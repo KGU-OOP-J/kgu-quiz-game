@@ -1,17 +1,13 @@
 package org.kgu;
 
-import java.util.Scanner;
+import javax.swing.SwingUtilities;
+import org.kgu.ui.navigation.GameNavigator;
 
+/** 프로그램 시작점: 화면 생성은 GameNavigator에게 위임한다. */
 public class Main {
-    Scanner scan = new Scanner(System.in);
-
-    void mymain() {
-        // 여기에 코드 작성
-        System.out.println("Hello, World!");
-    }
-
     public static void main(String[] args) {
-        Main main = new Main();
-        main.mymain();
+        // 780x576 기준 레이아웃을 약 1400px 너비로 균일하게 확대한다.
+        System.setProperty("sun.java2d.uiScale", "1.8");
+        SwingUtilities.invokeLater(() -> new GameNavigator().open());
     }
 }

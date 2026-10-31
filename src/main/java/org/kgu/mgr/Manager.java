@@ -9,6 +9,11 @@ import java.util.Scanner;
 public class Manager {
 	ArrayList<Manageable> mList = new ArrayList<>();
 
+	/** Registers an item created in code as well as items loaded from a file. */
+	public void add(Manageable item) {
+		mList.add(item);
+	}
+
 	public Manageable find(String name) {
 		for (Manageable p : mList) {
 			if (p.matches(name))
