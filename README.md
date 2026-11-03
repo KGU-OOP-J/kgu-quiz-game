@@ -14,10 +14,11 @@ run.bat
 
 ## 화면 담당
 
-- 시작·메뉴·난이도: `org.kgu.ui.start`
+- ID 입력·메뉴·게임 준비: `org.kgu.ui.start`
 - 문제 풀이: `org.kgu.ui.question`
-- 오답 노트: `org.kgu.ui.wrongnote`
 - 교수님 도감: `org.kgu.ui.collection`
+- 설정: `org.kgu.ui.settings`
+- 결과·획득 카드: `org.kgu.ui.result`
 - 화면 전환: `org.kgu.ui.navigation.GameNavigator`
 - 공통 UI: `org.kgu.ui.common`
 
