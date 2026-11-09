@@ -1,17 +1,16 @@
 package org.kgu;
 
-import java.util.Scanner;
+import org.kgu.application.Application;
+
+import javax.swing.*;
 
 public class Main {
-    Scanner scan = new Scanner(System.in);
-
-    void mymain() {
-        // 여기에 코드 작성
-        System.out.println("Hello, World!");
-    }
-
     public static void main(String[] args) {
-        Main main = new Main();
-        main.mymain();
+        // 프로그램의 진입점을 정의합니다.
+        // Swing이 초기화 된 이후 프로그램이 실행되어야 합니다.
+        SwingUtilities.invokeLater(() -> {
+            Application app = new Application();
+            app.run();
+        });
     }
 }

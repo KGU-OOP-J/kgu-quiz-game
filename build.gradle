@@ -23,3 +23,26 @@ application {
 test {
     useJUnitPlatform()
 }
+
+// 배포 파일 구성 시 data, config 포함
+distributions {
+    main {
+        contents {
+            from(layout.buildDirectory.dir('libs/data')) {
+                into 'data'
+            }
+
+            from(layout.buildDirectory.dir('libs/config')) {
+                into 'config'
+            }
+        }
+    }
+}
+
+// 프로젝트 정리 시 data, config 경로 제외
+tasks.named('clean', Delete) {
+    setDelete(fileTree(layout.buildDirectory.get().asFile) {
+        exclude 'libs/data/**'
+        exclude 'libs/config/**'
+    })
+}
