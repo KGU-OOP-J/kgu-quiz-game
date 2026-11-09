@@ -40,10 +40,7 @@ public class QuestionRepository {
             // 한 사람당 정확히 10줄인지 확인(오류확인)
             if (lines.size() % 10 != 0) {
                 throw new IllegalStateException(
-                        "TXT 파일의 줄 수가 올바르지 않습니다. "
-                        + "한 사람당 10줄이어야 합니다. 현재 줄 수: "
-                        + lines.size()
-                );
+                        "TXT 파일의 줄 수가 올바르지 않습니다. " + "한 사람당 10줄이어야 합니다. 현재 줄 수: " + lines.size() );
             }
 
             // 10줄씩 한 사람의 데이터 처리
@@ -65,9 +62,7 @@ public class QuestionRepository {
                     int lineNumber = i + j + 1;
                     String[] data = lines.get(i + j).split("\t", -1);
                     if (data.length != 7) {
-                        throw new IllegalStateException(
-                                lineNumber + "번째 줄의 문제 형식이 잘못되었습니다."
-                        );
+                        throw new IllegalStateException(lineNumber + "번째 줄의 문제 형식이 잘못되었습니다.");
                     }
 
                     String difficulty = data[0]; String questionText = data[1];
@@ -76,27 +71,20 @@ public class QuestionRepository {
                     try {
                         answerIndex = Integer.parseInt(data[6]);
                     } catch (NumberFormatException e) {
-                        throw new IllegalStateException(
-                                lineNumber + "번째 줄의 정답 번호가 숫자가 아닙니다."
-                        );
+                        throw new IllegalStateException(lineNumber + "번째 줄의 정답 번호가 숫자가 아닙니다.");
                     }
                     if (answerIndex < 1 || answerIndex > 4) {
-                        throw new IllegalStateException(
-                                lineNumber + "번째 줄의 정답 번호는 1~4여야 합니다."
-                        );
+                        throw new IllegalStateException(lineNumber + "번째 줄의 정답 번호는 1~4여야 합니다.");
                     }
                     Question question = new Question(
-                            personName, introduction, info1, info2, info3, difficulty, 
-                            questionText, options, answerIndex
+                            personName, introduction, info1, info2, info3, difficulty, questionText, options, answerIndex
                     );
                     questions.add(question);
                 }
             }
             //오류확인
         } catch (IOException e) {
-            throw new IllegalStateException(
-                    "문제 파일을 읽을 수 없습니다: " + fileName, e
-            );
+            throw new IllegalStateException("문제 파일을 읽을 수 없습니다: " + fileName, e);
         }
         return questions;
     }

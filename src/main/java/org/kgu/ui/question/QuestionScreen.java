@@ -196,8 +196,7 @@ public final class QuestionScreen extends JPanel {
         }
     }
 
-
-    // 인물 소개와 정보를 힌트로 표시
+    // 인물 소개와 정보를 힌트로 표시(회의 후 변경예정)
     private void showHint() {
         String hint = currentQuestion.getIntroduction() + "\n"
                     + currentQuestion.getInfo1() + "\n"
@@ -218,20 +217,13 @@ public final class QuestionScreen extends JPanel {
 
         if (isCorrect) {
             JOptionPane.showMessageDialog(
-                this,
-                currentQuestion.getPersonName() + " 카드 획득!",
-                "정답!",
-                JOptionPane.INFORMATION_MESSAGE
+                this, currentQuestion.getPersonName() + " 카드 획득!", "정답!", JOptionPane.INFORMATION_MESSAGE
             );
         } else {
             JOptionPane.showMessageDialog(
-                this,
-                "아쉬워요! 정답이 아닙니다.",
-                "오답",
-                JOptionPane.INFORMATION_MESSAGE
+                this, "아쉬워요! 정답이 아닙니다.", "오답", JOptionPane.INFORMATION_MESSAGE
             );
         }
-
         nextQuestion();
     }
 
@@ -260,10 +252,7 @@ public final class QuestionScreen extends JPanel {
     // 연습을 그만두고 메인 메뉴로 이동
     private void giveUp() {
         int result = JOptionPane.showConfirmDialog(
-            this,
-            "연습을 그만두고 메인 화면으로 돌아갈까요?",
-            "연습 종료",
-            JOptionPane.YES_NO_OPTION
+            this, "연습을 그만두고 메인 화면으로 돌아갈까요?", "연습 종료", JOptionPane.YES_NO_OPTION
         );
 
         if (result == JOptionPane.YES_OPTION) {
@@ -293,7 +282,7 @@ public final class QuestionScreen extends JPanel {
         g.setColor(new Color(239, 246, 255));
         g.fillRect(0, 0, getWidth(), getHeight());
 
-        // 상단에 선택한 분야, 난이도, 모드를 세 줄로 표시
+        // 상단에 선택한 분야, 난이도, 모드를 세 줄로 표시(회의 후 변경예정)
         PlayerSession session = navigator.getSession();
 
         String difficultyText = session.getDifficulty().equals("중")

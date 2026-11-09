@@ -1,7 +1,7 @@
 
 package org.kgu.question;
 
-/** 인물 정보와 문제 데이터를 저장하는 클래스. */
+// 인물 정보와 문제 데이터를 저장하는 클래스. 
 public class Question {
 
     private String personName;
