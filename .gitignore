@@ -1,5 +1,7 @@
 .gradle
+.gradle-user-home/
 build/
+sources.txt
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
@@ -41,3 +43,6 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+### Manual integration demo data and personal saves ###
+.integration-runtime/
