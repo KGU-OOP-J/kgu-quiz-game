@@ -18,7 +18,7 @@ import org.kgu.ui.navigation.GameNavigator;
 /** 게임 시작 전 분야·난이도·모드를 고르는 화면. */
 public final class GameSetupScreen extends JPanel {
     private final GameNavigator navigator;
-    private final JComboBox<String> field = new JComboBox<>(new String[] { "과학자", "교수님", "한국사", "연예인" });
+    private final JComboBox<String> field = new JComboBox<>(new String[] { "과학자", "교수님", "한국사", "아이돌" });
     private final JComboBox<String> difficulty = new JComboBox<>(new String[] { "하", "중", "상" });
     private final JComboBox<String> mode = new JComboBox<>(new String[] { "연습", "대진" });
     public GameSetupScreen(GameNavigator navigator) {
