@@ -43,8 +43,4 @@ bin/
 .DS_Store
 
 ### Custom ###
-!/build/libs/
-!/build/libs/data/
-!/build/libs/data/**
-!/build/libs/config/
-!/build/libs/config/**
+save/

@@ -1,8 +1,18 @@
 package org.kgu.manager;
 
+import org.kgu.factory.Factory;
+
 import java.util.NoSuchElementException;
 
-public final class FactoryManager<F extends Factory<?>> extends Manager<F> {
+public class FactoryManager<F extends Factory<?>> extends Manager<F> {
+
+    private static void validateById(String id) {
+        if (id == null || id.isBlank()) {
+            throw new IllegalArgumentException(
+                "Factory ID must not be null or blank."
+            );
+        }
+    }
 
     @Override
     public void add(F factory) {
@@ -46,13 +56,5 @@ public final class FactoryManager<F extends Factory<?>> extends Manager<F> {
         }
 
         return null;
-    }
-
-    private static void validateById(String id) {
-        if (id == null || id.isBlank()) {
-            throw new IllegalArgumentException(
-                "Factory ID must not be null or blank."
-            );
-        }
     }
 }

@@ -1,30 +1,26 @@
 package org.kgu.factory;
 
-import org.kgu.manager.Factory;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.util.Scanner;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Objects;
 
 public abstract class FileFactory<T> extends Factory<T> {
-    private final File file;
+    private final Path path;
 
-    protected FileFactory(String id, String path) {
-        super(id);
-        this.file = new File(Objects.requireNonNull(path, "path is null"));
+    protected FileFactory(Path path) {
+        this.path = Objects.requireNonNull(path);
     }
 
-    @Override
-    public final T create() {
-        try (Scanner scan = new Scanner(file)) {
-            return read(scan);
-        } catch (FileNotFoundException e) {
-            throw new IllegalStateException(
-                "Failed to open file: " + file.getPath(), e
-            );
-        }
+    public final Path getPath() {
+        return path;
     }
 
-    protected abstract T read(Scanner scan);
+    public abstract void load() throws IOException;
+
+    public abstract void clear();
+
+    public final void reload() throws IOException {
+        clear();
+        load();
+    }
 }
