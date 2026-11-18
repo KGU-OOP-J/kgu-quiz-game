@@ -28,7 +28,7 @@ public final class MenuView extends JPanel implements View {
         welcome.setBounds(120,160,1040,60);welcome.setFont(UiStyle.FONT.deriveFont(Font.BOLD,43f));welcome.setForeground(UiStyle.NAVY);home.add(welcome);
         JLabel guide=new JLabel("원하는 메뉴를 선택해서 나만의 인물 카드를 완성해 보세요.",SwingConstants.CENTER);guide.setBounds(150,222,980,35);guide.setFont(UiStyle.FONT.deriveFont(Font.BOLD,20f));guide.setForeground(new Color(35,76,124));home.add(guide);
         addTile(game,130,"게임 시작","분야와 난이도를 고르고\n인물 퀴즈에 도전하세요.","⚔");addTile(collection,470,"카드 도감","획득한 인물 카드를\n한눈에 확인하세요.","★");addTile(setting,810,"설정","소리와 게임 환경을\n내 취향에 맞춰보세요.","⚙");
-        login.setBounds(92,850,170,46);login.setFont(UiStyle.FONT.deriveFont(Font.BOLD,17f));login.setForeground(Color.WHITE);home.add(login);
+        login.setBounds(92,760,170,46);login.setFont(UiStyle.FONT.deriveFont(Font.BOLD,17f));login.setForeground(Color.WHITE);home.add(login);
     }
     private void addTile(JButton b,int x,String title,String desc,String icon){
         MenuCard tile=new MenuCard(title,desc,icon,b);
