@@ -26,7 +26,8 @@ public final class MenuGUIEvent implements ActionListener {
         if (source == view.getGameButton()) {
             refreshPersons();
             view.showSetup();
-        } else if (source == view.getCollectionButton()) menuFeature.openCollection();
+        } else if (source == view.getLoginButton()) menuFeature.returnToLogin();
+        else if (source == view.getCollectionButton()) menuFeature.openCollection();
         else if (source == view.getSettingButton()) menuFeature.openSetting();
         else if (source == view.getBackButton()) view.showHome();
         else if (source == view.getCategoryBox()) refreshPersons();

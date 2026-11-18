@@ -17,6 +17,7 @@ public final class MenuView extends JPanel implements View {
     private final CardLayout layout=new CardLayout(); private final JPanel home=new Background(), setup=new SetupBackground();
     private final List<MenuCard> menuCards = new ArrayList<>();
     private final JButton game=button("게임 시작",new Color(35,133,246)), collection=button("카드 도감",new Color(239,151,43)), setting=button("설정",new Color(30,172,111));
+    private final JButton login=button("로그인으로",new Color(112,128,144));
     private final JButton start=button("게임 시작",new Color(33,127,239)), back=button("메뉴로",new Color(112,128,144));
     private final JComboBox<String> category=new JComboBox<>(new String[]{"과학자","교수님","한국사","아이돌"});
     private final JComboBox<Difficulty> difficulty=new JComboBox<>(Difficulty.values()); private final JComboBox<GameSession.Mode> mode=new JComboBox<>(GameSession.Mode.values());
@@ -27,6 +28,7 @@ public final class MenuView extends JPanel implements View {
         welcome.setBounds(120,160,1040,60);welcome.setFont(UiStyle.FONT.deriveFont(Font.BOLD,43f));welcome.setForeground(UiStyle.NAVY);home.add(welcome);
         JLabel guide=new JLabel("원하는 메뉴를 선택해서 나만의 인물 카드를 완성해 보세요.",SwingConstants.CENTER);guide.setBounds(150,222,980,35);guide.setFont(UiStyle.FONT.deriveFont(Font.BOLD,20f));guide.setForeground(new Color(35,76,124));home.add(guide);
         addTile(game,130,"게임 시작","분야와 난이도를 고르고\n인물 퀴즈에 도전하세요.","⚔");addTile(collection,470,"카드 도감","획득한 인물 카드를\n한눈에 확인하세요.","★");addTile(setting,810,"설정","소리와 게임 환경을\n내 취향에 맞춰보세요.","⚙");
+        login.setBounds(92,850,170,46);login.setFont(UiStyle.FONT.deriveFont(Font.BOLD,17f));login.setForeground(Color.WHITE);home.add(login);
     }
     private void addTile(JButton b,int x,String title,String desc,String icon){
         MenuCard tile=new MenuCard(title,desc,icon,b);
@@ -41,9 +43,9 @@ public final class MenuView extends JPanel implements View {
     public void setPlayerId(String id){welcome.setText(id+"님, 무엇을 해볼까요?");} public void showHome(){layout.show(this,"home");SwingUtilities.invokeLater(()->{for(int i=0;i<menuCards.size();i++)menuCards.get(i).appear(i*100);});} public void showSetup(){layout.show(this,"setup");updateMode();}
     public void updateMode(){boolean battle=getMode()==GameSession.Mode.BATTLE;person.setVisible(battle);personLabel.setVisible(battle);} public void setPersons(List<Person> p){person.setModel(new DefaultComboBoxModel<>(p.toArray(new Person[0])));}
     public String getCategory(){return (String)category.getSelectedItem();} public Difficulty getDifficulty(){return (Difficulty)difficulty.getSelectedItem();} public GameSession.Mode getMode(){return (GameSession.Mode)mode.getSelectedItem();} public Person getSelectedPerson(){return (Person)person.getSelectedItem();}
-    public JButton getGameButton(){return game;}public JButton getCollectionButton(){return collection;}public JButton getSettingButton(){return setting;}public JButton getStartButton(){return start;}public JButton getBackButton(){return back;}public JComboBox<String> getCategoryBox(){return category;}public JComboBox<GameSession.Mode> getModeBox(){return mode;}
+    public JButton getGameButton(){return game;}public JButton getCollectionButton(){return collection;}public JButton getSettingButton(){return setting;}public JButton getLoginButton(){return login;}public JButton getStartButton(){return start;}public JButton getBackButton(){return back;}public JComboBox<String> getCategoryBox(){return category;}public JComboBox<GameSession.Mode> getModeBox(){return mode;}
     @Override public ViewId getViewId(){return ViewId.MENU;}@Override public JComponent getComponent(){return this;}@Override public Dimension getViewSize(){return new Dimension(WIDTH,HEIGHT);}
-    private static class Background extends JPanel{private final Image image=new ImageIcon(Background.class.getResource("/org/kgu/battle/campus_background.png")).getImage();Background(){setLayout(null);setOpaque(false);}@Override protected void paintComponent(Graphics g){g.drawImage(image,0,0,getWidth(),getHeight(),null);}}
+    private static class Background extends JPanel{private final Image image=new ImageIcon(Background.class.getResource("/org/kgu/battle/campus_background.jpg")).getImage();Background(){setLayout(null);setOpaque(false);}@Override protected void paintComponent(Graphics g){g.drawImage(image,0,0,getWidth(),getHeight(),null);}}
     private static final class MenuCard extends JPanel {
         private final String title, description, icon; private final JButton button; private float alpha; private boolean hover; private Timer timer;
         MenuCard(String title,String description,String icon,JButton button){this.title=title;this.description=description;this.icon=icon;this.button=button;setLayout(null);setOpaque(false);add(button);MouseAdapter listener=new MouseAdapter(){@Override public void mouseEntered(MouseEvent e){hover=true;repaint();}@Override public void mouseExited(MouseEvent e){hover=false;repaint();}};addMouseListener(listener);button.addMouseListener(listener);}

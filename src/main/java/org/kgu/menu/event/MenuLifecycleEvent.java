@@ -15,7 +15,7 @@ public final class MenuLifecycleEvent implements LifecycleEvent {
     }
 
     private AbstractButton[] buttons() {
-        return new AbstractButton[]{view.getGameButton(), view.getCollectionButton(), view.getSettingButton(), view.getStartButton(), view.getBackButton()};
+        return new AbstractButton[]{view.getGameButton(), view.getCollectionButton(), view.getSettingButton(), view.getLoginButton(), view.getStartButton(), view.getBackButton()};
     }
 
     @Override
