@@ -4,7 +4,7 @@ import java.awt.*;
 
 /** 화면 전체에서 공유하는 Java 2D 스타일 도구. */
 public final class UiStyle {
-    public static final int WIDTH = 780, HEIGHT = 576;
+    public static final int WIDTH = 1280, HEIGHT = 960;
     public static final Font FONT = new Font("Malgun Gothic", Font.PLAIN, 14);
     public static final Color NAVY = new Color(24, 48, 76);
     private UiStyle() { }

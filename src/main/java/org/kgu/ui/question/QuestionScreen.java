@@ -1,329 +1,275 @@
 
 package org.kgu.ui.question;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Dimension;
-import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.net.URL;
 import java.util.List;
-
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.ButtonGroup;
-import javax.swing.JButton;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JRadioButton;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
+import javax.imageio.ImageIO;
+import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-
+import javax.swing.text.*;
 import org.kgu.game.PlayerSession;
 import org.kgu.question.Question;
 import org.kgu.question.QuestionService;
-import org.kgu.ui.common.UiButton;
 import org.kgu.ui.common.UiStyle;
 import org.kgu.ui.navigation.GameNavigator;
 
-// 문제 화면을 담당하는 클래스
 public final class QuestionScreen extends JPanel {
 
-    // 화면 이동과 문제 관련 기능에 필요한 객체
+    // ===== 기본 게임 정보 및 화면 변수 =====
     private final GameNavigator navigator;
     private final QuestionService questionService;
-
     private final List<Question> questions;
     private Question currentQuestion;
     private int currentQuestionIndex = 0;
-
-    // 보기 버튼과 선택한 정답 번호
-    private final JRadioButton[] optionButtons = new JRadioButton[4];
-    private ButtonGroup optionGroup = new ButtonGroup();
-    private final JPanel[] optionRows = new JPanel[4];
-    private final JPanel optionPanel = new JPanel();
-    private JScrollPane optionScroll;
-    private JTextArea questionTextArea;
     private int selectedAnswer = 0;
+    private final QuestionStyle.OptionRow[] optionRows = new QuestionStyle.OptionRow[4];
+    private final JPanel optionPanel = new JPanel();
+    private JTextPane questionTextPane;
+    private BufferedImage backgroundImage;
+    private BufferedImage personImage;
 
-    // 화면에서 사용하는 색상
-    private final Color NAVY = new Color(43, 63, 91), BLUE = new Color(75, 139, 224), LIGHT_BLUE = new Color(232, 242, 255), GREEN = new Color(22, 164, 119);
+    // ===== 인물 사진 프레임 디자인 =====
+    private static final Color FRAME_COLOR = new Color(37, 43, 53);
+    private static final Color FRAME_BORDER = new Color(70, 81, 95);
 
-    // 생성자: 문제 화면의 기본 설정과 구성 요소 생성
+    // ===== 화면 초기화 및 버튼 구성 =====
     public QuestionScreen(GameNavigator navigator) {
         this.navigator = navigator;
-        this.questionService = new QuestionService();
-
-        // 현재 선택한 분야와 난이도에 맞는 문제 불러오기
+        questionService = new QuestionService();
         PlayerSession session = navigator.getSession();
         questions = questionService.getQuestions(session.getField(), session.getDifficulty());
 
-        if (questions.size() < 10) {
-        throw new IllegalStateException("연습 모드를 진행하려면 최소 10문제가 필요합니다.");
-        }
+        if (questions.size() < 10) throw new IllegalStateException("연습 모드를 진행하려면 최소 10문제가 필요합니다.");
 
-        // 첫 번째 문제 표시
-        currentQuestion = questions.get(currentQuestionIndex);
-
+        currentQuestion = questions.get(0);
         setPreferredSize(new Dimension(UiStyle.WIDTH, UiStyle.HEIGHT));
         setLayout(null);
-        setBackground(new Color(239, 246, 255));
+        setBackground(QuestionStyle.BACKGROUND);
 
-        // 문제와 보기 화면 추가
+        loadBackgroundImage();
+        loadPersonImage();
         addQuestion();
         addOptions();
 
-        // 하단 버튼 추가
-        add(button("힌트 보기", 35, new Color(75, 139, 224), e -> showHint()));
-        add(button("정답 제출", 285, GREEN, e -> submitAnswer()));
-        add(button("연습 그만", 535, new Color(135, 148, 166), e -> giveUp()));
+        add(QuestionStyle.createBottomButton("💡  힌트 보기", 75, QuestionStyle.BLUE, e -> showHint()));
+        add(QuestionStyle.createBottomButton("✔  정답 제출", 510, QuestionStyle.GREEN, e -> submitAnswer()));
+        add(QuestionStyle.createBottomButton("↪  연습 그만", 945, new Color(112, 135, 164), e -> giveUp()));
     }
 
-        // 문제 내용을 표시하고 긴 문장은 자동 줄바꿈 및 스크롤 처리
+    // ===== 배경 및 인물 사진 불러오기 =====
+    private void loadBackgroundImage() {
+        try {
+            URL url = getClass().getResource("/images/question-background.png");
+            if (url != null) backgroundImage = ImageIO.read(url);
+            else System.err.println("배경 이미지를 찾을 수 없습니다.");
+        } catch (IOException e) {
+            System.err.println("배경 이미지 로드 실패: " + e.getMessage());
+        }
+    }
+
+    private void loadPersonImage() {
+        personImage = PersonImageLoader.load(currentQuestion.getPersonName(), currentQuestion.getDifficulty());
+        repaint();
+    }
+
+    // ===== 문제 내용 및 가운데 정렬 =====
     private void addQuestion() {
-        questionTextArea = new JTextArea(currentQuestion.getQuestionText());
-        questionTextArea.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 17f));
-        questionTextArea.setForeground(NAVY);
-        questionTextArea.setLineWrap(true);
-        questionTextArea.setWrapStyleWord(true);
-        questionTextArea.setEditable(false);
-        questionTextArea.setFocusable(false);
-        questionTextArea.setOpaque(false);
-
-        JScrollPane questionScroll = new JScrollPane(questionTextArea);
-        questionScroll.setBounds(320, 135, 420, 75);
-        questionScroll.setBorder(null);
-        questionScroll.setOpaque(false);
-        questionScroll.getViewport().setOpaque(false);
-        questionScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-        questionScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-
-        add(questionScroll);
+        questionTextPane = new JTextPane();
+        questionTextPane.setText(currentQuestion.getQuestionText());
+        questionTextPane.setFont(QuestionStyle.font(25f, true));
+        questionTextPane.setForeground(QuestionStyle.NAVY);
+        questionTextPane.setEditable(false);
+        questionTextPane.setFocusable(false);
+        questionTextPane.setOpaque(false);
+        questionTextPane.setMargin(new Insets(5, 12, 5, 12));
+        questionTextPane.setBounds(505, 255, 695, 105);
+        centerQuestionText();
+        add(questionTextPane);
     }
 
-    
-    // 객관식 보기 4개를 만들고 긴 문장은 자동 줄바꿈 처리
-    private void addOptions() {
-        String[] options = currentQuestion.getOptions();
+    private void centerQuestionText() {
+        StyledDocument doc = questionTextPane.getStyledDocument();
+        SimpleAttributeSet attributes = new SimpleAttributeSet();
+        StyleConstants.setAlignment(attributes, StyleConstants.ALIGN_CENTER);
+        doc.setParagraphAttributes(0, doc.getLength(), attributes, false);
 
+        FontMetrics fm = questionTextPane.getFontMetrics(questionTextPane.getFont());
+        int availableWidth = 665, lineCount = 1, currentWidth = 0;
+
+        for (String word : questionTextPane.getText().split("\\s+")) {
+            int wordWidth = fm.stringWidth(word + " ");
+            if (currentWidth + wordWidth > availableWidth) {
+                lineCount++;
+                currentWidth = wordWidth;
+            } else currentWidth += wordWidth;
+        }
+
+        int textHeight = lineCount * fm.getHeight();
+        int topMargin = Math.max(5, (105 - textHeight) / 2);
+        questionTextPane.setMargin(new Insets(topMargin, 12, topMargin, 12));
+    }
+
+    // ===== 선택지 생성 및 선택 처리 =====
+    private void addOptions() {
         optionPanel.removeAll();
-        optionGroup = new ButtonGroup();
         optionPanel.setLayout(new BoxLayout(optionPanel, BoxLayout.Y_AXIS));
-        optionPanel.setBackground(Color.WHITE);
+        optionPanel.setOpaque(false);
+        optionPanel.setBounds(500, 410, 705, 390);
+        String[] options = currentQuestion.getOptions();
 
         for (int i = 0; i < 4; i++) {
             final int answerNumber = i + 1;
-
-            // 보기 한 개를 담을 영역
-            JPanel row = new JPanel(new BorderLayout(8, 0));
-            row.setBackground(Color.WHITE);
-            row.setBorder(new EmptyBorder(10, 10, 10, 10));
+            String value = options != null && i < options.length ? options[i] : "";
+            QuestionStyle.OptionRow row = new QuestionStyle.OptionRow();
+            row.setLayout(new GridBagLayout());
+            row.setOpaque(false);
+            row.setBorder(new EmptyBorder(5, 20, 5, 20));
+            row.setPreferredSize(new Dimension(700, 82));
+            row.setMinimumSize(new Dimension(700, 82));
+            row.setMaximumSize(new Dimension(700, 82));
             row.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-            JRadioButton option = new JRadioButton();
-            option.setBackground(Color.WHITE);
-            option.setOpaque(false);
-            option.setFocusPainted(false);
+            JTextArea text = new JTextArea((i + 1) + ". " + value);
+            text.setFont(QuestionStyle.font(27f, true));
+            text.setForeground(QuestionStyle.NAVY);
+            text.setLineWrap(true);
+            text.setWrapStyleWord(true);
+            text.setEditable(false);
+            text.setFocusable(false);
+            text.setOpaque(false);
+            text.setBorder(new EmptyBorder(0, 0, 0, 0));
+            text.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
 
-            JTextArea optionText = new JTextArea((i + 1) + ". " + options[i]);
-            optionText.setFont(UiStyle.FONT.deriveFont(16f));
-            optionText.setForeground(NAVY);
-            optionText.setLineWrap(true);
-            optionText.setWrapStyleWord(true);
-            optionText.setEditable(false);
-            optionText.setFocusable(false);
-            optionText.setOpaque(false);
+            GridBagConstraints gbc = new GridBagConstraints();
+            gbc.gridx = 0;
+            gbc.gridy = 0;
+            gbc.weightx = 1;
+            gbc.fill = GridBagConstraints.HORIZONTAL;
+            gbc.anchor = GridBagConstraints.CENTER;
+            row.add(text, gbc);
 
-            optionText.setSize(340, Short.MAX_VALUE);
-            int rowHeight = Math.max(65, optionText.getPreferredSize().height + 20);
-
-            row.setPreferredSize(new Dimension(390, rowHeight));
-            row.setMinimumSize(new Dimension(390, rowHeight));
-            row.setMaximumSize(new Dimension(390, rowHeight));
-
-            row.add(option, BorderLayout.WEST);
-            row.add(optionText, BorderLayout.CENTER);
-
-            option.addActionListener(e -> {
-                selectedAnswer = answerNumber;
-                updateOptionStyle();
-            });
-
-            optionText.addMouseListener(new java.awt.event.MouseAdapter() {
+            MouseAdapter selectAction = new MouseAdapter() {
                 @Override
-                public void mouseClicked(java.awt.event.MouseEvent e) {
-                    option.doClick();
+                public void mousePressed(MouseEvent e) {
+                    selectAnswer(answerNumber);
                 }
-            });
+            };
 
-            optionButtons[i] = option;
+            row.addMouseListener(selectAction);
+            text.addMouseListener(selectAction);
             optionRows[i] = row;
-            optionGroup.add(option);
-
             optionPanel.add(row);
-            optionPanel.add(Box.createVerticalStrut(5));
+            if (i < 3) optionPanel.add(Box.createVerticalStrut(8));
         }
 
-        if (optionScroll == null) {
-            optionScroll = new JScrollPane(optionPanel);
-            optionScroll.setBounds(320, 220, 420, 215);
-            optionScroll.setBorder(null);
-            optionScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-            optionScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-            add(optionScroll);
-        }
-
+        add(optionPanel);
         optionPanel.revalidate();
         optionPanel.repaint();
     }
 
-    // 선택한 보기의 배경색을 파란색으로 변경
+    private void selectAnswer(int answerNumber) {
+        selectedAnswer = answerNumber;
+        updateOptionStyle();
+    }
+
     private void updateOptionStyle() {
-        for (int i = 0; i < 4; i++) {
-            if (optionButtons[i].isSelected()) {
-                optionRows[i].setBackground(LIGHT_BLUE);
-                optionRows[i].setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(BLUE, 2),
-                    new EmptyBorder(8, 8, 8, 8)
-                ));
-            } else {
-                optionRows[i].setBackground(Color.WHITE);
-                optionRows[i].setBorder(new EmptyBorder(10, 10, 10, 10));
-            }
-        }
+        for (int i = 0; i < 4; i++) optionRows[i].setSelected(selectedAnswer == i + 1);
+        optionPanel.repaint();
     }
 
-    // 인물 소개와 정보를 힌트로 표시(회의 후 변경예정)
+    // ===== 힌트 표시 =====
     private void showHint() {
-        String hint = currentQuestion.getIntroduction() + "\n"
-                    + currentQuestion.getInfo1() + "\n"
-                    + currentQuestion.getInfo2() + "\n"
-                    + currentQuestion.getInfo3();
-
-        JOptionPane.showMessageDialog(this, hint, "힌트", JOptionPane.INFORMATION_MESSAGE);
+        String hint = currentQuestion.getIntroduction() + "\n" + currentQuestion.getInfo1() + "\n"
+                + currentQuestion.getInfo2() + "\n" + currentQuestion.getInfo3();
+        JTextArea hintArea = new JTextArea(hint, 8, 35);
+        hintArea.setFont(QuestionStyle.font(19f, true));
+        hintArea.setLineWrap(true);
+        hintArea.setWrapStyleWord(true);
+        hintArea.setEditable(false);
+        hintArea.setBackground(new Color(245, 249, 255));
+        hintArea.setBorder(new EmptyBorder(15, 15, 15, 15));
+        JOptionPane.showMessageDialog(this, new JScrollPane(hintArea), "힌트", JOptionPane.INFORMATION_MESSAGE);
     }
 
-        // 정답을 확인하고 결과 메시지를 보여준 뒤 다음 문제로 이동
+    // ===== 정답 확인 및 결과 표시 =====
     private void submitAnswer() {
         if (selectedAnswer == 0) {
             JOptionPane.showMessageDialog(this, "정답을 선택해 주세요.");
             return;
         }
 
-        boolean isCorrect = questionService.checkAnswer(currentQuestion, selectedAnswer);
-
-        if (isCorrect) {
-            JOptionPane.showMessageDialog(
-                this, currentQuestion.getPersonName() + " 카드 획득!", "정답!", JOptionPane.INFORMATION_MESSAGE
-            );
+        boolean correct = questionService.checkAnswer(currentQuestion, selectedAnswer);
+        if (correct) {
+            JOptionPane.showMessageDialog(this, currentQuestion.getPersonName() + " 카드 획득!", "정답!", JOptionPane.INFORMATION_MESSAGE);
         } else {
-            JOptionPane.showMessageDialog(
-                this, "아쉬워요! 정답이 아닙니다.", "오답", JOptionPane.INFORMATION_MESSAGE
-            );
+            JOptionPane.showMessageDialog(this, "아쉬워요! 정답이 아닙니다.", "오답", JOptionPane.INFORMATION_MESSAGE);
         }
         nextQuestion();
     }
 
-    // 다음 문제로 이동
+    // ===== 다음 문제 이동 및 10문제 완료 처리 =====
     private void nextQuestion() {
-        currentQuestionIndex++;
-
-        // 10문제를 모두 풀었으면 메인 메뉴로 이동
-        if (currentQuestionIndex >= 10) {
+        if (currentQuestionIndex >= 9) {
             JOptionPane.showMessageDialog(this, "10문제를 모두 풀었습니다!\n수고하셨습니다.");
             navigator.showMenu();
             return;
         }
 
-        // 다음 문제 데이터 불러오기
+        currentQuestionIndex++;
         currentQuestion = questions.get(currentQuestionIndex);
         selectedAnswer = 0;
-        optionGroup.clearSelection();
-
-        questionTextArea.setText(currentQuestion.getQuestionText());
+        loadPersonImage();
+        questionTextPane.setText(currentQuestion.getQuestionText());
+        centerQuestionText();
+        remove(optionPanel);
         addOptions();
-
+        revalidate();
         repaint();
     }
 
-    // 연습을 그만두고 메인 메뉴로 이동
+    // ===== 연습 종료 =====
     private void giveUp() {
-        int result = JOptionPane.showConfirmDialog(
-            this, "연습을 그만두고 메인 화면으로 돌아갈까요?", "연습 종료", JOptionPane.YES_NO_OPTION
-        );
-
-        if (result == JOptionPane.YES_OPTION) {
-            navigator.showMenu();
-        }
+        int result = JOptionPane.showConfirmDialog(this, "연습을 그만두고 메인 화면으로 돌아갈까요?", "연습 종료", JOptionPane.YES_NO_OPTION);
+        if (result == JOptionPane.YES_OPTION) navigator.showMenu();
     }
 
-    // 하단 버튼을 공통으로 생성하는 메서드
-    private JButton button(String text, int x, Color color, java.awt.event.ActionListener action) {
-        UiButton button = new UiButton(text, color);
-        button.setBounds(x, 465, 180, 48);
-        button.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 17f));
-        button.setForeground(Color.WHITE);
-        button.addActionListener(action);
-        return button;
-    }
-
-    // 화면 배경, 카드, 상단 정보 등 디자인을 그리는 메서드
+    // ===== 전체 화면 및 인물 사진 그리기 =====
     @Override
     protected void paintComponent(Graphics source) {
         super.paintComponent(source);
+        int displayQuestionIndex = Math.min(currentQuestionIndex, 9);
+        QuestionStyle.paintScreen(source, this, backgroundImage, navigator.getSession(), displayQuestionIndex);
 
-        Graphics2D g = (Graphics2D) source.create();
-        UiStyle.prepare(g);
+        Graphics2D g2 = (Graphics2D) source.create();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
-        // 전체 배경
-        g.setColor(new Color(239, 246, 255));
-        g.fillRect(0, 0, getWidth(), getHeight());
+        // 사진 뒤 차콜 프레임
+        int frameX = 73, frameY = 263, frameWidth = 404, frameHeight = 474;
 
-        // 상단에 선택한 분야, 난이도, 모드를 세 줄로 표시(회의 후 변경예정)
-        PlayerSession session = navigator.getSession();
+        // 그림자 및 프레임
+        g2.setColor(new Color(0, 0, 0, 45));
+        g2.fillRoundRect(frameX + 4, frameY + 5, frameWidth, frameHeight, 22, 22);
+        g2.setColor(FRAME_COLOR);
+        g2.fillRoundRect(frameX, frameY, frameWidth, frameHeight, 22, 22);
+        g2.setColor(FRAME_BORDER);
+        g2.setStroke(new BasicStroke(2f));
+        g2.drawRoundRect(frameX + 1, frameY + 1, frameWidth - 2, frameHeight - 2, 22, 22);
 
-        String difficultyText = session.getDifficulty().equals("중")
-                ? "보통" : session.getDifficulty();
+        // 인물 사진 표시
+        if (personImage != null) {
+            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+            double scale = Math.min(380.0 / personImage.getWidth(), 450.0 / personImage.getHeight());
+            int drawWidth = (int) (personImage.getWidth() * scale);
+            int drawHeight = (int) (personImage.getHeight() * scale);
+            int x = 85 + (380 - drawWidth) / 2;
+            int y = 275 + (450 - drawHeight) / 2;
+            g2.drawImage(personImage, x, y, drawWidth, drawHeight, null);
+        }
 
-        String modeText = session.getMode().equals("연습")
-                ? "연습 모드" : "대진 모드";
-
-        g.setColor(NAVY);
-        g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 14f));
-
-        g.drawString("분야: " + session.getField(), 35, 28);
-        g.drawString("난이도: " + difficultyText, 35, 48);
-        g.drawString("모드: " + modeText, 35, 68);
-
-        // 현재 문제 번호 표시
-        g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 19f));
-        // 현재 문제 번호 표시
-        g.drawString("문제 " + (currentQuestionIndex + 1) + " / 10", 635, 48);
-
-        // 문제 진행도 막대
-        g.setColor(new Color(216, 228, 244));
-        g.fillRoundRect(35, 82, 690, 9, 9, 9);
-        g.setColor(BLUE);
-        int progressWidth = 690 * (currentQuestionIndex + 1) / 10;
-        g.fillRoundRect(35, 82, progressWidth, 9, 9, 9);
-
-        // 가운데 흰색 문제 카드
-        UiStyle.round(g, 20, 100, 740, 415, 20, Color.WHITE);
-
-        // 왼쪽 인물 사진 영역
-        UiStyle.round(g, 40, 135, 250, 285, 16, new Color(218, 237, 224));
-        g.setColor(new Color(75, 126, 91));
-        g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 18f));
-        g.drawString("인물 사진 영역", 95, 280);
-
-        // 오른쪽 문제 영역 제목
-        g.setColor(BLUE);
-        g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 13f));
-        g.drawString("QUESTION", 320, 125);
-
-        g.dispose();
+        g2.dispose();
     }
 }
