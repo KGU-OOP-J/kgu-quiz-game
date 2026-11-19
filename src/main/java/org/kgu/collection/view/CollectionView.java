@@ -15,8 +15,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 인물 도감 화면. 마을 지도 → 마을(분야)별 카드 목록 → 인물 상세 순서로 보여 준다.
+ */
 public final class CollectionView extends JPanel implements View {
-    // 지도 그림(images/ui/map.png)에서 마을이 있는 사분면 순서: 왼쪽 위, 오른쪽 위, 왼쪽 아래, 오른쪽 아래
+    // WaveMap.ISLANDS와 같은 순서(지도의 왼쪽 위, 오른쪽 위, 왼쪽 아래, 오른쪽 아래 섬)
     private static final String[] VILLAGES = {"과학자", "교수님", "한국사", "아이돌"};
     private static final Point[] LABELS = {new Point(120, 200), new Point(480, 200), new Point(110, 470), new Point(480, 470)};
 
@@ -51,6 +54,9 @@ public final class CollectionView extends JPanel implements View {
     private int totalPersons;
     private int collectedStages;
 
+    /**
+     * @param event 마을 고르기, 인물 열기, 메인으로 가기를 처리하는 이벤트
+     */
     public CollectionView(CollectionGUIEvent event) {
         this.event = event;
         art = new CardArt(event::image);
@@ -124,6 +130,15 @@ public final class CollectionView extends JPanel implements View {
         add(detail);
     }
 
+    /**
+     * 고른 마을의 카드 목록과 진행도, 지도 이름표의 수집 수를 새로 채운다. 보이는 페이지는 바꾸지 않는다.
+     *
+     * @param selected 고른 분야(마을) 이름
+     * @param persons 목록에 보여 줄 인물
+     * @param collectedPersons 그 분야에서 모은 인물 수
+     * @param totalPersons 그 분야의 전체 인물 수
+     * @param collectedStages 그 분야에서 모은 단계 카드 수
+     */
     public void display(String selected, List<Person> persons, int collectedPersons, int totalPersons, int collectedStages) {
         this.selected = selected;
         this.collectedPersons = collectedPersons;
@@ -135,6 +150,7 @@ public final class CollectionView extends JPanel implements View {
         repaint();
     }
 
+    /** 마을 지도를 보여 주고 바다 물결을 움직인다. */
     public void showMap() {
         hovered = -1;
         java.util.Arrays.fill(scales, 1);
@@ -142,10 +158,17 @@ public final class CollectionView extends JPanel implements View {
         waves.start();
     }
 
+    /** 고른 마을의 카드 목록을 보여 준다. */
     public void showList() {
         show(list);
     }
 
+    /**
+     * 인물 상세 화면을 보여 준다.
+     *
+     * @param person 보여 줄 인물
+     * @param owned 상세 화면에서 넘겨 볼 수 있는, 모은 인물 목록
+     */
     public void showPerson(Person person, List<Person> owned) {
         detail.display(person, owned);
         show(detail);

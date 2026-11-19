@@ -17,7 +17,6 @@ import java.util.stream.Collectors;
 
 public final class CollectionFeature {
     public static final String ALL = "전체";
-    public static final List<String> CATEGORIES = List.of(ALL, "과학자", "교수님", "한국사", "아이돌");
 
     private final PersonManager personManager;
     private final ImageManager imageManager;
