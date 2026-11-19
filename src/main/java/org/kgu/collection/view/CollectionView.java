@@ -2,21 +2,40 @@ package org.kgu.collection.view;
 
 import org.kgu.collection.event.CollectionGUIEvent;
 import org.kgu.model.Person;
+import org.kgu.window.UiButton;
 import org.kgu.window.UiStyle;
 import org.kgu.window.View;
 import org.kgu.window.ViewId;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 public final class CollectionView extends JPanel implements View {
+    // 지도 그림(images/ui/map.png)에서 마을이 있는 사분면 순서: 왼쪽 위, 오른쪽 위, 왼쪽 아래, 오른쪽 아래
+    private static final String[] VILLAGES = {"과학자", "교수님", "한국사", "아이돌"};
+    private static final Point[] LABELS = {new Point(120, 200), new Point(480, 200), new Point(110, 470), new Point(480, 470)};
+
     private final CollectionGUIEvent event;
     private final CardArt art;
+    private final JPanel map = new JPanel(null) {
+        @Override
+        protected void paintComponent(Graphics source) {
+            Graphics2D g = (Graphics2D) source.create();
+            UiStyle.prepare(g);
+            art.paintMap(g, getWidth(), getHeight());
+            g.dispose();
+        }
+    };
+    private final Map<String, UiButton> villageButtons = new LinkedHashMap<>();
     private final JPanel list = new JPanel(null);
-    private final JPanel fields = new JPanel(null);
     private final CardSliderPanel slider;
     private final CardDetailPanel detail;
+    private String selected = "";
     private int collectedPersons;
     private int totalPersons;
     private int collectedStages;
@@ -25,51 +44,76 @@ public final class CollectionView extends JPanel implements View {
         this.event = event;
         art = new CardArt(event::image);
         setLayout(null);
+
+        map.setBounds(0, 0, 780, 560);
+        for (int i = 0; i < VILLAGES.length; i++) {
+            String category = VILLAGES[i];
+            UiButton button = CardArt.button(category + " 마을", Color.WHITE, 16f, () -> event.selectCategory(this, category));
+            button.setBounds(LABELS[i].x, LABELS[i].y, 190, 44);
+            villageButtons.put(category, button);
+            map.add(button);
+        }
+        JButton mapMenu = CardArt.button("메인으로", Color.WHITE, 14f, event::returnToMenu);
+        mapMenu.setBounds(330, 510, 120, 38);
+        map.add(mapMenu);
+        // 이름표 말고 마을 그림 자체를 눌러도 들어간다
+        map.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int quadrant = (e.getX() < map.getWidth() / 2 ? 0 : 1) + (e.getY() < map.getHeight() / 2 ? 0 : 2);
+                event.selectCategory(CollectionView.this, VILLAGES[quadrant]);
+            }
+        });
+        add(map);
+
         list.setOpaque(false);
         list.setBounds(0, 0, 780, 560);
+        list.setVisible(false);
         add(list);
-        fields.setOpaque(false);
-        fields.setBounds(16, 92, 184, 300);
-        list.add(fields);
         slider = new CardSliderPanel(event, art, person -> event.openPerson(this, person));
         slider.setBounds(221, 106, 530, 396);
         list.add(slider);
+        JButton toMap = CardArt.button("지도로", CardArt.BLUE, 16f, this::showMap);
+        toMap.setBounds(16, 92, 180, 46);
+        list.add(toMap);
+        JButton menu = CardArt.button("메인으로", Color.WHITE, 16f, event::returnToMenu);
+        menu.setBounds(16, 506, 180, 46);
+        list.add(menu);
+
         detail = new CardDetailPanel(event, art, this::showList);
         detail.setBounds(0, 0, 780, 560);
         detail.setVisible(false);
         add(detail);
-        JButton menu = CardArt.button("메인으로", Color.WHITE, 16f, event::returnToMenu);
-        menu.setBounds(16, 506, 180, 46);
-        list.add(menu);
     }
 
-    public void display(String selected, List<String> categories, List<Person> persons, int collectedPersons, int totalPersons, int collectedStages) {
+    public void display(String selected, List<Person> persons, int collectedPersons, int totalPersons, int collectedStages) {
+        this.selected = selected;
         this.collectedPersons = collectedPersons;
         this.totalPersons = totalPersons;
         this.collectedStages = collectedStages;
-        fields.removeAll();
-        for (int i = 0; i < categories.size(); i++) {
-            String category = categories.get(i);
-            JButton button = CardArt.button(category + " " + event.getCollectedCount(category) + "/" + event.getPersonCount(category),
-                category.equals(selected) ? CardArt.BLUE : Color.WHITE, 14f, () -> event.selectCategory(this, category));
-            button.setBounds(0, i * 54, 184, 44);
-            fields.add(button);
-        }
+        villageButtons.forEach((category, button) -> button.setText(
+            category + " 마을 " + event.getCollectedCount(category) + "/" + event.getPersonCount(category)));
         slider.setPersons(persons);
-        fields.revalidate();
-        showList();
+        repaint();
+    }
+
+    public void showMap() {
+        show(map);
+    }
+
+    public void showList() {
+        show(list);
     }
 
     public void showPerson(Person person, List<Person> owned) {
         detail.display(person, owned);
-        list.setVisible(false);
-        detail.setVisible(true);
-        repaint();
+        show(detail);
     }
 
-    public void showList() {
-        detail.setVisible(false);
-        list.setVisible(true);
+    private void show(JPanel page) {
+        map.setVisible(page == map);
+        list.setVisible(page == list);
+        detail.setVisible(page == detail);
         repaint();
     }
 
@@ -96,10 +140,10 @@ public final class CollectionView extends JPanel implements View {
         art.paintBackground(g, getWidth(), getHeight());
 
         if (list.isVisible()) {
-            CardArt.gradientRound(g, 30, 22, 214, 54, 30, new Color(44, 80, 140), new Color(22, 46, 92));
+            CardArt.gradientRound(g, 16, 22, 214, 54, 30, new Color(44, 80, 140), new Color(22, 46, 92));
             g.setColor(Color.WHITE);
-            g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 28f));
-            g.drawString("인물 도감", 65, 60);
+            g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 26f));
+            UiStyle.center(g, selected + " 마을", 123, 49);
             CardArt.panel(g, 290, 18, 470, 62, 18, new Color(255, 255, 255, 235));
             g.setColor(UiStyle.NAVY);
             g.setFont(UiStyle.FONT.deriveFont(15f));

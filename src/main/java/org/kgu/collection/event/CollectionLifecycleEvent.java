@@ -15,5 +15,6 @@ public final class CollectionLifecycleEvent implements LifecycleEvent {
     @Override
     public void onEnter() {
         event.refresh(view);
+        view.showMap();
     }
 }

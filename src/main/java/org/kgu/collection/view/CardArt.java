@@ -188,6 +188,15 @@ public final class CardArt {
         return true;
     }
 
+    void paintMap(Graphics2D g, int w, int h) {
+        Optional<BufferedImage> map = image("ui/map");
+        if (map.isPresent()) {
+            drawCover(g, map.get(), 0, 0, w, h);
+        } else {
+            paintBackground(g, w, h);
+        }
+    }
+
     void paintBackground(Graphics2D g, int w, int h) {
         Optional<BufferedImage> background = image("ui/background");
         if (background.isPresent()) {

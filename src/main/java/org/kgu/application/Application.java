@@ -57,6 +57,7 @@ public class Application {
 
         // 전체/배틀 UI에 필요한 이미지 사전에 로드
         imageManager.register("ui/전체", IMAGE_DIRECTORY.resolve("ui/전체.png"));
+        imageManager.register("ui/map", IMAGE_DIRECTORY.resolve("ui/map.png"));
         imageManager.registerResource("battle/background", "/org/kgu/battle/campus_background.png");
     }
 
