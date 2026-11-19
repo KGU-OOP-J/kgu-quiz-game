@@ -190,16 +190,28 @@ public final class CardArt {
 
     private WaveMap waveMap;
 
-    void paintMap(Graphics2D g, int w, int h, double seconds) {
+    private Optional<WaveMap> waveMap(int w, int h) {
         if (waveMap == null) {
-            Optional<BufferedImage> map = image("ui/map");
-            if (map.isEmpty()) {
-                paintBackground(g, w, h);
-                return;
-            }
-            waveMap = new WaveMap(map.get(), w, h);
+            image("ui/map").ifPresent(map -> waveMap = new WaveMap(map, w, h));
         }
-        g.drawImage(waveMap.frame(seconds), 0, 0, null);
+        return Optional.ofNullable(waveMap);
+    }
+
+    /** 지도 그림이 없으면 마을을 고를 수 없으니 -1. */
+    int villageAt(int x, int y, int w, int h) {
+        return waveMap(w, h).map(map -> map.villageAt(x, y)).orElse(-1);
+    }
+
+    void paintMap(Graphics2D g, int w, int h, double seconds, double[] villageScales) {
+        Optional<WaveMap> map = waveMap(w, h);
+        if (map.isEmpty()) {
+            paintBackground(g, w, h);
+            return;
+        }
+        g.drawImage(map.get().frame(seconds), 0, 0, null);
+        for (int v = 0; v < villageScales.length; v++) {
+            map.get().paintVillage(g, v, villageScales[v]);
+        }
     }
 
     void paintBackground(Graphics2D g, int w, int h) {

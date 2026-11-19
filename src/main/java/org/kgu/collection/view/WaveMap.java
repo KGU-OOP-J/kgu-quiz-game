@@ -34,6 +34,58 @@ final class WaveMap {
         rowShift = new int[h];
         colShift = new int[w];
         shine = new int[w * 2 + h * 3];
+        cutVillages();
+    }
+
+    // 마을 섬 = 섬을 감싼 타원 안의 바다 아닌 픽셀(780×560 기준, images/ui/map.png에 맞춘 값).
+    // 마우스를 올리면 이 조각을 키워 그린다. 지도 그림을 바꾸면 이 값도 다시 맞춰야 한다.
+    private static final double[][] ISLANDS = {
+        {225, 155, 150, 105}, {562, 155, 158, 110}, {192, 395, 152, 125}, {578, 405, 162, 120}};
+    private final BufferedImage[] sprites = new BufferedImage[4], shadows = new BufferedImage[4];
+    private final Rectangle[] bounds = new Rectangle[4];
+
+    int villageAt(int x, int y) {
+        if (x < 0 || y < 0 || x >= w || y >= h || water[y * w + x]) return -1;
+        double fx = x * 780.0 / w, fy = y * 560.0 / h;
+        for (int v = 0; v < ISLANDS.length; v++) {
+            double dx = (fx - ISLANDS[v][0]) / ISLANDS[v][2], dy = (fy - ISLANDS[v][1]) / ISLANDS[v][3];
+            if (dx * dx + dy * dy <= 1) return v;
+        }
+        return -1;
+    }
+
+    private void cutVillages() {
+        BufferedImage[] full = new BufferedImage[4], dark = new BufferedImage[4];
+        for (int v = 0; v < 4; v++) {
+            full[v] = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+            dark[v] = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+        }
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                int v = villageAt(x, y);
+                if (v < 0) continue;
+                full[v].setRGB(x, y, 0xFF000000 | src[y * w + x]);
+                dark[v].setRGB(x, y, 0x55000020);
+                bounds[v] = bounds[v] == null ? new Rectangle(x, y, 1, 1) : bounds[v].union(new Rectangle(x, y, 1, 1));
+            }
+        }
+        for (int v = 0; v < 4; v++) {
+            Rectangle b = bounds[v];
+            sprites[v] = full[v].getSubimage(b.x, b.y, b.width, b.height);
+            shadows[v] = dark[v].getSubimage(b.x, b.y, b.width, b.height);
+        }
+    }
+
+    /** scale 1이면 아무것도 안 그린다. 커질수록 위로 살짝 떠오르고 그림자가 생긴다. */
+    void paintVillage(Graphics2D g, int v, double scale) {
+        if (scale <= 1.001) return;
+        Rectangle b = bounds[v];
+        double lift = (scale - 1) / 0.12;  // 0~1, CollectionView의 최대 배율 1.12 기준
+        int nw = (int) (b.width * scale), nh = (int) (b.height * scale);
+        int nx = b.x + b.width / 2 - nw / 2, ny = b.y + b.height / 2 - nh / 2;
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.drawImage(shadows[v], nx, ny + (int) (10 * lift), nw, nh, null);
+        g.drawImage(sprites[v], nx, ny - (int) (6 * lift), nw, nh, null);
     }
 
     BufferedImage frame(double t) {

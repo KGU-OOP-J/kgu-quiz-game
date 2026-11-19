@@ -27,11 +27,16 @@ public final class CollectionView extends JPanel implements View {
         protected void paintComponent(Graphics source) {
             Graphics2D g = (Graphics2D) source.create();
             UiStyle.prepare(g);
-            art.paintMap(g, getWidth(), getHeight(), (System.nanoTime() - startNanos) / 1e9);
+            for (int v = 0; v < scales.length; v++) {
+                scales[v] += ((v == hovered ? 1.12 : 1.0) - scales[v]) * 0.3;  // 부드럽게 커지고 줄어든다
+            }
+            art.paintMap(g, getWidth(), getHeight(), (System.nanoTime() - startNanos) / 1e9, scales);
             g.dispose();
         }
     };
     private final long startNanos = System.nanoTime();
+    private final double[] scales = {1, 1, 1, 1};
+    private int hovered = -1;
     // 지도가 화면에 보일 때만 바다를 다시 그린다(약 30fps)
     private final Timer waves = new Timer(33, e -> {
         if (map.isShowing()) map.repaint();
@@ -56,20 +61,47 @@ public final class CollectionView extends JPanel implements View {
             String category = VILLAGES[i];
             UiButton button = CardArt.button(category + " 마을", Color.WHITE, 16f, () -> event.selectCategory(this, category));
             button.setBounds(LABELS[i].x, LABELS[i].y, 190, 44);
+            int village = i;
+            button.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    hovered = village;
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    hovered = -1;
+                }
+            });
             villageButtons.put(category, button);
             map.add(button);
         }
         JButton mapMenu = CardArt.button("메인으로", Color.WHITE, 14f, event::returnToMenu);
         mapMenu.setBounds(330, 510, 120, 38);
         map.add(mapMenu);
-        // 이름표 말고 마을 그림 자체를 눌러도 들어간다
-        map.addMouseListener(new MouseAdapter() {
+        // 이름표 말고 마을 섬 자체를 눌러도 들어간다(바다·가운데 광장은 안 눌림)
+        MouseAdapter villageMouse = new MouseAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                hovered = art.villageAt(e.getX(), e.getY(), map.getWidth(), map.getHeight());
+                map.setCursor(Cursor.getPredefinedCursor(hovered < 0 ? Cursor.DEFAULT_CURSOR : Cursor.HAND_CURSOR));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                hovered = -1;
+            }
+
             @Override
             public void mouseClicked(MouseEvent e) {
-                int quadrant = (e.getX() < map.getWidth() / 2 ? 0 : 1) + (e.getY() < map.getHeight() / 2 ? 0 : 2);
-                event.selectCategory(CollectionView.this, VILLAGES[quadrant]);
+                int village = art.villageAt(e.getX(), e.getY(), map.getWidth(), map.getHeight());
+                if (village >= 0) {
+                    event.selectCategory(CollectionView.this, VILLAGES[village]);
+                }
             }
-        });
+        };
+        map.addMouseListener(villageMouse);
+        map.addMouseMotionListener(villageMouse);
         add(map);
 
         list.setOpaque(false);
@@ -104,6 +136,8 @@ public final class CollectionView extends JPanel implements View {
     }
 
     public void showMap() {
+        hovered = -1;
+        java.util.Arrays.fill(scales, 1);
         show(map);
         waves.start();
     }
