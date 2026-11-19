@@ -188,13 +188,18 @@ public final class CardArt {
         return true;
     }
 
-    void paintMap(Graphics2D g, int w, int h) {
-        Optional<BufferedImage> map = image("ui/map");
-        if (map.isPresent()) {
-            drawCover(g, map.get(), 0, 0, w, h);
-        } else {
-            paintBackground(g, w, h);
+    private WaveMap waveMap;
+
+    void paintMap(Graphics2D g, int w, int h, double seconds) {
+        if (waveMap == null) {
+            Optional<BufferedImage> map = image("ui/map");
+            if (map.isEmpty()) {
+                paintBackground(g, w, h);
+                return;
+            }
+            waveMap = new WaveMap(map.get(), w, h);
         }
+        g.drawImage(waveMap.frame(seconds), 0, 0, null);
     }
 
     void paintBackground(Graphics2D g, int w, int h) {

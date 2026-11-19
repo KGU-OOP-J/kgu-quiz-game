@@ -27,10 +27,16 @@ public final class CollectionView extends JPanel implements View {
         protected void paintComponent(Graphics source) {
             Graphics2D g = (Graphics2D) source.create();
             UiStyle.prepare(g);
-            art.paintMap(g, getWidth(), getHeight());
+            art.paintMap(g, getWidth(), getHeight(), (System.nanoTime() - startNanos) / 1e9);
             g.dispose();
         }
     };
+    private final long startNanos = System.nanoTime();
+    // 지도가 화면에 보일 때만 바다를 다시 그린다(약 30fps)
+    private final Timer waves = new Timer(33, e -> {
+        if (map.isShowing()) map.repaint();
+        else ((Timer) e.getSource()).stop();
+    });
     private final Map<String, UiButton> villageButtons = new LinkedHashMap<>();
     private final JPanel list = new JPanel(null);
     private final CardSliderPanel slider;
@@ -99,6 +105,7 @@ public final class CollectionView extends JPanel implements View {
 
     public void showMap() {
         show(map);
+        waves.start();
     }
 
     public void showList() {
