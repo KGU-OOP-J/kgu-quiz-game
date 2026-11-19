@@ -28,7 +28,6 @@ public final class BattleRepository {
         catch (IOException ex) { throw new IllegalStateException("문제 파일을 읽을 수 없습니다: " + field, ex); }
         List<Entry> result = new ArrayList<>();
         BattleCharacter person = null;
-        String info = "";
         List<BattleQuestion> questions = new ArrayList<>();
         int lineNo = 0;
         for (String line : lines) {
@@ -44,7 +43,6 @@ public final class BattleRepository {
                 String id = field + "\t" + cells[0];
                 person = new BattleCharacter(id, cells[0], field,
                         "images/cards/" + cells[0] + "_" + CardSave.starsOf(difficulty) + ".png");
-                info = String.join(" · ", cells[1], cells[2], cells[3], cells[4]);
             } else if (person != null && cells[0].equals(difficulty) && cells.length == 7) {
                 try {
                     int answer = Integer.parseInt(cells[6]) - 1; // Team data uses 1..4.

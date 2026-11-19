@@ -12,7 +12,7 @@ import org.kgu.integration.ui.start.LoginScreen;
 import org.kgu.integration.ui.start.MenuScreen;
 import org.kgu.integration.ui.settings.SettingsScreen;
 import org.kgu.integration.ui.answer.AnswerResultScreen;
-import org.kgu.integration.ui.battle.BattleSetupScreen;
+import org.kgu.integration.ui.battle.BattleFlowPanel;
 
 /** 창과 화면 흐름만 담당하며, 메뉴 데이터 관리는 mgr.Manager에 위임한다. */
 public final class GameNavigator {
@@ -31,8 +31,7 @@ public final class GameNavigator {
     public PlayerSession getSession() { return session; }
     public void showGameSetup() { show(new GameSetupScreen(this)); }
     public void showQuestion() { show(new QuestionScreen(this)); }
-    public void showBattle() { show(new BattleSetupScreen(this)); }
-    public void showBattleResult(org.kgu.battle.BattleEngine engine) { show(new org.kgu.integration.ui.battle.BattleResultScreen(this, engine)); }
+    public void showBattle() { show(new BattleFlowPanel(this)); }
     public void showCollection() { show(new CollectionScreen(this)); }
     public void showSettings() { show(new SettingsScreen(this)); }
     public void showAnswerResult(GameOutcome outcome) { show(new AnswerResultScreen(this, outcome)); }

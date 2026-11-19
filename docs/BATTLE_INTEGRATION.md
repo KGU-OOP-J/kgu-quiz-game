@@ -1,112 +1,57 @@
-# 배틀 페이지 연결 계약
+# 1인 퀴즈 전투 연결 계약
 
-## 이번 구조 정리
-
-`feature/battle-screen` 브랜치 안에서 source set을 분리했습니다.
-별도 test 브랜치를 만들거나 원격 저장소를 수정하지 않았습니다.
-
-### main: 배틀 담당 구현
-
-- `org.kgu.battle.BattleEngine`: 6턴, HP, 공격/방어 판정, 승패, 보상 대상 ID.
-- `BattleCharacter`, `BattleQuestion`: 화면과 전투에 필요한 입력 데이터.
-- `org.kgu.ui.battle.BattleScreen`: 외부에서 준비된 전투를 받아 표시하는 진입점.
-- `BattlePanel`: 그리기, 보기 선택, 제출, 다음 턴, 정보 표시, 메뉴 이벤트.
-- 배틀 배경은 main resources에 포함되어 JAR에서도 읽을 수 있습니다.
-
-배틀 본체에서 로그인 세션, GameNavigator, 도감 API, 파일 문제 로더, 결과 화면을 참조하지 않습니다.
-원래 브랜치의 Main과 mgr 파일은 HEAD의 내용으로 복구하여 팀 공용 코드 변경을 제거했습니다.
-
-### test: 통합 확인 전용
-
-- `org.kgu.integration.IntegrationMain`: 수동 실행 시작점.
-- `org.kgu.integration.ui.*`: 자료3의 시작/도감/문제/정답 화면 참고본과 테스트용 전환 관리자.
-- `org.kgu.integration.ui.battle`: 테스트용 인물 선택 및 배틀 결과 화면.
-- `org.kgu.integration.collection`: 자료3의 도감 저장·조회 참고본.
-- `org.kgu.integration.battle`: 파일 문제 로더, 무작위 상대 선정, 보상 저장 어댑터.
-- `src/test/resources/integration`: 팀 데이터·카드 ZIP·샘플 저장 기록.
-
-테스트 참고본에 별도 integration 패키지를 사용했습니다.
-나중에 `org.kgu.collection` 등 실제 팀 구현을 합쳐도 동일한 클래스 이름이 겹치지 않습니다.
-테스트용 결과 화면과 저장 동작은 기능을 확인하기 위한 예시이며 결과 담당자의 최종 구현을 대체하지 않습니다.
-원본 자료3의 가이드와 파일 출처 목록은 `docs/reference`에 보존했습니다.
-분리 전 소스·문서 백업은 저장소 밖 `../battle-before-test-split.zip`입니다.
-
-## 실제 팀 코드에서 호출하는 방법
-
-문제/설정 담당 코드가 선택한 인물과 문제를 전달합니다.
-각 인물에 해당하는 같은 난이도 문제를 3개 이상 준비합니다.
-문제 데이터 파일의 정답 번호가 1~4라면 BattleQuestion의 answerIndex는 1을 빼서 0~3으로 변환합니다.
+## 진입과 종료
 
 ```java
-BattleEngine engine = new BattleEngine(
-    playerCharacter, opponentCharacter, playerQuestions, opponentQuestions);
-
-JPanel screen = new BattleScreen(
-    engine,
-    finished -> {
-        // 결과 담당 화면으로 전달: finished.result(), playerHp(), computerHp(),
-        // correctCount(), player(), computer(), rewardIds() 등.
-        // 실제 팀의 화면 전환 API를 여기서 호출합니다.
-    },
-    navigator::showMenu
-);
+BattleEngine engine = new BattleEngine(target, questions, requiredCorrect);
+JPanel screen = new BattleScreen(engine, finished -> {
+    // 이 콜백은 자동 진행 완료 시 한 번만 호출됩니다.
+    // finished.won(): 성공 여부
+    // finished.target(): 대상 인물 (ID/이름/분야/이미지 경로)
+    // finished.current().difficulty(): 카드 단계
+    // finished.correctCount(), finished.questionIndex(): 정답/실제 진행 수
+    // finished.remainingHp(): 남은 HP
+    // 여기서 팀의 결과 화면 및 보상 서비스로 전달하세요.
+}, () -> {
+    // 기존 GameNavigator를 통해 메뉴나 맵으로 이동하세요.
+});
 ```
 
-GameNavigator가 위 패널을 기존 창에 넣으면 됩니다. 새 JFrame을 만들지 않습니다.
-기존 임시 화면의 `BattleScreen(GameNavigator)` 생성자와는 다릅니다.
-최종 통합 시 Navigator의 배틀 화면 생성 부분을 이 입력·콜백 계약에 맞추면 됩니다.
-배틀 종료 콜백은 6턴을 완료한 시점에 호출되고, 중간 메뉴 이동은 onExit만 호출합니다.
+실제 화면은 기존 JFrame에 JPanel로 붙입니다. 배틀 화면이 새 JFrame을 만들거나 사용자 파일에 직접 저장하지 않습니다.
 
-## 결과·보상 담당자에게 전달할 내용
+`target`은 교수님·과학자·아이돌·한국사 중 하나입니다. `questions`는 같은 인물·난이도의 문제 목록, 보기 4개, 정답 인덱스 0~3이며 중복 ID는 허용하지 않습니다. 적중 횟수 `requiredCorrect`는 1 이상 문제 수 이하여야 합니다. 기본 정책은 전체 문제 수의 2/3 올림이며 팀의 최종 규칙에 따라 호출자가 별도로 전달할 수 있습니다.
 
-자료2 규칙을 유지했습니다: HP 60, 피해 20, 6턴을 모두 진행, 승리 시 두 인물 카드 보상.
-팀 최종 규칙과 다르면 전투 모델과 테스트를 함께 수정합니다.
+## 자동 진행
 
-보상 저장 책임은 최종 결과 담당자가 가져가면 됩니다. 예시:
+정답 타격 효과 종료 → 1초 표시 → 다음 문제/결과. 오답 → 2.4초 표시 → 다음 문제/결과. 메뉴 이탈·화면 제거 시 효과 타이머와 자동 진행 타이머를 중지합니다.
+
+## 도감·결과 담당 연결
+
+성공 시 `finished.target()`의 인물 한 명과 `finished.current().difficulty()`만 저장합니다. 연습 획득 내역과 스테이지 클리어 기록을 혼용하지 않습니다. 실제 화면 이동과 카드 저장은 호출자 책임입니다.
+
+테스트 어댑터의 연결 예:
 
 ```java
-if (finished.result() == BattleEngine.Result.WIN) {
-    for (BattleCharacter person : List.of(finished.player(), finished.computer())) {
-        CardSave.record(session.getPlayerId(), person.category(), person.name(),
-                        finished.current().difficulty());
-    }
-}
+CardSave.record(playerId, finished.target().category(),
+                finished.target().name(), finished.current().difficulty());
 ```
 
-배틀 본체에서는 CardSave를 호출하지 않습니다. 결과 화면의 저장 호출과 중복되지 않습니다.
-현재 test의 BattleService가 위 연동을 시연하며 중복 방지와 부분 실패 후 재시도를 검사합니다.
-인물 그림은 BattleCharacter.imagePath에 실제 팀의 그림 파일 경로를 전달합니다.
-현재 BattlePanel의 인물 그림 로더는 파일 경로를 사용하며, 배경만 클래스패스 리소스입니다.
+`BattleResultScreen`은 로컬 동작 확인용 배틀 결과 UI입니다. 실제 카드 기록 함수는 Supplier<Boolean>으로 주입하고 실패 시 재시도합니다. 팀 결과 화면의 최종 API가 정해지면 완료 콜백을 그쪽으로 연결하면 됩니다.
 
-## 문제 담당자에게 전달할 내용
+## 이번 변경 경계
 
-현재 test 어댑터는 자료3의 하/중/상, 과학자/교수님/한국사/아이돌 데이터를 사용합니다.
-기존 문제 브랜치의 getQuestions는 인물당 한 문제만 반환하므로,
-실제 연동에서는 분야·난이도·인물별 문제 3개를 제공할 API가 필요합니다.
-팀 API의 실제 타입을 BattleQuestion으로 바꾸는 코드는 통합 지점에서 작성합니다.
+- main: 배틀 도메인과 배틀 UI 패키지만 변경.
+- test: 실제 팀 코드와 분리된 GameSetupScreen, 데이터 로더, 화면 연결 어댑터 변경.
+- 루트: 실행 배치, README, Gradle 테스트 설정 변경.
+- 원본 팀원 저장소는 수정하지 않음.
+- 별도 로컬 통합본의 GameSetupScreen/QuestionRepository 변경은 이 브랜치 PR에 포함되지 않음. 필요하면 해당 담당자와 공유.
 
-## 실행과 저장 위치
+PR에는 배틀 구현뿐 아니라 루트 실행 파일과 테스트 연결부 변경도 명시하세요. 기존 1대1 API는 제거했습니다. `BattleEngine(target, questions, requiredCorrect)`와 `BattleScreen`을 사용합니다. 원격 Commit/Push/PR은 아직 수행하지 않았습니다.
 
-- 수동 확인: `run.bat` 또는 `gradlew.bat runIntegration`.
-- 수동 runtime: `.integration-runtime` (Git 제외, clean 이후에도 보존).
-- 자동 테스트 runtime: `build/battle-test-runtime` (개인 기록과 분리).
-- 일반 build/JAR: main만 포함. 테스트용 시작·도감·결과 클래스는 포함되지 않음.
-- 기존 `gradlew run`은 초기 Main 실행이므로 통합 화면 확인 명령이 아님.
+## 통합 담당자 전달 사항
 
-## Git에 올릴 때
-
-같은 브랜치에서 main은 배틀 구현, test는 재현·통합 확인 자료라고 PR에 설명하면 됩니다.
-main의 타 담당 패키지와 공용 화면 전환 파일을 수정하지 않습니다.
-테스트용 팀 자료가 포함되어 있으므로 PR 설명에 자료3 출처를 명시하세요.
-카드 ZIP 약 62MB는 원본 팀 제공 자료이며 테스트 리소스에 있습니다.
-현재 커밋·push·merge는 실행하지 않았습니다.
-
-## 자료4 디자인 반영
-
-- 배틀 기본 크기를 1280×960으로 변경하고 원본 campus_background.png를 사용합니다.
-- 좌표 클릭 판정을 없애고 실제 Swing 버튼과 ButtonGroup으로 선택/제출/잠금을 처리합니다.
-- HP는 JProgressBar와 Timer로 표시만 보간하고, 실제 HP는 BattleEngine에서 한 번만 변경합니다.
-- 화면 제거/중단 시 타이머를 정지하고 최종 결과 콜백은 한 번만 호출합니다.
-- 배틀 하단에는 힌트/제출/다음 버튼만 배치합니다. 보상 안내는 테스트 결과 화면이 담당합니다.
-- 팀 데이터에 없는 hint/explanation은 비워 두고 미등록 상태를 표시합니다. 정답은 항상 표시합니다.
-- 도감/시작/정답 팀원의 원본 구현은 수정하지 않았습니다. 테스트용 배틀 준비 화면과 문제 변환만 조정했습니다.
+- 현재 기능 브랜치의 준비·전투·결과 화면은 `BattleSetupScreen`, `BattleScreen`, `BattleResultScreen`입니다.
+- 승리 판정은 완료된 `BattleEngine.won()`으로 조회합니다. 이전 1대1 생성자와 공격/방어 API는 더 이상 제공하지 않습니다.
+- 테스트 연결 패널은 `org.kgu.integration.ui.battle.BattleFlowPanel`이며 배포용 공통 UI가 아닙니다. 테스트용 `BattleService`는 완료된 승리에서만 대상 카드 한 장을 저장합니다.
+- 이 변경은 명칭 통일과 이전 전투 구현 정리입니다. `BattleScreen`의 이벤트/자동 진행 분리와 결과 화면의 저장 요청 분리는 후속 리팩토링 대상입니다. 새 아키텍처에 완전히 통합된 상태를 의미하지 않습니다.
+- 통합 경로는 `feature/battle-screen` → `chore/new-architecture`이며, 전체 통합·검증 전에는 `develop`에 신규 기능을 병합하지 않습니다.
