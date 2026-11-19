@@ -35,10 +35,16 @@ public final class CategoryFileFactory extends TextFileFactory<List<PersonFactor
                 Person person = Person.read(in, category);
                 List<Quiz> quizzes = new ArrayList<>();
                 for (Difficulty difficulty : Difficulty.values()) {
-                    for (int i = 0; i < 3; i++) {
+                    for (int i = 0; i < QuizFactory.PER_DIFFICULTY; i++) {
                         Quiz quiz = Quiz.read(in);
                         if (quiz.getDifficulty() != difficulty) {
                             throw new IllegalArgumentException("Expected difficulty: " + difficulty);
+                        }
+                        // 문제 화면에 인물 카드(이름)가 보이므로, 이름이 정답 보기에만 있으면 바로 맞힐 수 있다.
+                        // 순서 맞히기처럼 모든 보기에 이름이 들어간 문제는 괜찮다.
+                        long named = quiz.getChoices().stream().filter(c -> c.contains(person.getName())).count();
+                        if (named == 1 && quiz.getChoices().get(quiz.getAnswer() - 1).contains(person.getName())) {
+                            throw new IllegalArgumentException("Answer must not be the person: " + quiz.getQuestion());
                         }
                         quizzes.add(quiz);
                     }

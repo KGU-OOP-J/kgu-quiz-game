@@ -63,7 +63,9 @@ public final class GameFeature {
         List<Quiz> defense = new ArrayList<>(computer.getQuizFactory().get(difficulty));
         Collections.shuffle(attack, random);
         Collections.shuffle(defense, random);
-        BattleEngine battle = new BattleEngine(player.create(), computer.create(), attack, defense);
+        // 인물마다 난이도별 문제가 BattleEngine 한 판(3문제)보다 많으니 섞은 뒤 앞에서 3개만 쓴다
+        BattleEngine battle = new BattleEngine(player.create(), computer.create(),
+                attack.subList(0, 3), defense.subList(0, 3));
         gameSession = Optional.of(GameSession.battle(category, difficulty, battle));
         navigate.accept(ViewId.QUESTION);
     }
