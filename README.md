@@ -14,7 +14,6 @@
 WSL에서는 이 저장소 폴더에서 Windows 실행기를 호출합니다.
 
 ```bash
-cd "/mnt/c/users/metan/onedrive/desktop/객체지향_팀프로젝트/kgu-quiz-game"
 cmd.exe /c run-battle.bat
 # 로그인, 카테고리 선택과 저장까지 확인하려면:
 cmd.exe /c run.bat
