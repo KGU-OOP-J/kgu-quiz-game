@@ -65,9 +65,9 @@ public final class IntegrationChecks {
             for (PersonFactory person : factory.create()) {
                 check(person.create() == person.create(), "Person identity");
                 check(person.create().getCategory().equals(category), "category metadata");
-                check(person.getQuizFactory().create().size() == 9, "nine quizzes per person");
+                check(person.getQuizFactory().create().size() == 15, "fifteen quizzes per person");
                 for (Difficulty difficulty : Difficulty.values()) {
-                    check(person.getQuizFactory().get(difficulty).size() == 3, "three quizzes per difficulty");
+                    check(person.getQuizFactory().get(difficulty).size() == 5, "five quizzes per difficulty");
                 }
             }
             factory.reload();
