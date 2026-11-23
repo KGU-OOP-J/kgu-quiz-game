@@ -1,17 +1,26 @@
 package org.kgu;
 
-import java.util.Scanner;
+import org.kgu.application.Application;
+
+import javax.swing.*;
+import java.io.IOException;
 
 public class Main {
-    Scanner scan = new Scanner(System.in);
-
-    void mymain() {
-        // 여기에 코드 작성
-        System.out.println("Hello, World!");
-    }
-
     public static void main(String[] args) {
-        Main main = new Main();
-        main.mymain();
+        SwingUtilities.invokeLater(() -> {
+            Application application = new Application();
+
+            try {
+                application.init();
+                application.load();
+                application.start();
+            }
+            catch (IOException e) {
+                application.shutdown();
+                JOptionPane.showMessageDialog(null,
+                    e.getMessage(),
+                    "시작 실패", JOptionPane.ERROR_MESSAGE);
+            }
+        });
     }
 }

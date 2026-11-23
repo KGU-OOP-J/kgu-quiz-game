@@ -1,44 +1,25 @@
-# Java Project Boilerplate
+# 교수님 이름 맞추기
 
-Java 25 기반의 간단한 프로젝트입니다.
+Java Swing으로 만드는 교수님 이름 맞추기 게임입니다.
 
-[Eclipse Temurin® JDK 25 LTS](https://adoptium.net/)를 사용하는 것을 권장합니다.
+## 실행
 
-## 빌드 및 실행
+JDK가 설치된 Windows 환경에서 프로젝트 최상단의 `run.bat`을 더블 클릭하거나, 터미널에서 실행합니다.
 
-저장소를 복제한 뒤 프로젝트 디렉터리로 이동합니다.
-
-```sh
-git clone https://github.com/KGU-OOP-J/java-project-boilerplate.git
-cd java-project-boilerplate
+```cmd
+run.bat
 ```
 
-* **Windows**
+`run.bat`은 모든 Java 소스를 임시 폴더에 컴파일한 뒤 `org.kgu.Main`을 실행합니다. 생성 파일은 Git에 올라가지 않습니다.
 
-```pwsh
-.\gradlew.bat build
-.\gradlew.bat run
-```
+## 화면 담당
 
-* **Linux / macOS**
+- ID 입력·메뉴·게임 준비: `org.kgu.ui.start`
+- 문제 풀이: `org.kgu.ui.question`
+- 교수님 도감: `org.kgu.ui.collection`
+- 설정: `org.kgu.ui.settings`
+- 결과·획득 카드: `org.kgu.ui.result`
+- 화면 전환: `org.kgu.ui.navigation.GameNavigator`
+- 공통 UI: `org.kgu.ui.common`
 
-```sh
-./gradlew build
-./gradlew run
-```
-
-## Project Structure
-
-프로젝트는 Gradle의 표준 디렉터리 구조를 따릅니다.
-
-* `src/main/java/`: Java 소스 코드
-* `src/main/resources/`: 애플리케이션 리소스
-* `src/test/java/`: 테스트 코드
-* `src/test/resources/`: 테스트용 리소스
-
-Java 소스 코드는 `org.kgu` 패키지를 기준으로 작성하며, 테스트 코드는 테스트 대상과 동일한 패키지 구조를 따르는 것을 권장합니다.
-
-## 개발 문서
-
-* [Gradle 사용법 및 실행 설정](docs/GRADLE.md)
-* [코딩 및 협업 규칙](docs/CONTRIBUTING.md)
+자세한 모듈 담당 규칙은 [docs/SCREEN_OWNERSHIP.md](docs/SCREEN_OWNERSHIP.md)를 참고하세요.
