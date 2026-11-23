@@ -23,6 +23,7 @@ public final class GameFeature {
     private final Consumer<ViewId> navigate;
     private final Random random;
     private GameSession gameSession;
+    private Person rescuePerson;
     public GameFeature(PlayerSession playerSession, PersonManager personManager, ImageManager imageManager,
                        SettingFactory settingFactory, Consumer<ViewId> navigate) {
         this(playerSession, personManager, imageManager, settingFactory, navigate, new Random());
@@ -37,6 +38,14 @@ public final class GameFeature {
     public PlayerProgress profile() { return progress().snapshot(); }
     public String playerId() { return playerSession.playerId(); }
     public List<Person> getCandidates(String category) { return factories(category).stream().map(PersonFactory::create).toList(); }
+    public List<Person> getChallengeCandidates(String category) {
+        return getCandidates(category).stream().filter(p -> !category.equals("교수님") || p.getName().equals("이은정")).toList();
+    }
+    public boolean categoryUnlocked(String category) { return !category.equals("교수님") || profile().professorUnlocked(); }
+    private void requireCategory(String category) {
+        if (!categoryUnlocked(category)) throw new IllegalArgumentException("교수님 구출 잠김 — 다른 분야의 서로 다른 문제 "
+            + profile().rescueProgress() + "/" + PlayerProgress.PROFESSOR_REQUIRED + "개 정답이 필요합니다.");
+    }
     public List<Person> ownedCards() {
         return personManager.getAll().stream().map(PersonFactory::create)
             .filter(p -> playerSession.saveFactory().create().isCollected(p.getCategory(), p.getName())).toList();
@@ -52,6 +61,7 @@ public final class GameFeature {
         progress().equip(CardPower.key(person));
     }
     public void startPractice(String category, Difficulty difficulty) {
+        requireCategory(category);
         List<QuestionBank.Entry> pool = bank(category).stream().filter(e -> e.difficulty() == difficulty).toList();
         List<QuestionBank.Entry> entries = QuestionBank.choose(pool, 10, profile(), random, true);
         if (entries.size() < 10) throw new IllegalArgumentException("연습 모드에는 인물 10명 이상이 필요합니다.");
@@ -60,7 +70,7 @@ public final class GameFeature {
     public void startReview() {
         Set<String> wrongIds = profile().wrongQuestions();
         List<QuestionBank.Entry> wrong = QuestionBank.all(personManager.getAll()).stream()
-            .filter(e -> wrongIds.contains(e.id())).toList();
+            .filter(e -> wrongIds.contains(e.id()) && categoryUnlocked(e.person().getCategory())).toList();
         List<QuestionBank.Entry> entries = QuestionBank.choose(wrong, 10, profile(), random, false);
         if (entries.isEmpty()) throw new IllegalArgumentException("저장된 오답이 없습니다. 먼저 연습이나 배틀에 도전하세요.");
         gameSession = GameSession.practice("오답 노트", entries.getFirst().difficulty(), entries, true); navigate.accept(ViewId.QUESTION);
@@ -68,9 +78,12 @@ public final class GameFeature {
     /** The selected person is now the challenge target, not an unowned playable character. */
     public void startBattle(String category, Difficulty difficulty, Person target) { startChallenge(category, difficulty, target, false); }
     public void startChallenge(String category, Difficulty difficulty, Person target, boolean boss) {
-        if (!getCandidates(category).contains(target)) throw new IllegalArgumentException("도전할 인물을 선택하세요.");
+        requireCategory(category);
+        if (!getChallengeCandidates(category).contains(target)) throw new IllegalArgumentException("도전할 인물을 선택하세요. 최종 교수님 구출 대상은 이은정 교수님입니다.");
+        if (category.equals("교수님")) boss = true;
         if (boss && !profile().bossUnlocked(category)) throw new IllegalArgumentException("이 마을의 서로 다른 인물 3명에게 승리하면 보스가 열립니다.");
-        List<QuestionBank.Entry> pool = bank(category).stream().filter(e -> e.difficulty() == difficulty && (boss || e.person() == target)).toList();
+        boolean mixed = boss && !category.equals("교수님");
+        List<QuestionBank.Entry> pool = bank(category).stream().filter(e -> e.difficulty() == difficulty && (mixed || e.person() == target)).toList();
         List<QuestionBank.Entry> entries = QuestionBank.choose(pool, boss ? 8 : 5, profile(), random, false);
         Person support = equippedCard().orElseGet(() -> new Person(category, "견습 탐험가", List.of("나만의 탐험", "카드를 모으세요", "스킬을 활용하세요", "마을을 탐험하세요")));
         BattleEngine battle = new BattleEngine(support, target, entries.stream().map(QuestionBank.Entry::quiz).toList(),
@@ -83,7 +96,7 @@ public final class GameFeature {
     }
     public void selectAnswer(int answer) { getSession().selectAnswer(answer); }
     private void recordAnswer(boolean correct) {
-        try { progress().answer(getSession().currentEntry().id(), correct); }
+        try { progress().answer(getSession().currentEntry().id(), getSession().currentEntry().person().getCategory(), correct); }
         catch (IOException e) { throw new UncheckedIOException("답안 기록을 저장하지 못했습니다. 다시 제출하세요.", e); }
     }
     public boolean submitAnswer() {
@@ -109,8 +122,27 @@ public final class GameFeature {
     }
     public void finishBattle() {
         if (getSession().getBattle().phase() != BattleEngine.Phase.FINISHED) throw new IllegalStateException("전투를 먼저 끝내세요.");
+        try {
+            if (hasRescueDialogue()) {
+                saveRewards();
+                if (beginRescueDialogue()) return;
+            }
+        } catch (IOException ignored) { }
         navigate.accept(ViewId.RESULT);
     }
+    private boolean hasRescueDialogue() {
+        return gameSession != null && gameSession.getMode() == GameSession.Mode.BATTLE
+            && gameSession.getPhase() == GameSession.Phase.FINISHED
+            && gameSession.getBattle().result() == BattleEngine.Result.WIN
+            && !gameSession.dialoguePlayed() && gameSession.getBattle().computer().hasDialogue();
+    }
+    public boolean beginRescueDialogue() {
+        if (!hasRescueDialogue()) return false;
+        rescuePerson = gameSession.getBattle().computer(); gameSession.markDialoguePlayed();
+        navigate.accept(ViewId.DIALOGUE); return true;
+    }
+    public Person rescuePerson() { return Objects.requireNonNull(rescuePerson, "구출 대사가 없습니다."); }
+    public void finishDialogue() { rescuePerson = null; navigate.accept(ViewId.RESULT); }
     /** Card persistence and profile settlement are independently idempotent, so retry is safe. */
     public List<Person> saveRewards() throws IOException {
         GameSession s = getSession(); List<Person> added = new ArrayList<>();
@@ -141,7 +173,9 @@ public final class GameFeature {
             .contains(person.getCategory(), person.getName(), getSession().getDifficulty())).toList();
     }
     public String nextGoal() {
-        for (String category : org.kgu.application.Application.CATEGORIES) {
+        if (!profile().professorUnlocked()) return "최종 구출 해금 · 다른 분야 문제 " + profile().rescueProgress() + "/" + PlayerProgress.PROFESSOR_REQUIRED + "개 정답";
+        if (!profile().professorRescued()) return "최종 구출 해금 완료! 교수님 마을에서 이은정 교수님을 구출하세요.";
+        for (String category : org.kgu.application.Application.CATEGORIES.stream().filter(c -> !c.equals("교수님")).toList()) {
             if (!profile().bossUnlocked(category)) return category + " 마을: 서로 다른 인물 " + profile().cleared(category) + "/3 승리 → 보스 해금";
             if (profile().keys("stage.boss." + category + "|").isEmpty()) return category + " 마을 보스에 도전하세요!";
         }

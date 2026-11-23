@@ -38,7 +38,7 @@ public final class CollectionFeature {
     }
 
     public List<Person> getPersons(String category) {
-        var persons = personManager.getAll().stream().map(PersonFactory::create);
+        var persons = personManager.getAll().stream().map(PersonFactory::create).filter(person -> categoryAvailable(person.getCategory()));
 
         if (category.equals(ALL)) {
             return persons.sorted(Comparator.comparingInt(this::getHighestStage).reversed())
@@ -47,6 +47,9 @@ public final class CollectionFeature {
 
         return persons.filter(person -> person.getCategory().equals(category)).toList();
     }
+
+    public boolean categoryAvailable(String category) { return !category.equals("교수님") || playerSession.saveFactory().progress().snapshot().professorUnlocked(); }
+    public int rescueProgress() { return playerSession.saveFactory().progress().snapshot().rescueProgress(); }
 
     public List<Integer> getStages(Person person) {
         return playerSession.saveFactory().create().getStages(person.getCategory(), person.getName());

@@ -23,16 +23,21 @@ public final class CollectionGUIEvent {
     }
 
     public void selectCategory(CollectionView view, String category) {
+        if (!categoryAvailable(category)) { view.showGateNotice(rescueProgress()); return; }
         this.category = category;
         refresh(view);
         view.showList();
     }
 
     public void openPerson(CollectionView view, Person person) {
+        if (!categoryAvailable(person.getCategory())) { view.showGateNotice(rescueProgress()); return; }
         List<Person> owned = collectionFeature.getPersons(category).stream().filter(collectionFeature::isCollected)
             .toList();
         view.showPerson(person, owned);
     }
+
+    public boolean categoryAvailable(String category) { return collectionFeature.categoryAvailable(category); }
+    public int rescueProgress() { return collectionFeature.rescueProgress(); }
 
     public List<Integer> getStages(Person person) {
         return collectionFeature.getStages(person);

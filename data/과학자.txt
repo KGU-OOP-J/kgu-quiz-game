@@ -318,3 +318,27 @@
 상	튜링이 논문에서 제안한 보편 기계 개념은 어떤 해에 발표되었는가?	1928년	1945년	1936년	1950년	3
 상	튜링이 영국 국립물리연구소(NPL)에서 설계한 컴퓨터는?	ENIAC	UNIVAC	ACE	EDVAC	3
 상	튜링이 세상을 떠난 해는?	1945년	1960년	1936년	1954년	4
+@dialogue	알베르트 아인슈타인	1
+EXAMPLE 1
+EXAMPLE 2
+EXAMPLE 3
+0
+@dialogue	아이작 뉴턴	0
+@dialogue	마리 퀴리	0
+@dialogue	갈릴레오 갈릴레이	0
+@dialogue	찰스 다윈	0
+@dialogue	니콜라 테슬라	0
+@dialogue	토머스 에디슨	0
+@dialogue	스티븐 호킹	0
+@dialogue	레오나르도 다빈치	0
+@dialogue	루이 파스퇴르	0
+@dialogue	그레고어 멘델	0
+@dialogue	마이클 패러데이	0
+@dialogue	요하네스 케플러	0
+@dialogue	니콜라우스 코페르니쿠스	0
+@dialogue	로잘린드 프랭클린	0
+@dialogue	리처드 파인만	0
+@dialogue	제임스 와트	0
+@dialogue	알렉산더 플레밍	0
+@dialogue	제인 구달	0
+@dialogue	앨런 튜링	0

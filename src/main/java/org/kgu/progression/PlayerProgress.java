@@ -41,7 +41,13 @@ public final class PlayerProgress {
             .map(k -> k.substring(0, k.lastIndexOf('|'))).distinct().count();
     }
     public int totalStars() { return keys("stage.").stream().mapToInt(this::number).sum(); }
-    public boolean bossUnlocked(String category) { return cleared(category) >= 3; }
+    public static final int PROFESSOR_REQUIRED = 30;
+    public int rescueProgress() { return (int)keys("solved.external.").stream().filter(this::flag).count(); }
+    public boolean professorUnlocked() { return rescueProgress() >= PROFESSOR_REQUIRED; }
+    public boolean professorRescued() {
+        return keys("stage.boss.교수님|이은정|").stream().anyMatch(k -> number(k) > 0);
+    }
+    public boolean bossUnlocked(String category) { return category.equals("교수님") ? professorUnlocked() : cleared(category) >= 3; }
     public int bossWins() { return (int) keys("stage.boss.").stream().filter(k -> number(k) > 0).count(); }
     public String equipped() { return text("equipped"); }
     public int inventory(ShopItem item) { return number("item." + item.name()); }

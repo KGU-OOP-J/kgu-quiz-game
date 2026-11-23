@@ -318,3 +318,27 @@
 상	김구의 활동을 시기별로 바르게 설명한 것은?	일제강점기에 동북 9성을 축성하고 광복 뒤 규장각을 설치하였다	1919년에 하얼빈 의거를 일으키고 광복 뒤 신간회를 창립하였다	일제강점기에 6·10만세운동을 지휘하고 광복 이후 한국광복군을 창설했다	일제강점기 한인애국단 활동, 광복 후 김규식과 남북 협상이 이어졌다	4
 상	1949년 김구를 암살한 인물은?	염장	김재규	안두희	이완용	3
 상	김구가 이끈 임시정부가 일본에 선전포고한 해는?	1932년	1945년	1919년	1941년	4
+@dialogue	근초고왕	0
+@dialogue	광개토대왕	1
+EXAMPLE 1
+EXAMPLE 2
+EXAMPLE 3
+0
+@dialogue	장수왕	0
+@dialogue	진흥왕	0
+@dialogue	선덕여왕	0
+@dialogue	김유신	0
+@dialogue	대조영	0
+@dialogue	장보고	0
+@dialogue	왕건	0
+@dialogue	광종	0
+@dialogue	서희	0
+@dialogue	강감찬	0
+@dialogue	공민왕	0
+@dialogue	세종	0
+@dialogue	이순신	0
+@dialogue	정조	0
+@dialogue	정약용	0
+@dialogue	안중근	0
+@dialogue	유관순	0
+@dialogue	김구	0

@@ -5,11 +5,12 @@ import org.kgu.game.feature.BattleEngine;
 import org.kgu.progression.ShopItem;
 import org.kgu.ui.battle.ImpactCard;
 import org.kgu.window.UiStyle;
+import org.kgu.window.UiButton;
+import org.kgu.window.GameTheme;
 import javax.swing.*;
 import java.awt.*;
 import java.util.EnumMap;
 
-/** The integrated battle UI: tactical rules plus the battle branch's hit-card effects. */
 public final class BattlePanel extends JPanel {
     private final BattleEngine engine;
     private final BattleGUIEvent event;
@@ -24,12 +25,11 @@ public final class BattlePanel extends JPanel {
     private final JProgressBar playerHp, targetHp;
     private final ImpactCard portrait;
     private final Timer animation = new Timer(16, e -> animate());
-    private final Image background = new ImageIcon(BattlePanel.class.getResource("/org/kgu/battle/campus_background.png")).getImage();
 
     public BattlePanel(BattleEngine engine, BattleGUIEvent event, Runnable onFinish, Runnable onMenu) {
         this.engine = engine; this.event = event; this.onFinish = onFinish;
         setLayout(new BorderLayout(15, 12)); setBorder(BorderFactory.createEmptyBorder(18, 28, 18, 28));
-        JPanel header = panel(new GridLayout(0, 1, 4, 6));
+        JPanel header = GameTheme.panel(new GridLayout(0, 1, 4, 6)); header.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
         header.add(progress); header.add(intent); header.add(resources);
         JPanel bars = panel(new GridLayout(1, 2, 20, 0));
         playerHp = hp(engine.maxPlayerHp()); targetHp = hp(engine.maxComputerHp()); bars.add(playerHp); bars.add(targetHp); header.add(bars);
@@ -39,9 +39,9 @@ public final class BattlePanel extends JPanel {
         portrait.setPreferredSize(new Dimension(300, 400)); arena.add(portrait, BorderLayout.WEST);
         JPanel qa = panel(new BorderLayout(0, 12));
         question.setEditable(false); question.setLineWrap(true); question.setWrapStyleWord(true);
-        question.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 25f)); question.setForeground(UiStyle.NAVY);
-        question.setBackground(new Color(248, 252, 255)); question.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
-        JScrollPane questionScroll = new JScrollPane(question); questionScroll.setPreferredSize(new Dimension(600, 135)); qa.add(questionScroll, BorderLayout.NORTH);
+        question.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 25f)); question.setForeground(GameTheme.PAPER);
+        question.setBackground(GameTheme.DARK); question.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+        JScrollPane questionScroll = GameTheme.scroll(question); questionScroll.setPreferredSize(new Dimension(600, 135)); qa.add(questionScroll, BorderLayout.NORTH);
         JPanel optionPanel = panel(new GridLayout(4, 1, 0, 9));
         for (int i = 0; i < 4; i++) {
             final int index = i; choices[i] = button("", "choice" + i);
@@ -49,7 +49,7 @@ public final class BattlePanel extends JPanel {
             bind("choice" + i, KeyStroke.getKeyStroke((char) ('1' + i)), () -> choices[index].doClick());
         }
         qa.add(optionPanel, BorderLayout.CENTER); arena.add(qa, BorderLayout.CENTER); add(arena, BorderLayout.CENTER);
-        JPanel bottom = panel(new GridLayout(0, 1, 0, 7)); bottom.add(feedback);
+        JPanel bottom = GameTheme.panel(new GridLayout(0, 1, 0, 7)); bottom.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14)); bottom.add(feedback);
         JPanel actionRow = panel(new GridLayout(1, 3, 10, 0));
         for (BattleEngine.Action action : BattleEngine.Action.values()) {
             JButton b = button(action.label(), "action" + action.name()); b.setToolTipText(action.description());
@@ -96,7 +96,7 @@ public final class BattlePanel extends JPanel {
     public void refresh() {
         if (engine.phase() == BattleEngine.Phase.FINISHED) { submit.setEnabled(false); next.setEnabled(false); return; }
         boolean asking = engine.phase() == BattleEngine.Phase.QUESTION;
-        progress.setText((engine.boss() ? "마을 보스 · " : "인물 도전 · ") + engine.computer().getName() + "  |  기회 " + Math.min(engine.turn() + 1, engine.questionCount()) + "/" + engine.questionCount());
+        progress.setText((engine.computer().getCategory().equals("교수님") ? "최종 구출 · " : engine.boss() ? "마을 보스 · " : "인물 도전 · ") + engine.computer().getName() + "  |  기회 " + Math.min(engine.turn() + 1, engine.questionCount()) + "/" + engine.questionCount());
         intent.setText("상대 예고: " + engine.intent());
         resources.setText("자원 " + engine.energy() + "/10 · 콤보 " + engine.combo() + " · " + engine.power().title() + " / " + engine.power().description());
         playerHp.setString("내 HP " + engine.playerHp() + "/" + engine.maxPlayerHp());
@@ -105,9 +105,11 @@ public final class BattlePanel extends JPanel {
         for (int i = 0; i < 4; i++) {
             choices[i].setText("<html>" + (i + 1) + ". " + escape(engine.current().getChoices().get(i)) + "</html>");
             choices[i].setEnabled(asking && !engine.eliminated().contains(i));
+            choices[i].putClientProperty("selected", engine.selected() == i);
+            choices[i].putClientProperty("correct", !asking && i == engine.current().getAnswer() - 1);
             choices[i].setBackground(!asking && i == engine.current().getAnswer() - 1 ? new Color(185, 244, 202) : engine.selected() == i ? new Color(173, 216, 255) : Color.WHITE);
         }
-        actions.forEach((a, b) -> { b.setEnabled(asking); b.setBackground(engine.action() == a ? new Color(173, 216, 255) : Color.WHITE); });
+        actions.forEach((a, b) -> { b.setEnabled(asking); b.putClientProperty("selected", engine.action() == a); b.repaint(); });
         skills.forEach((s, b) -> { b.setEnabled(asking); b.setText(b.getText().split(" \\[자원")[0] + " [자원 " + engine.skillCost(s) + "]"); });
         items.forEach((i, b) -> { b.setEnabled(asking); b.setText(i.label() + " ×" + event.profile().inventory(i)); });
         submit.setEnabled(asking); next.setEnabled(engine.phase() == BattleEngine.Phase.FEEDBACK);
@@ -115,11 +117,11 @@ public final class BattlePanel extends JPanel {
     }
     private static String escape(String text) { return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"); }
     private static JPanel panel(LayoutManager layout) { JPanel p = new JPanel(layout); p.setOpaque(false); return p; }
-    private static JLabel label(String text, int size) { JLabel l = new JLabel(text); l.setFont(UiStyle.FONT.deriveFont(Font.BOLD, (float)size)); l.setForeground(UiStyle.NAVY); return l; }
-    private static JButton button(String text, String name) { JButton b = new JButton(text); b.setName(name); b.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 17f)); b.setBackground(Color.WHITE); return b; }
+    private static JLabel label(String text, int size) { JLabel l = new JLabel(text); l.setFont(UiStyle.FONT.deriveFont(Font.BOLD, (float)size)); l.setForeground(GameTheme.PAPER); return l; }
+    private static JButton button(String text, String name) { JButton b = new UiButton(text, GameTheme.TEAL); b.setName(name); b.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 17f)); b.setBackground(Color.WHITE); return b; }
     private static JProgressBar hp(int maximum) { JProgressBar b = new JProgressBar(0, maximum); b.setValue(maximum); b.setStringPainted(true); b.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 17f)); b.setPreferredSize(new Dimension(200, 30)); return b; }
     private void bind(String name, KeyStroke key, Runnable action) { getInputMap(WHEN_IN_FOCUSED_WINDOW).put(key, name); getActionMap().put(name, new AbstractAction() { @Override public void actionPerformed(java.awt.event.ActionEvent e) { action.run(); } }); }
     public void stopAnimation() { animation.stop(); }
     @Override public void removeNotify() { stopAnimation(); super.removeNotify(); }
-    @Override protected void paintComponent(Graphics g) { super.paintComponent(g); g.drawImage(background, 0, 0, getWidth(), getHeight(), this); }
+    @Override protected void paintComponent(Graphics source) { Graphics2D g = (Graphics2D)source.create(); UiStyle.prepare(g); GameTheme.backdrop(g, getWidth(), getHeight(), "battle", 0.82f); g.dispose(); }
 }

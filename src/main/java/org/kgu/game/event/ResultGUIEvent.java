@@ -12,6 +12,7 @@ public final class ResultGUIEvent {
     public void refresh(ResultView view){
         try{
             gameFeature.saveRewards();
+            if (gameFeature.beginRescueDialogue()) return;
             view.display(gameFeature.getSession(),gameFeature.getSavedRewards(),gameFeature.getSession().receipt() + "<br>다음 목표: " + gameFeature.nextGoal(),false);
         }catch(IOException e){
             view.display(gameFeature.getSession(),gameFeature.getSavedRewards(),"보상 저장 실패: "+e.getMessage(),true);

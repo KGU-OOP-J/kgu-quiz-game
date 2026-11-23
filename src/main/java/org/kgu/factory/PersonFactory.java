@@ -12,7 +12,7 @@ public final class PersonFactory extends Factory<Person> {
         Objects.requireNonNull(person);
 
         this.person = person.getCategory().equals(category) ? person
-                : new Person(category, person.getName(), person.getInformation());
+                : new Person(category, person.getName(), person.getInformation(), person.hasDialogue(), person.getDialogue());
         this.quizFactory = Objects.requireNonNull(quizFactory);
     }
 

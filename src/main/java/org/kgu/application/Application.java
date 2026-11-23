@@ -41,6 +41,8 @@ public class Application {
 
     private final Path dataDirectory;
     private final Path imageDirectory;
+    private final Path prologuePath;
+    private org.kgu.story.feature.PrologueFeature prologue;
 
     private final CategoryFileManager categoryManager = CategoryFileManager.getInstance();
     private final PersonManager personManager = PersonManager.getInstance();
@@ -52,6 +54,7 @@ public class Application {
     public Application(Path runtimeDirectory) {
         dataDirectory = runtimeDirectory.resolve("data");
         imageDirectory = runtimeDirectory.resolve("images");
+        prologuePath = runtimeDirectory.resolve("prologue-dialog.txt");
         settingFactory = new SettingFactory(runtimeDirectory.resolve("settings.properties"), new Setting());
     }
 
@@ -88,19 +91,27 @@ public class Application {
                 }
             }
         }
+        prologue = new org.kgu.story.feature.PrologueFeature(prologuePath, () -> mainWindow.show(ViewId.LOGIN));
     }
 
     public void start() {
+        org.kgu.story.event.PrologueGUIEvent prologueEvent = new org.kgu.story.event.PrologueGUIEvent(java.util.Objects.requireNonNull(prologue));
+        org.kgu.story.view.PrologueView prologueView = new org.kgu.story.view.PrologueView(prologueEvent);
+        mainWindow.register(prologueView, new org.kgu.story.event.PrologueLifecycleEvent(prologueView, prologueEvent));
         LoginView loginView = new LoginView();
         LoginFeature loginFeature = new LoginFeature(this::startPlayer);
         mainWindow.register(loginView, new LoginLifecycleEvent(loginView, new LoginGUIEvent(loginView, loginFeature)));
-        mainWindow.show(ViewId.LOGIN);
+        mainWindow.show(ViewId.PROLOGUE);
     }
 
     private void startPlayer(PlayerSession playerSession) {
         mainWindow.clearPlayerViews();
         Consumer<ViewId> navigate = mainWindow::show;
         GameFeature gameFeature = new GameFeature(playerSession, personManager, imageManager, settingFactory, navigate);
+        org.kgu.story.feature.DialogueFeature dialogueFeature = new org.kgu.story.feature.DialogueFeature(gameFeature::rescuePerson, gameFeature::finishDialogue);
+        org.kgu.story.event.DialogueGUIEvent dialogueEvent = new org.kgu.story.event.DialogueGUIEvent(dialogueFeature, gameFeature::image);
+        org.kgu.story.view.DialogueView dialogueView = new org.kgu.story.view.DialogueView(dialogueEvent);
+        mainWindow.register(dialogueView, new org.kgu.story.event.DialogueLifecycleEvent(dialogueView, dialogueEvent));
         MenuFeature menuFeature = new MenuFeature(gameFeature, navigate);
         CollectionFeature collectionFeature = new CollectionFeature(personManager, imageManager, playerSession, navigate);
         SettingFeature settingFeature = new SettingFeature(settingFactory, navigate);

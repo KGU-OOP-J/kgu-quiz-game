@@ -8,12 +8,21 @@ public final class Person {
     private final String category;
     private final String name;
     private final List<String> information;
+    private final boolean hasDialogue;
+    private final List<String> dialogue;
 
     public Person(String name, List<String> information) {
         this("", name, information);
     }
 
     public Person(String category, String name, List<String> information) {
+        this(category, name, information, false, List.of());
+    }
+
+    public Person(String category, String name, List<String> information, boolean hasDialogue, List<String> dialogue) {
+        this.hasDialogue = hasDialogue;
+        this.dialogue = List.copyOf(dialogue);
+        if (hasDialogue == dialogue.isEmpty()) throw new IllegalArgumentException("대사 플래그와 대본이 일치하지 않습니다.");
         this.category = Objects.requireNonNull(category);
         this.name = Objects.requireNonNull(name);
         this.information = List.copyOf(information);
@@ -36,6 +45,9 @@ public final class Person {
         }
         return new Person(category, fields[0], List.of(fields[1], fields[2], fields[3], fields[4]));
     }
+
+    public boolean hasDialogue() { return hasDialogue; }
+    public List<String> getDialogue() { return dialogue; }
 
     public String getCategory() {
         return category;

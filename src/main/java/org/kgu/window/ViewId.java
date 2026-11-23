@@ -8,5 +8,7 @@ public enum ViewId {
     COLLECTION,
     SETTING,
     ADVENTURE,
-    TUTORIAL
+    TUTORIAL,
+    PROLOGUE,
+    DIALOGUE
 }

@@ -318,3 +318,27 @@
 상	다음 중 영케이의 그룹·그룹 데뷔 연도·기획사가 모두 일치하는 것은?	Wanna One / 2017년 / YY엔터테인먼트	투모로우바이투게더 / 2019년 / 빅히트 뮤직	방탄소년단 / 2013년 / 빅히트 뮤직	DAY6 / 2015년 / JYP엔터테인먼트	4
 상	DAY6 '녹아내려요'의 발매 연도와 멜론 TOP100 첫 1위 기록을 모두 올바르게 고른 것은?	2024년 / 데뷔 8년 만	2024년 / 데뷔 9년 만	2023년 / 데뷔 8년 만	2023년 / 데뷔 9년 만	2
 상	영케이의 그룹 데뷔 앨범과 정식 데뷔 날짜를 모두 올바르게 고른 것은?	WHO! / 2015년 9월 7일	The Day / 2023년 5월 30일	The Day / 2015년 9월 7일	WHO! / 2023년 5월 30일	3
+@dialogue	장원영	1
+EXAMPLE 1
+EXAMPLE 2
+EXAMPLE 3
+0
+@dialogue	카리나	0
+@dialogue	김채원	0
+@dialogue	미연	0
+@dialogue	설윤	0
+@dialogue	아이찡	0
+@dialogue	유나	0
+@dialogue	원이	0
+@dialogue	이안	0
+@dialogue	원희	0
+@dialogue	정국	0
+@dialogue	연준	0
+@dialogue	원빈	0
+@dialogue	최산	0
+@dialogue	박지훈	0
+@dialogue	건호	0
+@dialogue	뷔	0
+@dialogue	신유	0
+@dialogue	명재현	0
+@dialogue	영케이	0

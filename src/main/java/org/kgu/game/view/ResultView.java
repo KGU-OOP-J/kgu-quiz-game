@@ -95,7 +95,7 @@ public final class ResultView extends JPanel implements View {
         hp.removeAll();
         if (session.getMode() == GameSession.Mode.BATTLE) {
             BattleEngine battle = session.getBattle();
-            title.setText("최종 배틀 결과");
+            title.setText(battle.computer().getCategory().equals("교수님") && battle.result() == BattleEngine.Result.WIN ? "이은정 교수님 구출 완료" : "최종 배틀 결과");
             String result = battle.result() == BattleEngine.Result.WIN ? "승리" : battle.result() == BattleEngine.Result.LOSE ? "패배" : "무승부";
             verdict.setText(result);
             if (battle.result() == BattleEngine.Result.WIN) verdict.setForeground(new Color(255, 222, 154));
@@ -244,7 +244,7 @@ public final class ResultView extends JPanel implements View {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        g.drawImage(background, 0, 0, getWidth(), getHeight(), this);
+        org.kgu.window.GameTheme.asset("scene-result").ifPresentOrElse(image -> org.kgu.window.GameTheme.cover((Graphics2D)g, image, 0, 0, getWidth(), getHeight()), () -> g.drawImage(background, 0, 0, getWidth(), getHeight(), this));
     }
     private static final class GlossyHpBar extends JPanel {
         private final int MAX_HP;

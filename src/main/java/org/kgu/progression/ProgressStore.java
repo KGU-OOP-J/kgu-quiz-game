@@ -75,10 +75,14 @@ public final class ProgressStore {
             p.flag("achievement." + achievement.name(), true); p.add("coins", achievement.reward());
         });
     }
-    public void answer(String questionId, boolean correct) throws IOException {
+    public void answer(String questionId, boolean correct) throws IOException { answer(questionId, "", correct); }
+    public void answer(String questionId, String category, boolean correct) throws IOException {
         update(p -> {
             p.add("attempts", 1);
-            if (correct) { p.add("correct", 1); p.values.remove("wrong." + questionId); }
+            if (correct) {
+                p.add("correct", 1); p.values.remove("wrong." + questionId);
+                if (Set.of("과학자", "한국사", "아이돌").contains(category)) p.flag("solved.external." + questionId, true);
+            }
             else p.flag("wrong." + questionId, true);
             LinkedList<String> recent = new LinkedList<>(p.recentQuestions());
             recent.remove(questionId); recent.addFirst(questionId);

@@ -9,13 +9,11 @@ import org.kgu.window.*;
 import javax.swing.*;
 import java.awt.*;
 
-/** Responsive practice layout adapted from the QuestionScreen branch. */
 public final class QuestionView extends JPanel implements View {
     private final QuestionGUIEvent event;
     private final BattleGUIEvent battleEvent;
     private final CardArt art;
     private BattlePanel battlePanel;
-    private final Image background = new ImageIcon(QuestionView.class.getResource("/images/question-background.png")).getImage();
     public QuestionView(QuestionGUIEvent event, BattleGUIEvent battleEvent) { this.event = event; this.battleEvent = battleEvent; art = new CardArt(event::image); }
     public void display() {
         stopAnimations(); battlePanel = null;
@@ -41,11 +39,12 @@ public final class QuestionView extends JPanel implements View {
         JPanel qa = clear(new BorderLayout(0, 16));
         JTextArea question = new JTextArea(s.getCurrentQuiz().getQuestion()); question.setEditable(false); question.setLineWrap(true); question.setWrapStyleWord(true);
         question.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 28f)); question.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
-        question.setForeground(UiStyle.NAVY); JScrollPane scroll = new JScrollPane(question); scroll.setPreferredSize(new Dimension(600, 155)); qa.add(scroll, BorderLayout.NORTH);
+        question.setForeground(GameTheme.PAPER); question.setBackground(GameTheme.DARK); JScrollPane scroll = GameTheme.scroll(question); scroll.setPreferredSize(new Dimension(600, 155)); qa.add(scroll, BorderLayout.NORTH);
         JPanel options = clear(new GridLayout(4, 1, 0, 12));
         for (int i = 0; i < 4; i++) {
-            int answer = i + 1; JButton b = new JButton("<html>" + answer + ". " + escape(s.getCurrentQuiz().getChoices().get(i)) + "</html>");
+            int answer = i + 1; JButton b = new UiButton("<html>" + answer + ". " + escape(s.getCurrentQuiz().getChoices().get(i)) + "</html>", GameTheme.TEAL);
             b.setName("practiceChoice" + i); b.setFont(UiStyle.FONT.deriveFont(23f)); b.setEnabled(asking);
+            b.putClientProperty("selected", answer == s.getSelectedAnswer()); b.putClientProperty("correct", !asking && answer == s.getCurrentQuiz().getAnswer());
             b.setBackground(!asking && answer == s.getCurrentQuiz().getAnswer() ? new Color(185, 245, 205) : answer == s.getSelectedAnswer() ? new Color(177, 218, 255) : Color.WHITE);
             b.addActionListener(e -> { event.select(answer); showPractice(); }); options.add(b);
             bind("answer" + i, KeyStroke.getKeyStroke((char)('1' + i)), b::doClick);
@@ -60,14 +59,14 @@ public final class QuestionView extends JPanel implements View {
         buttons.add(hint); buttons.add(action); buttons.add(button("연습 그만", () -> event.giveUp(this))); bottom.add(buttons); add(bottom, BorderLayout.SOUTH);
         bind("submit", KeyStroke.getKeyStroke("ENTER"), action::doClick); revalidate(); repaint();
     }
-    private JButton button(String text, Runnable action) { JButton b = new JButton(text); b.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 22f)); b.addActionListener(e -> action.run()); return b; }
+    private JButton button(String text, Runnable action) { JButton b = new UiButton(text, GameTheme.TEAL); b.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 22f)); b.addActionListener(e -> action.run()); return b; }
     private void bind(String name, KeyStroke key, Runnable action) { getInputMap(WHEN_IN_FOCUSED_WINDOW).put(key, name); getActionMap().put(name, new AbstractAction() { @Override public void actionPerformed(java.awt.event.ActionEvent e) { action.run(); } }); }
     private static String escape(String text) { return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"); }
     private static JPanel clear(LayoutManager layout) { JPanel p = new JPanel(layout); p.setOpaque(false); return p; }
-    private static JLabel label(String text, int size) { JLabel l = new JLabel(text); l.setFont(UiStyle.FONT.deriveFont(Font.BOLD, (float)size)); l.setForeground(UiStyle.NAVY); return l; }
+    private static JLabel label(String text, int size) { JLabel l = new JLabel(text); l.setFont(UiStyle.FONT.deriveFont(Font.BOLD, (float)size)); l.setForeground(GameTheme.PAPER); return l; }
     public void stopAnimations() { if (battlePanel != null) battlePanel.stopAnimation(); }
     @Override public ViewId getViewId() { return ViewId.QUESTION; }
     @Override public JComponent getComponent() { return this; }
     @Override public Dimension getViewSize() { return new Dimension(1280, 960); }
-    @Override protected void paintComponent(Graphics g) { super.paintComponent(g); g.drawImage(background, 0, 0, getWidth(), getHeight(), this); }
+    @Override protected void paintComponent(Graphics source) { Graphics2D g = (Graphics2D)source.create(); UiStyle.prepare(g); GameTheme.backdrop(g, getWidth(), getHeight(), "study", 0.84f); g.dispose(); }
 }

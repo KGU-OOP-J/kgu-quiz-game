@@ -318,3 +318,27 @@
 상	김민홍 교수님의 학위 순서(학사 → 석사 → 박사)로 맞는 것은?	고려대 → 한양대 → 아주대	한양대 → 고려대 → 아주대	아주대 → 고려대 → 한양대	한양대 → 아주대 → 고려대	2
 상	김민홍 교수님의 학위 전공 순서(학사 → 석사 → 박사)로 맞는 것은?	경영학 → 원자력학 → 전자계산학	전자계산학 → 경영학 → 원자력학	원자력학 → 경영학 → 전자계산학	원자력학 → 전자계산학 → 경영학	3
 상	김민홍 교수님이 2005년 발표한 메신저 프레임워크의 확장 방식은?	블록체인 기반	양자 회로 기반	하드웨어 교체 기반	플러그인 기반	4
+@dialogue	권기현	0
+@dialogue	김인철	0
+@dialogue	이은정	1
+EXAMPLE 1
+EXAMPLE 2
+EXAMPLE 3
+0
+@dialogue	권준희	0
+@dialogue	안진호	0
+@dialogue	김남기	0
+@dialogue	김희열	0
+@dialogue	이병대	0
+@dialogue	배상원	0
+@dialogue	정경용	0
+@dialogue	안준호	0
+@dialogue	이재흥	0
+@dialogue	김도훈	0
+@dialogue	임현기	0
+@dialogue	윤익준	0
+@dialogue	이정빈	0
+@dialogue	서왕덕	0
+@dialogue	이한용	0
+@dialogue	나관상	0
+@dialogue	김민홍	0

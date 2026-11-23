@@ -24,6 +24,9 @@ public final class GameSession {
     private int questionIndex, selectedAnswer, correctCount, hints;
     private Phase phase = Phase.QUESTION;
     private String receipt = "";
+    private boolean dialoguePlayed;
+    public boolean dialoguePlayed() { return dialoguePlayed; }
+    public void markDialoguePlayed() { dialoguePlayed = true; }
     private GameSession(Mode mode, String category, Difficulty difficulty, List<QuestionBank.Entry> entries, BattleEngine battle) {
         this.mode = mode; this.category = category; this.difficulty = difficulty; this.entries = List.copyOf(entries); this.battle = battle;
         if (entries.isEmpty()) throw new IllegalArgumentException("출제할 문제가 없습니다.");

@@ -1,50 +1,34 @@
 package org.kgu.login.view;
 
-import org.kgu.window.UiButton;
-import org.kgu.window.UiStyle;
-import org.kgu.window.View;
-import org.kgu.window.ViewId;
+import org.kgu.window.*;
 import javax.swing.*;
-import javax.swing.border.*;
 import java.awt.*;
 
-/** Design-only login view. Events and login logic remain outside this class. */
 public final class LoginView extends JPanel implements View {
-    private static final int WIDTH = 1280, HEIGHT = 960;
-    private final Image campus = new ImageIcon(LoginView.class.getResource("/org/kgu/login/main_login.png")).getImage();
     private final JTextField playerId = new JTextField();
-    private final UiButton login = new UiButton("게임 시작", new Color(31, 133, 240));
+    private final JButton login = new UiButton("여정 시작하기", GameTheme.TEAL);
 
     public LoginView() {
-        setLayout(null); setOpaque(false);
-        playerId.setBounds(795, 480, 340, 58);
-        playerId.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 21f));
-        playerId.setBorder(new CompoundBorder(new LineBorder(new Color(112, 163, 215), 2, true), new EmptyBorder(3, 18, 3, 18)));
-        add(playerId);
-        login.setBounds(795, 565, 340, 66);
-        login.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 24f));
-        login.setForeground(Color.WHITE); add(login);
+        setLayout(new BorderLayout(50, 30)); setBorder(BorderFactory.createEmptyBorder(80, 75, 80, 75));
+        JPanel introduction = GameTheme.clear(new GridBagLayout());
+        JPanel story = GameTheme.clear(new GridLayout(0, 1, 0, 22));
+        story.add(GameTheme.label("A QUIZ ADVENTURE", 18, GameTheme.GOLD));
+        story.add(GameTheme.label("졸업을 향한", 45, GameTheme.PAPER)); story.add(GameTheme.label("마지막 여정", 52, GameTheme.PAPER));
+        story.add(GameTheme.label("사라진 교수님, 멈춰 버린 졸업.", 21, GameTheme.MUTED));
+        story.add(GameTheme.label("당신의 지식으로 구출 경로를 열어 보세요.", 18, GameTheme.MUTED)); introduction.add(story); add(introduction, BorderLayout.CENTER);
+        JPanel right = GameTheme.clear(new GridBagLayout()); right.setPreferredSize(new Dimension(420, 500));
+        JPanel form = GameTheme.panel(new BorderLayout(0, 28)); form.setPreferredSize(new Dimension(420, 390)); form.setBorder(BorderFactory.createEmptyBorder(35, 30, 35, 30));
+        JPanel heading = GameTheme.clear(new GridLayout(2, 1, 0, 12)); heading.add(GameTheme.label("TRAVELER'S RECORD", 16, GameTheme.GOLD)); heading.add(GameTheme.label("탐험가 이름", 29, GameTheme.PAPER)); form.add(heading, BorderLayout.NORTH);
+        JPanel input = GameTheme.clear(new BorderLayout(0, 12)); input.add(GameTheme.label("개인 ID", 17, GameTheme.MUTED), BorderLayout.NORTH);
+        playerId.setFont(UiStyle.FONT.deriveFont(23f)); playerId.setForeground(GameTheme.PAPER); playerId.setCaretColor(GameTheme.GOLD); playerId.setPreferredSize(new Dimension(350, 55)); input.add(playerId, BorderLayout.CENTER);
+        input.add(GameTheme.label("이 이름으로 수집 기록과 진행 상황을 불러옵니다.", 13, GameTheme.MUTED), BorderLayout.SOUTH); form.add(input);
+        login.setPreferredSize(new Dimension(350, 58)); login.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 22f)); form.add(login, BorderLayout.SOUTH); right.add(form); add(right, BorderLayout.EAST);
     }
     public String getPlayerId() { return playerId.getText(); }
     public JTextField getIdField() { return playerId; }
     public JButton getLoginButton() { return login; }
+    @Override protected void paintComponent(Graphics source) { Graphics2D g = (Graphics2D)source.create(); UiStyle.prepare(g); GameTheme.backdrop(g, getWidth(), getHeight(), "login", 0.74f); g.dispose(); }
     @Override public ViewId getViewId() { return ViewId.LOGIN; }
     @Override public JComponent getComponent() { return this; }
-    @Override public Dimension getViewSize() { return new Dimension(WIDTH, HEIGHT); }
-
-    @Override protected void paintComponent(Graphics source) {
-        super.paintComponent(source); Graphics2D g = (Graphics2D) source.create(); UiStyle.prepare(g);
-        g.drawImage(campus, 0, 0, getWidth(), getHeight(), null);
-        glass(g, 755, 310, 420, 420, 36);
-        g.setColor(new Color(24, 117, 220)); g.fillRoundRect(795, 345, 340, 44, 24, 24);
-        g.setColor(Color.WHITE); g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 18f)); UiStyle.center(g, "PERSON QUIZ LOGIN", 965, 374);
-        g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 18f)); g.setColor(new Color(45, 81, 124)); UiStyle.center(g, "개인 ID를 입력하고 시작하세요.", 965, 430);
-        g.setColor(UiStyle.NAVY); g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 18f)); g.drawString("개인 ID", 795, 462);
-        g.setFont(UiStyle.FONT.deriveFont(13f)); g.setColor(new Color(65, 105, 145)); g.drawString("입력한 ID로 카드 수집 기록이 저장됩니다.", 800, 684);
-        g.dispose();
-    }
-    private static void glass(Graphics2D g, int x, int y, int w, int h, int arc) {
-        g.setPaint(new GradientPaint(x, y, new Color(255,255,255,244), x, y+h, new Color(220,239,255,232))); g.fillRoundRect(x,y,w,h,arc,arc);
-        g.setColor(new Color(255,255,255,230)); g.setStroke(new BasicStroke(2f)); g.drawRoundRect(x,y,w,h,arc,arc);
-    }
+    @Override public Dimension getViewSize() { return new Dimension(1280, 960); }
 }

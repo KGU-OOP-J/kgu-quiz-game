@@ -37,6 +37,11 @@ public final class CollectionView extends JPanel implements View {
                 scales[v] += ((v == hovered ? 1.12 : 1.0) - scales[v]) * 0.3;  // 부드럽게 커지고 줄어든다
             }
             art.paintMap(g, getWidth(), getHeight(), (System.nanoTime() - startNanos) / 1e9, scales);
+            if (!event.categoryAvailable("교수님")) {
+                org.kgu.window.GameTheme.paintSurface(g, 55, 24, getWidth() - 110, 64, 18, false);
+                g.setColor(org.kgu.window.GameTheme.GOLD); g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 24f));
+                UiStyle.center(g, gateNotice.isBlank() ? "최종 구출 해금 · 다른 분야 문제 " + event.rescueProgress() + "/30 정답" : gateNotice, getWidth() / 2, 65);
+            }
             g.dispose();
         }
     };
@@ -56,6 +61,8 @@ public final class CollectionView extends JPanel implements View {
     private int collectedPersons;
     private int totalPersons;
     private int collectedStages;
+    private String gateNotice = "";
+    public void showGateNotice(int solved) { gateNotice = "교수님 마을 잠김 · 다른 분야 문제 " + solved + "/30 정답이 필요합니다."; showMap(); }
     private java.util.function.Consumer<String> adventure = category -> { };
     public void configureAdventure(java.util.function.Consumer<String> open) { adventure = open; }
     public void stopAnimations() { waves.stop(); }
@@ -78,7 +85,7 @@ public final class CollectionView extends JPanel implements View {
             button.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseEntered(MouseEvent e) {
-                    hovered = village;
+                    hovered = event.categoryAvailable(category) ? village : -1;
                 }
 
                 @Override
@@ -99,6 +106,7 @@ public final class CollectionView extends JPanel implements View {
             @Override
             public void mouseMoved(MouseEvent e) {
                 hovered = art.villageAt(e.getX(), e.getY(), map.getWidth(), map.getHeight());
+                if (hovered >= 0 && !event.categoryAvailable(VILLAGES[hovered])) hovered = -1;
                 map.setCursor(Cursor.getPredefinedCursor(hovered < 0 ? Cursor.DEFAULT_CURSOR : Cursor.HAND_CURSOR));
             }
 
@@ -172,8 +180,10 @@ public final class CollectionView extends JPanel implements View {
         this.collectedPersons = collectedPersons;
         this.totalPersons = totalPersons;
         this.collectedStages = collectedStages;
-        villageButtons.forEach((category, button) -> button.setText(
-            category + " 마을 " + event.getCollectedCount(category) + "/" + event.getPersonCount(category)));
+        villageButtons.forEach((category, button) -> {
+            boolean available = event.categoryAvailable(category); button.setEnabled(available);
+            button.setText(available ? category + " 마을 " + event.getCollectedCount(category) + "/" + event.getPersonCount(category) : "교수님 잠김 " + event.rescueProgress() + "/30");
+        });
         slider.setPersons(persons);
         repaint();
     }

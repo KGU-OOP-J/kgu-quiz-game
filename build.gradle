@@ -20,6 +20,10 @@ application {
     mainClass = 'org.kgu.Main'
 }
 
+tasks.named('processResources') {
+    from('prologue-dialog.txt') { into 'org/kgu/story' }
+}
+
 // Team pages/data are test fixtures and never enter the production source set.
 def fixtureDir = layout.projectDirectory.dir('src/test/resources/integration')
 def integrationDir = layout.projectDirectory.dir('.integration-runtime')
