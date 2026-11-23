@@ -22,7 +22,7 @@ public final class CollectionView extends JPanel implements View {
     // WaveMap.ISLANDS와 같은 순서(지도의 왼쪽 위, 오른쪽 위, 왼쪽 아래, 오른쪽 아래 섬)
     private static final String[] VILLAGES = {"과학자", "교수님", "한국사", "아이돌"};
     private static final int LOCKED = java.util.Arrays.asList(VILLAGES).indexOf(CollectionGUIEvent.LOCKED_VILLAGE);
-    private static final double UNLOCK_SECONDS = 1.8;
+    private static final double UNLOCK_SECONDS = 2.4;
     private static final Point[] LABELS = {new Point(120, 200), new Point(480, 200), new Point(110, 470), new Point(480, 470)};
     // 배치는 처음 만든 780x560 좌표로 하고, 로그인·메뉴·대전과 같은 1280x960 창에 맞게 한 번에 늘린다.
     private static final int WIDTH = 1280, HEIGHT = 960;

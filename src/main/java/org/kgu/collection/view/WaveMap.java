@@ -41,7 +41,7 @@ final class WaveMap {
     // 마우스를 올리면 이 조각을 키워 그린다. 지도 그림을 바꾸면 이 값도 다시 맞춰야 한다.
     private static final double[][] ISLANDS = {
         {225, 155, 150, 105}, {562, 155, 158, 110}, {192, 395, 152, 125}, {578, 405, 162, 120}};
-    private final BufferedImage[] sprites = new BufferedImage[4], shadows = new BufferedImage[4];
+    private final BufferedImage[] sprites = new BufferedImage[4], shadows = new BufferedImage[4], auras = new BufferedImage[4];
     private final Rectangle[] bounds = new Rectangle[4];
 
     int villageAt(int x, int y) {
@@ -95,6 +95,23 @@ final class WaveMap {
         d.setComposite(AlphaComposite.SrcOver.derive(Math.min(1f, dim)));
         Rectangle b = bounds[v];
         for (int i = 0; i < 2; i++) d.drawImage(shadows[v], b.x, b.y, null);  // 그림자 한 장은 옅어서 겹쳐 그린다
+        d.dispose();
+    }
+
+    /** 잠긴 마을 섬에 섬 모양대로 보랏빛 어둠을 입힌다. */
+    void auraVillage(Graphics2D g, int v, float alpha) {
+        if (alpha <= 0) return;
+        if (auras[v] == null) {
+            auras[v] = new BufferedImage(sprites[v].getWidth(), sprites[v].getHeight(), BufferedImage.TYPE_INT_ARGB);
+            for (int y = 0; y < auras[v].getHeight(); y++) {
+                for (int x = 0; x < auras[v].getWidth(); x++) {
+                    if ((sprites[v].getRGB(x, y) >>> 24) != 0) auras[v].setRGB(x, y, 0xFF3A0E5C);
+                }
+            }
+        }
+        Graphics2D d = (Graphics2D) g.create();
+        d.setComposite(AlphaComposite.SrcOver.derive(Math.min(1f, alpha)));
+        d.drawImage(auras[v], bounds[v].x, bounds[v].y, null);
         d.dispose();
     }
 
