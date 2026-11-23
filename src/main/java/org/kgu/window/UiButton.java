@@ -2,12 +2,16 @@ package org.kgu.window;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 
 /**
  * 단일색·1px 테두리·1px 글자 윤곽선을 가진 재사용 버튼.
  */
 public final class UiButton extends JButton {
     private final Color color;
+    private float pressOffset;
+    private final Timer releaseAnimation;
 
     public UiButton(String text, Color color) {
         super(text);
@@ -16,12 +20,30 @@ public final class UiButton extends JButton {
         setBorderPainted(false);
         setContentAreaFilled(false);
         setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        releaseAnimation = new Timer(15, event -> {
+            pressOffset = Math.max(0f, pressOffset - 0.75f);
+            repaint();
+            if (pressOffset == 0f) ((Timer) event.getSource()).stop();
+        });
+        addMouseListener(new MouseAdapter() {
+            @Override public void mousePressed(MouseEvent event) {
+                if (!isEnabled() || !SwingUtilities.isLeftMouseButton(event)) return;
+                releaseAnimation.stop();
+                pressOffset = 3f;
+                repaint();
+            }
+
+            @Override public void mouseReleased(MouseEvent event) {
+                if (pressOffset > 0f) releaseAnimation.start();
+            }
+        });
     }
 
     @Override
     protected void paintComponent(Graphics source) {
         Graphics2D g = (Graphics2D) source.create();
         UiStyle.prepare(g);
+        g.translate(0, Math.round(pressOffset));
         g.setColor(getModel().isPressed() ? color.darker() : color);
         g.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
         g.setColor(color.darker());

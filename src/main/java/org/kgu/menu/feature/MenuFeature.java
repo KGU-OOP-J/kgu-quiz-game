@@ -38,4 +38,8 @@ public final class MenuFeature {
     public void openSetting() {
         navigate.accept(ViewId.SETTING);
     }
+
+    public void returnToLogin() {
+        navigate.accept(ViewId.LOGIN);
+    }
 }

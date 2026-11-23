@@ -4,72 +4,47 @@ import org.kgu.window.UiButton;
 import org.kgu.window.UiStyle;
 import org.kgu.window.View;
 import org.kgu.window.ViewId;
-
 import javax.swing.*;
-import javax.swing.border.CompoundBorder;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
+import javax.swing.border.*;
 import java.awt.*;
 
+/** Design-only login view. Events and login logic remain outside this class. */
 public final class LoginView extends JPanel implements View {
+    private static final int WIDTH = 1280, HEIGHT = 960;
+    private final Image campus = new ImageIcon(LoginView.class.getResource("/org/kgu/login/main_login.png")).getImage();
     private final JTextField playerId = new JTextField();
-    private final UiButton login = new UiButton("시작하기", new Color(36, 126, 238));
+    private final UiButton login = new UiButton("게임 시작", new Color(31, 133, 240));
 
     public LoginView() {
-        setLayout(null);
-        playerId.setBounds(245, 300, 290, 52);
-        playerId.setFont(UiStyle.FONT.deriveFont(20f));
-        playerId.setBorder(new CompoundBorder(new LineBorder(new Color(180, 190, 202), 1, true),
-            new EmptyBorder(2, 15, 2, 10)));
+        setLayout(null); setOpaque(false);
+        playerId.setBounds(795, 480, 340, 58);
+        playerId.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 21f));
+        playerId.setBorder(new CompoundBorder(new LineBorder(new Color(112, 163, 215), 2, true), new EmptyBorder(3, 18, 3, 18)));
         add(playerId);
-        login.setBounds(245, 385, 290, 62);
-        login.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 23f));
-        login.setForeground(Color.WHITE);
-        add(login);
+        login.setBounds(795, 565, 340, 66);
+        login.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 24f));
+        login.setForeground(Color.WHITE); add(login);
     }
+    public String getPlayerId() { return playerId.getText(); }
+    public JTextField getIdField() { return playerId; }
+    public JButton getLoginButton() { return login; }
+    @Override public ViewId getViewId() { return ViewId.LOGIN; }
+    @Override public JComponent getComponent() { return this; }
+    @Override public Dimension getViewSize() { return new Dimension(WIDTH, HEIGHT); }
 
-    public String getPlayerId() {
-        return playerId.getText();
-    }
-
-    public JTextField getIdField() {
-        return playerId;
-    }
-
-    public JButton getLoginButton() {
-        return login;
-    }
-
-    @Override
-    public ViewId getViewId() {
-        return ViewId.LOGIN;
-    }
-
-    @Override
-    public JComponent getComponent() {
-        return this;
-    }
-
-    @Override
-    public Dimension getViewSize() {
-        return new Dimension(UiStyle.WIDTH, UiStyle.HEIGHT);
-    }
-
-    @Override
-    protected void paintComponent(Graphics source) {
-        super.paintComponent(source);
-        Graphics2D g = (Graphics2D) source.create();
-        UiStyle.prepare(g);
-        g.setColor(new Color(245, 248, 252));
-        g.fillRect(0, 0, getWidth(), getHeight());
-        UiStyle.round(g, 170, 135, 440, 345, 16, Color.WHITE);
-        g.setColor(UiStyle.NAVY);
-        g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 38f));
-        UiStyle.center(g, "WHO’S NEXT?", 390, 210);
-        g.setFont(UiStyle.FONT.deriveFont(18f));
-        UiStyle.center(g, "개인 ID를 입력하고 시작하세요.", 390, 248);
-        g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 18f));
-        g.drawString("개인 ID", 245, 285);
+    @Override protected void paintComponent(Graphics source) {
+        super.paintComponent(source); Graphics2D g = (Graphics2D) source.create(); UiStyle.prepare(g);
+        g.drawImage(campus, 0, 0, getWidth(), getHeight(), null);
+        glass(g, 755, 310, 420, 420, 36);
+        g.setColor(new Color(24, 117, 220)); g.fillRoundRect(795, 345, 340, 44, 24, 24);
+        g.setColor(Color.WHITE); g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 18f)); UiStyle.center(g, "PERSON QUIZ LOGIN", 965, 374);
+        g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 18f)); g.setColor(new Color(45, 81, 124)); UiStyle.center(g, "개인 ID를 입력하고 시작하세요.", 965, 430);
+        g.setColor(UiStyle.NAVY); g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 18f)); g.drawString("개인 ID", 795, 462);
+        g.setFont(UiStyle.FONT.deriveFont(13f)); g.setColor(new Color(65, 105, 145)); g.drawString("입력한 ID로 카드 수집 기록이 저장됩니다.", 800, 684);
         g.dispose();
+    }
+    private static void glass(Graphics2D g, int x, int y, int w, int h, int arc) {
+        g.setPaint(new GradientPaint(x, y, new Color(255,255,255,244), x, y+h, new Color(220,239,255,232))); g.fillRoundRect(x,y,w,h,arc,arc);
+        g.setColor(new Color(255,255,255,230)); g.setStroke(new BasicStroke(2f)); g.drawRoundRect(x,y,w,h,arc,arc);
     }
 }
