@@ -21,6 +21,8 @@ import java.util.Map;
 public final class CollectionView extends JPanel implements View {
     // WaveMap.ISLANDS와 같은 순서(지도의 왼쪽 위, 오른쪽 위, 왼쪽 아래, 오른쪽 아래 섬)
     private static final String[] VILLAGES = {"과학자", "교수님", "한국사", "아이돌"};
+    private static final int LOCKED = java.util.Arrays.asList(VILLAGES).indexOf(CollectionGUIEvent.LOCKED_VILLAGE);
+    private static final double UNLOCK_SECONDS = 1.8;
     private static final Point[] LABELS = {new Point(120, 200), new Point(480, 200), new Point(110, 470), new Point(480, 470)};
     // 배치는 처음 만든 780x560 좌표로 하고, 로그인·메뉴·대전과 같은 1280x960 창에 맞게 한 번에 늘린다.
     private static final int WIDTH = 1280, HEIGHT = 960;
@@ -36,13 +38,19 @@ public final class CollectionView extends JPanel implements View {
             for (int v = 0; v < scales.length; v++) {
                 scales[v] += ((v == hovered ? 1.12 : 1.0) - scales[v]) * 0.3;  // 부드럽게 커지고 줄어든다
             }
-            art.paintMap(g, getWidth(), getHeight(), (System.nanoTime() - startNanos) / 1e9, scales);
+            double unlock = locked ? 0 : unlockStart < 0 ? 1 : Math.min(1, (System.nanoTime() - unlockStart) / 1e9 / UNLOCK_SECONDS);
+            art.paintMap(g, getWidth(), getHeight(), (System.nanoTime() - startNanos) / 1e9, scales, LOCKED, unlock, lockHint);
             g.dispose();
         }
     };
     private final long startNanos = System.nanoTime();
     private final double[] scales = {1, 1, 1, 1};
     private int hovered = -1;
+    private boolean locked;
+    // shortcut: 잠김→열림을 이 실행 안에서 지도에서 본 경우에만 풀리는 모션이 나온다(저장하지 않음). 꼭 한 번 보여 줘야 하면 세이브에 기록할 것.
+    private boolean wasLocked;
+    private long unlockStart = -1;
+    private String lockHint = "";
     // 지도가 화면에 보일 때만 바다를 다시 그린다(약 30fps)
     private final Timer waves = new Timer(33, e -> {
         if (map.isShowing()) map.repaint();
@@ -68,13 +76,13 @@ public final class CollectionView extends JPanel implements View {
         map.setBounds(0, 0, 780, 560);
         for (int i = 0; i < VILLAGES.length; i++) {
             String category = VILLAGES[i];
-            UiButton button = CardArt.button(category + " 마을", Color.WHITE, 16f, () -> event.selectCategory(this, category));
+            UiButton button = CardArt.button(villageName(category) + " 마을", Color.WHITE, 16f, () -> event.selectCategory(this, category));
             button.setBounds(LABELS[i].x, LABELS[i].y, 190, 44);
             int village = i;
             button.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mouseEntered(MouseEvent e) {
-                    hovered = village;
+                    hovered = openOrNone(village);
                 }
 
                 @Override
@@ -92,7 +100,7 @@ public final class CollectionView extends JPanel implements View {
         MouseAdapter villageMouse = new MouseAdapter() {
             @Override
             public void mouseMoved(MouseEvent e) {
-                hovered = art.villageAt(e.getX(), e.getY(), map.getWidth(), map.getHeight());
+                hovered = openOrNone(art.villageAt(e.getX(), e.getY(), map.getWidth(), map.getHeight()));
                 map.setCursor(Cursor.getPredefinedCursor(hovered < 0 ? Cursor.DEFAULT_CURSOR : Cursor.HAND_CURSOR));
             }
 
@@ -165,7 +173,7 @@ public final class CollectionView extends JPanel implements View {
         this.totalPersons = totalPersons;
         this.collectedStages = collectedStages;
         villageButtons.forEach((category, button) -> button.setText(
-            category + " 마을 " + event.getCollectedCount(category) + "/" + event.getPersonCount(category)));
+            villageName(category) + " 마을 " + event.getCollectedCount(category) + "/" + event.getPersonCount(category)));
         slider.setPersons(persons);
         repaint();
     }
@@ -173,6 +181,11 @@ public final class CollectionView extends JPanel implements View {
     /** 마을 지도를 보여 주고 바다 물결을 움직인다. */
     public void showMap() {
         hovered = -1;
+        locked = !event.isVillageOpen(CollectionGUIEvent.LOCKED_VILLAGE);
+        if (wasLocked && !locked) unlockStart = System.nanoTime();
+        wasLocked = locked;
+        lockHint = String.join(" · ", CollectionGUIEvent.KEY_VILLAGES.stream()
+            .map(c -> c + " " + event.getCollectedCount(c) + "/" + (event.getPersonCount(c) + 1) / 2).toList()) + " 모으면 열려요";
         java.util.Arrays.fill(scales, 1);
         show(map);
         waves.start();
@@ -192,6 +205,15 @@ public final class CollectionView extends JPanel implements View {
     public void showPerson(Person person, List<Person> owned) {
         detail.display(person, owned);
         show(detail);
+    }
+
+    /** 도감에서는 교수님 분야를 "경기대"로 부른다(분야 데이터 이름은 그대로). */
+    private static String villageName(String category) {
+        return CollectionGUIEvent.LOCKED_VILLAGE.equals(category) ? "경기대" : category;
+    }
+
+    private int openOrNone(int village) {
+        return village >= 0 && event.isVillageOpen(VILLAGES[village]) ? village : -1;
     }
 
     private void show(JPanel page) {
@@ -228,7 +250,7 @@ public final class CollectionView extends JPanel implements View {
             CardArt.gradientRound(g, 16, 22, 214, 54, 30, new Color(44, 80, 140), new Color(22, 46, 92));
             g.setColor(Color.WHITE);
             g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 26f));
-            UiStyle.center(g, selected + " 마을", 123, 49);
+            UiStyle.center(g, villageName(selected) + " 마을", 123, 49);
             CardArt.panel(g, 290, 18, 470, 62, 18, new Color(255, 255, 255, 235));
             g.setColor(UiStyle.NAVY);
             g.setFont(UiStyle.FONT.deriveFont(15f));

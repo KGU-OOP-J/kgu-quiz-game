@@ -23,6 +23,7 @@ public final class CollectionGUIEvent {
     }
 
     public void selectCategory(CollectionView view, String category) {
+        if (!isVillageOpen(category)) return;
         this.category = category;
         refresh(view);
         view.showList();
@@ -48,6 +49,18 @@ public final class CollectionGUIEvent {
 
     public long getCollectedCount(String category) {
         return collectionFeature.getPersons(category).stream().filter(collectionFeature::isCollected).count();
+    }
+
+    /** 교수님(경기대) 마을을 여는 분야. 이 분야들에서 각각 인물 절반 이상을 모아야 한다. */
+    public static final String LOCKED_VILLAGE = "교수님";
+    public static final List<String> KEY_VILLAGES = List.of("과학자", "한국사", "아이돌");
+
+    /**
+     * 마을에 들어갈 수 있는지. 교수님 마을은 과학자·한국사·아이돌에서 각각 인물을 절반 이상(별 개수 상관없이 1장이라도 모은 인물) 모아야 열린다.
+     */
+    public boolean isVillageOpen(String category) {
+        return !LOCKED_VILLAGE.equals(category)
+            || KEY_VILLAGES.stream().allMatch(key -> getCollectedCount(key) * 2 >= getPersonCount(key));
     }
 
     public Optional<BufferedImage> image(String key) {

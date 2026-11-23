@@ -202,7 +202,12 @@ public final class CardArt {
         return waveMap(w, h).map(map -> map.villageAt(x, y)).orElse(-1);
     }
 
-    void paintMap(Graphics2D g, int w, int h, double seconds, double[] villageScales) {
+    /**
+     * @param lockedVillage 자물쇠를 그릴 마을 번호(없으면 -1)
+     * @param unlock 0이면 잠김, 0~1이면 자물쇠가 풀리는 중, 1이면 다 열림
+     * @param hint 잠겨 있을 때 자물쇠 아래에 보여 줄 여는 조건
+     */
+    void paintMap(Graphics2D g, int w, int h, double seconds, double[] villageScales, int lockedVillage, double unlock, String hint) {
         Optional<WaveMap> map = waveMap(w, h);
         if (map.isEmpty()) {
             paintBackground(g, w, h);
@@ -212,6 +217,63 @@ public final class CardArt {
         for (int v = 0; v < villageScales.length; v++) {
             map.get().paintVillage(g, v, villageScales[v]);
         }
+        if (lockedVillage < 0 || unlock >= 1) return;
+        map.get().dimVillage(g, lockedVillage, (float) (1 - phase(unlock, 0.4, 1)));
+        Rectangle b = map.get().villageBounds(lockedVillage);
+        float s = w / 780f;
+        int cx = b.x + b.width / 2, cy = b.y + b.height * 3 / 10;
+        if (unlock <= 0) {  // 자물쇠 바로 아래, 마을 이름표보다 위
+            g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 12f * s));
+            int tw = g.getFontMetrics().stringWidth(hint) + Math.round(24 * s), th = Math.round(26 * s), ty = cy + Math.round(38 * s);
+            UiStyle.round(g, cx - tw / 2, ty, tw, th, th, new Color(16, 28, 56, 220));
+            g.setColor(Color.WHITE);
+            UiStyle.center(g, hint, cx, ty + th / 2 + g.getFontMetrics().getAscent() / 2 - Math.round(2 * s));
+        }
+        drawBigLock(g, cx, cy, s, unlock);
+    }
+
+    /** t가 from~to 구간에서 0→1로 가는 값(구간 밖은 0 또는 1). */
+    private static double phase(double t, double from, double to) {
+        return Math.max(0, Math.min(1, (t - from) / (to - from)));
+    }
+
+    /** 마을 위의 큰 자물쇠. 풀릴 때: 흔들림(0~0.25) → 고리가 튀어 올라 열림(0.25~0.55) → 커지며 사라지고 빛 고리가 퍼짐(0.55~1). */
+    private static void drawBigLock(Graphics2D source, int cx, int cy, float s, double t) {
+        Graphics2D g = (Graphics2D) source.create();
+        double shake = t < 0.25 ? Math.sin(t * 80) * 0.14 * (1 - t / 0.25) : 0;
+        double open = phase(t, 0.25, 0.55), fade = phase(t, 0.55, 1);
+        if (fade > 0) {
+            int r = Math.round((40 + 140 * (float) fade) * s);
+            g.setColor(new Color(255, 236, 150, (int) (200 * (1 - fade))));
+            g.setStroke(new BasicStroke(6 * s * (float) (1 - fade) + 1));
+            g.drawOval(cx - r, cy - r, r * 2, r * 2);
+        }
+        g.setComposite(AlphaComposite.SrcOver.derive((float) (1 - fade)));
+        g.translate(cx, cy);
+        g.rotate(shake);
+        g.scale(s * (1 + 0.4 * fade), s * (1 + 0.4 * fade));
+        // 고리: 오른쪽 다리를 축으로 위로 튀어 오르며 바깥으로 돈다
+        Graphics2D shackle = (Graphics2D) g.create();
+        shackle.translate(14, -10 - 12 * open);
+        shackle.rotate(-0.6 * open);
+        shackle.setStroke(new BasicStroke(8, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        shackle.setColor(new Color(60, 70, 90));
+        shackle.drawArc(-28, -26, 28, 44, 0, 180);
+        shackle.drawLine(-28, -4, -28, 4);
+        shackle.drawLine(0, -4, 0, 10);
+        shackle.setColor(new Color(205, 214, 228));
+        shackle.setStroke(new BasicStroke(5, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        shackle.drawArc(-28, -26, 28, 44, 0, 180);
+        shackle.dispose();
+        // 몸통
+        g.setPaint(new GradientPaint(0, -12, new Color(255, 214, 90), 0, 30, new Color(214, 150, 20)));
+        g.fillRoundRect(-26, -12, 52, 42, 12, 12);
+        g.setColor(new Color(120, 78, 8));
+        g.setStroke(new BasicStroke(2.5f));
+        g.drawRoundRect(-26, -12, 52, 42, 12, 12);
+        g.fillOval(-5, 0, 10, 10);
+        g.fillRect(-2, 8, 4, 11);
+        g.dispose();
     }
 
     void paintBackground(Graphics2D g, int w, int h) {

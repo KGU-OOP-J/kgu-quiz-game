@@ -88,6 +88,20 @@ final class WaveMap {
         g.drawImage(sprites[v], nx, ny - (int) (6 * lift), nw, nh, null);
     }
 
+    /** 잠긴 마을 섬을 섬 모양대로 어둡게 덮는다. dim 0이면 그대로, 1이면 가장 어둡다. */
+    void dimVillage(Graphics2D g, int v, float dim) {
+        if (dim <= 0) return;
+        Graphics2D d = (Graphics2D) g.create();
+        d.setComposite(AlphaComposite.SrcOver.derive(Math.min(1f, dim)));
+        Rectangle b = bounds[v];
+        for (int i = 0; i < 2; i++) d.drawImage(shadows[v], b.x, b.y, null);  // 그림자 한 장은 옅어서 겹쳐 그린다
+        d.dispose();
+    }
+
+    Rectangle villageBounds(int v) {
+        return bounds[v];
+    }
+
     BufferedImage frame(double t) {
         for (int y = 0; y < h; y++) rowShift[y] = (int) Math.round(2.5 * Math.sin(y * 0.09 + t * 2.0));
         for (int x = 0; x < w; x++) colShift[x] = (int) Math.round(1.5 * Math.cos(x * 0.07 + t * 1.6));
