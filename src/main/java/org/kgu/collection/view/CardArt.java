@@ -213,13 +213,18 @@ public final class CardArt {
             paintBackground(g, w, h);
             return;
         }
-        g.drawImage(map.get().frame(seconds), 0, 0, null);
+        BufferedImage frame = map.get().frame(seconds);
+        boolean sealed = lockedVillage >= 0 && unlock < 1;
+        // 봉인이 있으면 빛 번짐을 더하려고 작업 화면에 그린 뒤 한 번에 옮긴다
+        Graphics2D target = sealed ? lockArt.begin(frame) : g;
+        if (!sealed) g.drawImage(frame, 0, 0, null);
         for (int v = 0; v < villageScales.length; v++) {
-            map.get().paintVillage(g, v, villageScales[v]);
+            map.get().paintVillage(target, v, villageScales[v]);
         }
-        if (lockedVillage < 0 || unlock >= 1) return;
-        LockArt.paint(g, map.get(), lockedVillage, w / 780f, seconds, unlock, hint);
+        if (sealed) lockArt.paint(g, target, map.get(), lockedVillage, w / 780f, seconds, unlock, hint);
     }
+
+    private final LockArt lockArt = new LockArt();
 
     void paintBackground(Graphics2D g, int w, int h) {
         Optional<BufferedImage> background = image("ui/background");
