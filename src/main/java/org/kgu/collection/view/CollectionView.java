@@ -47,8 +47,6 @@ public final class CollectionView extends JPanel implements View {
     private final double[] scales = {1, 1, 1, 1};
     private int hovered = -1;
     private boolean locked;
-    // shortcut: 잠김→열림을 이 실행 안에서 지도에서 본 경우에만 풀리는 모션이 나온다(저장하지 않음). 꼭 한 번 보여 줘야 하면 세이브에 기록할 것.
-    private boolean wasLocked;
     private long unlockStart = -1;
     private String lockHint = "";
     // 지도가 화면에 보일 때만 바다를 다시 그린다(약 30fps)
@@ -182,8 +180,8 @@ public final class CollectionView extends JPanel implements View {
     public void showMap() {
         hovered = -1;
         locked = !event.isVillageOpen(CollectionGUIEvent.LOCKED_VILLAGE);
-        if (wasLocked && !locked) unlockStart = System.nanoTime();
-        wasLocked = locked;
+        // 열린 뒤 처음 지도를 볼 때 계정마다 한 번만 풀리는 모션을 튼다(본 기록은 세이브 옆 파일에 남는다)
+        if (event.takeUnlockMotion(CollectionGUIEvent.LOCKED_VILLAGE)) unlockStart = System.nanoTime();
         lockHint = String.join(" · ", CollectionGUIEvent.KEY_VILLAGES.stream()
             .map(c -> c + " " + event.getCollectedCount(c) + "/" + (event.getPersonCount(c) + 1) / 2).toList()) + " 모으면 열려요";
         java.util.Arrays.fill(scales, 1);

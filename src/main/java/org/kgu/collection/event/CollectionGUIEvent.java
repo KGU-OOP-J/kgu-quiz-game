@@ -63,6 +63,15 @@ public final class CollectionGUIEvent {
             || KEY_VILLAGES.stream().allMatch(key -> getCollectedCount(key) * 2 >= getPersonCount(key));
     }
 
+    /**
+     * 잠긴 마을이 열려 있고 이 사용자가 풀리는 모션을 아직 안 봤으면, 봤다고 기록하고 true를 준다(계정마다 한 번).
+     */
+    public boolean takeUnlockMotion(String village) {
+        if (!isVillageOpen(village) || collectionFeature.isUnlockSeen(village)) return false;
+        collectionFeature.markUnlockSeen(village);
+        return true;
+    }
+
     public Optional<BufferedImage> image(String key) {
         return collectionFeature.image(key);
     }
