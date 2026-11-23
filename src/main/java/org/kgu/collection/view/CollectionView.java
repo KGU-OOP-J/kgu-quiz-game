@@ -22,6 +22,9 @@ public final class CollectionView extends JPanel implements View {
     // WaveMap.ISLANDS와 같은 순서(지도의 왼쪽 위, 오른쪽 위, 왼쪽 아래, 오른쪽 아래 섬)
     private static final String[] VILLAGES = {"과학자", "교수님", "한국사", "아이돌"};
     private static final Point[] LABELS = {new Point(120, 200), new Point(480, 200), new Point(110, 470), new Point(480, 470)};
+    // 배치는 처음 만든 780x560 좌표로 하고, 로그인·메뉴·대전과 같은 1280x960 창에 맞게 한 번에 늘린다.
+    private static final int WIDTH = 1280, HEIGHT = 960;
+    static final double SX = WIDTH / (double) UiStyle.WIDTH, SY = HEIGHT / (double) UiStyle.HEIGHT;
 
     private final CollectionGUIEvent event;
     private final CardArt art;
@@ -128,6 +131,23 @@ public final class CollectionView extends JPanel implements View {
         detail.setBounds(0, 0, 780, 560);
         detail.setVisible(false);
         add(detail);
+        for (Component child : getComponents()) scale(child);
+    }
+
+    /** 780x560 기준으로 놓은 부품의 위치·크기·글자 크기를 창 크기에 맞게 늘린다(자식까지). */
+    static void scale(Component c) {
+        Rectangle b = c.getBounds();
+        c.setBounds((int) Math.round(b.x * SX), (int) Math.round(b.y * SY), (int) Math.round(b.width * SX), (int) Math.round(b.height * SY));
+        if (c.isPreferredSizeSet()) {
+            Dimension d = c.getPreferredSize();
+            c.setPreferredSize(new Dimension((int) Math.round(d.width * SX), (int) Math.round(d.height * SY)));
+        }
+        Font f = c.getFont();
+        if (f != null) c.setFont(f.deriveFont((float) (f.getSize2D() * SX)));
+        // CardView는 그림을 자기 크기에 맞춰 그리므로 안쪽은 건드리지 않는다
+        if (c instanceof Container container && !(c instanceof CardView)) {
+            for (Component child : container.getComponents()) scale(child);
+        }
     }
 
     /**
@@ -193,7 +213,7 @@ public final class CollectionView extends JPanel implements View {
 
     @Override
     public Dimension getViewSize() {
-        return new Dimension(UiStyle.WIDTH, UiStyle.HEIGHT);
+        return new Dimension(WIDTH, HEIGHT);
     }
 
     @Override
@@ -204,6 +224,7 @@ public final class CollectionView extends JPanel implements View {
         art.paintBackground(g, getWidth(), getHeight());
 
         if (list.isVisible()) {
+            g.scale(SX, SY);
             CardArt.gradientRound(g, 16, 22, 214, 54, 30, new Color(44, 80, 140), new Color(22, 46, 92));
             g.setColor(Color.WHITE);
             g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 26f));
