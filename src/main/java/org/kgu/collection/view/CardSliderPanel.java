@@ -46,6 +46,8 @@ final class CardSliderPanel extends JPanel {
             number.setPreferredSize(new Dimension(36,36));pages.add(number);
         }
         if(pageCount(persons.size())>1){UiButton next=CardArt.button("▶",Color.WHITE,14f,()->showPage(page+1));next.setPreferredSize(new Dimension(40,36));pages.add(next);}
+        for(Component c:grid.getComponents())CollectionView.scale(c);
+        for(Component c:pages.getComponents())CollectionView.scale(c);
         grid.revalidate();pages.revalidate();repaint();
     }
 }

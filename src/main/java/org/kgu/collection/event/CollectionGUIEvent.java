@@ -18,17 +18,14 @@ public final class CollectionGUIEvent {
     }
 
     public void refresh(CollectionView view) {
-        view.display(category, CollectionFeature.CATEGORIES,
-            collectionFeature.getPersons(category),
-            collectionFeature.getCollectedCount(),
-            collectionFeature.getPersons(CollectionFeature.ALL).size(),
-            collectionFeature.getStageCount(CollectionFeature.ALL)
-        );
+        List<Person> persons = collectionFeature.getPersons(category);
+        view.display(category, persons, (int) getCollectedCount(category), persons.size(), collectionFeature.getStageCount(category));
     }
 
     public void selectCategory(CollectionView view, String category) {
         this.category = category;
         refresh(view);
+        view.showList();
     }
 
     public void openPerson(CollectionView view, Person person) {
