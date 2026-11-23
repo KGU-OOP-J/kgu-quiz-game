@@ -45,6 +45,17 @@ public final class MainWindow {
         lifecycleEvents.put(view.getViewId(), lifecycleEvent);
     }
 
+    /** A new local login owns a fresh set of views and feature instances. */
+    public void clearPlayerViews() {
+        requireEdt();
+        if (current.isPresent() && current.get() != ViewId.LOGIN) throw new IllegalStateException("로그인 화면에서만 사용자를 바꿀 수 있습니다.");
+        for (ViewId id : ViewId.values()) if (id != ViewId.LOGIN) {
+            LifecycleEvent event = lifecycleEvents.remove(id);
+            if (event != null) event.onExit();
+            views.remove(id);
+        }
+    }
+
     public void show(ViewId viewId) {
         requireEdt();
         if (closed) throw new IllegalStateException("종료된 창입니다.");

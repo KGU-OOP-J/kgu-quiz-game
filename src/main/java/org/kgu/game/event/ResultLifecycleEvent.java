@@ -8,4 +8,5 @@ public final class ResultLifecycleEvent implements LifecycleEvent {
     private final ResultGUIEvent event;
     public ResultLifecycleEvent(ResultView view,ResultGUIEvent event){this.view=view;this.event=event;}
     @Override public void onEnter(){event.refresh(view);}
+    @Override public void onExit(){view.stopAnimations();}
 }

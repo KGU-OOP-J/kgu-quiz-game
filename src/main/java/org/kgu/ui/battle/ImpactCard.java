@@ -7,7 +7,7 @@ import java.awt.image.BufferedImage;
 import javax.swing.JPanel;
 
 /** Portrait-only hit animation. It never changes HP, rewards or the source image file. */
-final class ImpactCard extends JPanel {
+public final class ImpactCard extends JPanel {
     private final BattleComponents.CardPanel card;
     private final String victoryLabel;
     private BufferedImage snapshot;
@@ -16,12 +16,18 @@ final class ImpactCard extends JPanel {
     private int damage;
     private boolean defeated;
 
-    ImpactCard(String name, String imagePath, Color color, String victoryLabel) {
+    public ImpactCard(String name, String imagePath, Color color, String victoryLabel) {
         this.victoryLabel = victoryLabel;
         setOpaque(false);
         setLayout(new BorderLayout());
         card = new BattleComponents.CardPanel(name, imagePath, color);
         add(card, BorderLayout.CENTER);
+    }
+
+    public ImpactCard(String name, BufferedImage image, Color color, String victoryLabel) {
+        this.victoryLabel = victoryLabel;
+        setOpaque(false); setLayout(new BorderLayout());
+        card = new BattleComponents.CardPanel(name, image, color); add(card, BorderLayout.CENTER);
     }
 
     @Override
@@ -30,7 +36,7 @@ final class ImpactCard extends JPanel {
         card.doLayout();
     }
 
-    void startHit(int damage, boolean defeated, long now) {
+    public void startHit(int damage, boolean defeated, long now) {
         this.damage = damage;
         this.defeated = defeated;
         startedAt = now;
@@ -38,14 +44,14 @@ final class ImpactCard extends JPanel {
         snapshot = null;
     }
 
-    void updateHit(long now) {
+    public void updateHit(long now) {
         if (!isAnimating()) return;
         double duration = defeated ? 1_250_000_000.0 : 850_000_000.0;
         progress = Math.min(1, Math.max(0, (now - startedAt) / duration));
         repaint();
     }
 
-    boolean isAnimating() {
+    public boolean isAnimating() {
         return progress >= 0 && progress < 1;
     }
 

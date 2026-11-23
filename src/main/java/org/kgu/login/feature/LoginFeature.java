@@ -19,6 +19,7 @@ public final class LoginFeature {
     public void login(String playerId) throws IOException {
         PlayerSession playerSession = new PlayerSession(playerId);
         playerSession.saveFactory().open();
+        playerSession.saveFactory().progress().syncCollected(playerSession.saveFactory().create().getCollectedCount());
         onLogin.accept(playerSession);
     }
 }

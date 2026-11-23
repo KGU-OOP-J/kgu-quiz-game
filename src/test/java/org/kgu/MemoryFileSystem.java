@@ -147,7 +147,13 @@ final class MemoryFileSystem extends FileSystem {
             if (files.remove(name) == null && !directories.remove(name)) { throw new NoSuchFileException(name); }
         }
         @Override public void copy(Path source, Path target, CopyOption... options) { throw new UnsupportedOperationException(); }
-        @Override public void move(Path source, Path target, CopyOption... options) { throw new UnsupportedOperationException(); }
+        @Override public void move(Path source, Path target, CopyOption... options) throws IOException {
+            if (failWrites) throw new IOException("Simulated write failure");
+            String from = key(source), to = key(target);
+            if (!files.containsKey(from)) throw new NoSuchFileException(from);
+            if (files.containsKey(to) && !Arrays.asList(options).contains(StandardCopyOption.REPLACE_EXISTING)) throw new FileAlreadyExistsException(to);
+            files.put(to, files.remove(from));
+        }
         @Override public boolean isSameFile(Path a, Path b) { return key(a).equals(key(b)); }
         @Override public boolean isHidden(Path path) { return false; }
         @Override public FileStore getFileStore(Path path) { throw new UnsupportedOperationException(); }

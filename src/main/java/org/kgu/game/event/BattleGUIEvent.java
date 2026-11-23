@@ -23,6 +23,10 @@ public final class BattleGUIEvent {
         return gameFeature.getSession().getBattle();
     }
 
+    public org.kgu.game.feature.GameSession session() { return gameFeature.getSession(); }
+    public void useItem(org.kgu.progression.ShopItem item) throws java.io.IOException { gameFeature.useItem(item); }
+    public org.kgu.progression.PlayerProgress profile() { return gameFeature.profile(); }
+
     public void select(int choice) {
         gameFeature.selectBattleAnswer(choice);
     }

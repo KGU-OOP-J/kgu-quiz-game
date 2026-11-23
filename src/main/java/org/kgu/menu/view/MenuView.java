@@ -23,12 +23,20 @@ public final class MenuView extends JPanel implements View {
     private final JComboBox<Difficulty> difficulty=new JComboBox<>(Difficulty.values()); private final JComboBox<GameSession.Mode> mode=new JComboBox<>(GameSession.Mode.values());
     private final JComboBox<Person> person=new JComboBox<>(); private final JLabel personLabel=new JLabel("배틀 상대 선택");
     private final JLabel welcome=new JLabel("무엇을 해볼까요?",SwingConstants.CENTER);
+    private final JLabel progress = new JLabel("", SwingConstants.CENTER);
+    private final JLabel goal = new JLabel("", SwingConstants.CENTER);
+    private final JButton world = button("마을 지도", new Color(48, 110, 198)), shop = button("상점", new Color(194, 126, 34)), achievements = button("도전과제", new Color(130, 87, 188)), deck = button("카드 장착", new Color(39, 139, 115)), review = button("오답 노트", new Color(74, 111, 148)), tutorial = button("튜토리얼", new Color(112, 128, 144));
     public MenuView(){ setLayout(layout); buildHome(); buildSetup(); add(home,"home");add(setup,"setup");showHome(); }
     private void buildHome(){
         welcome.setBounds(120,160,1040,60);welcome.setFont(UiStyle.FONT.deriveFont(Font.BOLD,43f));welcome.setForeground(UiStyle.NAVY);home.add(welcome);
         JLabel guide=new JLabel("원하는 메뉴를 선택해서 나만의 인물 카드를 완성해 보세요.",SwingConstants.CENTER);guide.setBounds(150,222,980,35);guide.setFont(UiStyle.FONT.deriveFont(Font.BOLD,20f));guide.setForeground(new Color(35,76,124));home.add(guide);
         addTile(game,130,"게임 시작","분야와 난이도를 고르고\n인물 퀴즈에 도전하세요.","⚔");addTile(collection,470,"카드 도감","획득한 인물 카드를\n한눈에 확인하세요.","★");addTile(setting,810,"설정","소리와 게임 환경을\n내 취향에 맞춰보세요.","⚙");
-        login.setBounds(92,760,170,46);login.setFont(UiStyle.FONT.deriveFont(Font.BOLD,17f));login.setForeground(Color.WHITE);home.add(login);
+        progress.setBounds(70,65,1140,40); progress.setFont(UiStyle.FONT.deriveFont(Font.BOLD,21f)); progress.setForeground(UiStyle.NAVY); home.add(progress);
+        goal.setBounds(70,108,1140,35); goal.setFont(UiStyle.FONT.deriveFont(Font.BOLD,18f)); goal.setForeground(UiStyle.NAVY); home.add(goal);
+        JButton[] extra = {world, shop, achievements, deck, review, tutorial};
+        String[] names = {"openWorld", "openShop", "openAchievements", "openDeck", "openReview", "openTutorial"};
+        for (int i = 0; i < extra.length; i++) { JButton b = extra[i]; b.setBounds(100 + i * 183,760,173,52); b.setName(names[i]); b.setFont(UiStyle.FONT.deriveFont(Font.BOLD,18f)); b.setForeground(Color.WHITE); home.add(b); }
+        login.setName("returnToLogin"); login.setBounds(100,840,180,46);login.setFont(UiStyle.FONT.deriveFont(Font.BOLD,17f));login.setForeground(Color.WHITE);home.add(login);
     }
     private void addTile(JButton b,int x,String title,String desc,String icon){
         MenuCard tile=new MenuCard(title,desc,icon,b);
@@ -44,6 +52,17 @@ public final class MenuView extends JPanel implements View {
     public void updateMode(){boolean battle=getMode()==GameSession.Mode.BATTLE;person.setVisible(battle);personLabel.setVisible(battle);} public void setPersons(List<Person> p){person.setModel(new DefaultComboBoxModel<>(p.toArray(new Person[0])));}
     public String getCategory(){return (String)category.getSelectedItem();} public Difficulty getDifficulty(){return (Difficulty)difficulty.getSelectedItem();} public GameSession.Mode getMode(){return (GameSession.Mode)mode.getSelectedItem();} public Person getSelectedPerson(){return (Person)person.getSelectedItem();}
     public JButton getGameButton(){return game;}public JButton getCollectionButton(){return collection;}public JButton getSettingButton(){return setting;}public JButton getLoginButton(){return login;}public JButton getStartButton(){return start;}public JButton getBackButton(){return back;}public JComboBox<String> getCategoryBox(){return category;}public JComboBox<GameSession.Mode> getModeBox(){return mode;}
+    public void configureAdventure(java.util.function.Consumer<String> open, Runnable showTutorial) {
+        world.addActionListener(e -> open.accept("world")); shop.addActionListener(e -> open.accept("shop"));
+        achievements.addActionListener(e -> open.accept("achievements")); deck.addActionListener(e -> open.accept("deck"));
+        review.addActionListener(e -> open.accept("review")); tutorial.addActionListener(e -> showTutorial.run());
+    }
+    public void showProgress(org.kgu.progression.PlayerProgress p, String nextGoal) {
+        progress.setText("Lv." + p.level() + "  ·  XP " + p.levelExperience() + "/" + org.kgu.progression.PlayerProgress.experienceForLevel(p.level()) + "  ·  코인 " + p.coins() + "  ·  별 " + p.totalStars());
+        goal.setText("다음 목표: " + nextGoal);
+    }
+    public void stopAnimations() { for (MenuCard card : menuCards) if (card.timer != null) card.timer.stop(); }
+    @Override public void removeNotify() { stopAnimations(); super.removeNotify(); }
     @Override public ViewId getViewId(){return ViewId.MENU;}@Override public JComponent getComponent(){return this;}@Override public Dimension getViewSize(){return new Dimension(WIDTH,HEIGHT);}
     private static class Background extends JPanel{private final Image image=new ImageIcon(Background.class.getResource("/org/kgu/battle/campus_background.jpg")).getImage();Background(){setLayout(null);setOpaque(false);}@Override protected void paintComponent(Graphics g){g.drawImage(image,0,0,getWidth(),getHeight(),null);}}
     private static final class MenuCard extends JPanel {

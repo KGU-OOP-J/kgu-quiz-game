@@ -30,6 +30,7 @@ public final class QuestionGUIEvent {
     }
 
     public void showHint(QuestionView view) {
+        getSession().recordHint();
         JOptionPane.showMessageDialog(view, String.join("\n", getSession().getCurrentPerson().getInformation()), "힌트", JOptionPane.INFORMATION_MESSAGE);
     }
 
@@ -38,17 +39,15 @@ public final class QuestionGUIEvent {
             JOptionPane.showMessageDialog(view, "정답을 선택해 주세요.");
             return;
         }
-        boolean correct = gameFeature.submitAnswer();
-        if (gameFeature.isSoundEnabled()) Toolkit.getDefaultToolkit().beep();
-        view.showPractice();
-        if (correct) {
-            try {
-                boolean added = gameFeature.saveRewards().contains(getSession().getCurrentPerson());
-                JOptionPane.showMessageDialog(view, getSession().getCurrentPerson().getName()
-                    + (added ? " 단계 카드 획득!" : " — 이미 보유한 단계 카드입니다."));
-            } catch (IOException e) {
-                JOptionPane.showMessageDialog(view, "정답은 반영됐지만 보상 저장에 실패했습니다. 결과 화면에서 재시도할 수 있습니다.\n" + e.getMessage(), "보상 저장 실패", JOptionPane.ERROR_MESSAGE);
-            }
+        try {
+            boolean correct = gameFeature.submitAnswer();
+            if (gameFeature.isSoundEnabled()) Toolkit.getDefaultToolkit().beep();
+            view.showPractice();
+            if (correct) gameFeature.saveRewards();
+        } catch (java.io.UncheckedIOException e) {
+            JOptionPane.showMessageDialog(view, e.getMessage(), "답안 기록 실패", JOptionPane.ERROR_MESSAGE);
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(view, "정답은 반영됐지만 보상 저장에 실패했습니다. 결과 화면에서 재시도할 수 있습니다.\n" + e.getMessage(), "보상 저장 실패", JOptionPane.ERROR_MESSAGE);
         }
     }
 

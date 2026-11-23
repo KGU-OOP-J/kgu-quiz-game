@@ -56,6 +56,10 @@ public final class CollectionView extends JPanel implements View {
     private int collectedPersons;
     private int totalPersons;
     private int collectedStages;
+    private java.util.function.Consumer<String> adventure = category -> { };
+    public void configureAdventure(java.util.function.Consumer<String> open) { adventure = open; }
+    public void stopAnimations() { waves.stop(); }
+    @Override public void removeNotify() { stopAnimations(); super.removeNotify(); }
 
     /**
      * @param event 마을 고르기, 인물 열기, 메인으로 가기를 처리하는 이벤트
@@ -88,6 +92,8 @@ public final class CollectionView extends JPanel implements View {
         JButton mapMenu = CardArt.button("메인으로", Color.WHITE, 14f, event::returnToMenu);
         mapMenu.setBounds(330, 510, 120, 38);
         map.add(mapMenu);
+        JButton challengeMap = CardArt.button("도전 · 카드 장착", Color.WHITE, 14f, () -> adventure.accept(selected));
+        challengeMap.setBounds(510, 510, 190, 38); map.add(challengeMap);
         // 이름표 말고 마을 섬 자체를 눌러도 들어간다(바다·가운데 광장은 안 눌림)
         MouseAdapter villageMouse = new MouseAdapter() {
             @Override
@@ -123,6 +129,8 @@ public final class CollectionView extends JPanel implements View {
         JButton toMap = CardArt.button("지도로", CardArt.BLUE, 16f, this::showMap);
         toMap.setBounds(16, 92, 180, 46);
         list.add(toMap);
+        JButton challenge = CardArt.button("마을 도전 · 장착", CardArt.BLUE, 16f, () -> adventure.accept(selected));
+        challenge.setBounds(16, 150, 180, 46); list.add(challenge);
         JButton menu = CardArt.button("메인으로", Color.WHITE, 16f, event::returnToMenu);
         menu.setBounds(16, 506, 180, 46);
         list.add(menu);
@@ -195,6 +203,7 @@ public final class CollectionView extends JPanel implements View {
     }
 
     private void show(JPanel page) {
+        if (page != map) waves.stop();
         map.setVisible(page == map);
         list.setVisible(page == list);
         detail.setVisible(page == detail);

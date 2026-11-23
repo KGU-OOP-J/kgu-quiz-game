@@ -76,7 +76,9 @@ public final class ResultView extends JPanel implements View {
         actions.setOpaque(false);
         JButton menu = new UiButton("메인으로", new Color(20, 125, 244));
         JButton collection = new UiButton("도감 확인", new Color(30, 172, 111));
-        for (JButton button : new JButton[]{menu, collection, retry}) {
+        JButton adventure = new UiButton("다음 도전 · 상점", new Color(132, 86, 196));
+        adventure.addActionListener(e -> event.openAdventure());
+        for (JButton button : new JButton[]{menu, collection, adventure, retry}) {
             button.setForeground(Color.WHITE);
             button.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 20f));
             button.setPreferredSize(new Dimension(220, 55));
@@ -102,12 +104,12 @@ public final class ResultView extends JPanel implements View {
                 verdict.setForeground(new Color(105, 200, 255));
                 verdict.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 50f));
             }
-            hp.add(hpPanel("플레이어", battle.playerHp()));
-            hp.add(hpPanel("상대", battle.computerHp()));
-            score.setText("맞힌 문제: " + battle.correctCount() + " / 6");
+            hp.add(hpPanel("플레이어", battle.playerHp(), battle.maxPlayerHp()));
+            hp.add(hpPanel("상대", battle.computerHp(), battle.maxComputerHp()));
+            score.setText("정답 " + battle.correctCount() + " / " + session.getAnsweredCount() + " · 최고 콤보 " + battle.bestCombo());
         } else {
-            title.setText("연습 결과");
-            verdict.setText("10문제를 모두 풀었습니다!");
+            title.setText(session.getMode() + " 결과");
+            verdict.setText(session.getQuestionCount() + "문제를 모두 풀었습니다!");
             score.setText("맞힌 문제: " + session.getCorrectCount() + " / " + session.getQuestionCount());
             verdict.setForeground(new Color(170, 223, 255));
         }
@@ -130,8 +132,8 @@ public final class ResultView extends JPanel implements View {
             emptyPanel.add(empty, BorderLayout.SOUTH);
             rewards.add(emptyPanel);
         }
-        status.setText(failed ? message : "");
-        status.setForeground(new Color(255, 180, 180));
+        status.setText("<html><div style='text-align:center'>" + message + "</div></html>");
+        status.setForeground(failed ? new Color(255, 180, 180) : new Color(235, 245, 255));
         retry.setVisible(failed);
         if (lastEffectSession != session) {
             lastEffectSession = session;
@@ -210,10 +212,21 @@ public final class ResultView extends JPanel implements View {
         }
     }
 
-    private JPanel hpPanel(String name, int value) {
+    public void stopAnimations() {
+        victoryHeader.stop();
+        stopHp(hp);
+    }
+    private void stopHp(Container container) {
+        for (Component child : container.getComponents()) {
+            if (child instanceof GlossyHpBar bar && bar.timer != null) bar.timer.stop();
+            if (child instanceof Container nested) stopHp(nested);
+        }
+    }
+    @Override public void removeNotify() { stopAnimations(); super.removeNotify(); }
+    private JPanel hpPanel(String name, int value, int maximum) {
         JPanel wrapper = new JPanel(new GridBagLayout());
         wrapper.setOpaque(false);
-        wrapper.add(new GlossyHpBar(name, value));
+        wrapper.add(new GlossyHpBar(name, value, maximum));
         return wrapper;
     }
     @Override
@@ -234,15 +247,17 @@ public final class ResultView extends JPanel implements View {
         g.drawImage(background, 0, 0, getWidth(), getHeight(), this);
     }
     private static final class GlossyHpBar extends JPanel {
-        private static final int MAX_HP = 60;
+        private final int MAX_HP;
         private final String name;
         private final int targetHp;
-        private double displayedHp = MAX_HP;
+        private double displayedHp;
         private double glow = 0;
         private Timer timer;
-        GlossyHpBar(String name, int targetHp) {
+        GlossyHpBar(String name, int targetHp, int maximum) {
+            MAX_HP = maximum;
             this.name = name;
             this.targetHp = Math.max(0, Math.min(MAX_HP, targetHp));
+            displayedHp = this.targetHp;
             setOpaque(false);
             setPreferredSize(new Dimension(500, 80));
         }
@@ -337,7 +352,7 @@ public final class ResultView extends JPanel implements View {
             FontMetrics fm = textG.getFontMetrics();
             int textX = (int) (27 * getWidth() / 359.0);
             int textY = (int) (39 * getHeight() / 115.0);
-            String hpLabel = "HP " + Math.round(displayedHp) + " / 60";
+            String hpLabel = "HP " + Math.round(displayedHp) + " / " + MAX_HP;
             textG.drawString(name, textX, textY);
             textG.drawString(hpLabel, getWidth() - textX - fm.stringWidth(hpLabel), textY);
             textG.dispose();
@@ -358,6 +373,7 @@ public final class ResultView extends JPanel implements View {
             setPreferredSize(new Dimension(0, 150));
             add(title); add(verdict); add(score);
         }
+        void stop() { if (timer != null) timer.stop(); }
         void play(boolean isVictory) {
         	if (timer != null) timer.stop();
         	victory = isVictory;
@@ -371,6 +387,7 @@ public final class ResultView extends JPanel implements View {
             timer = new Timer(16, e -> {
                 elapsed = (System.nanoTime() - started) / 1_000_000_000.0;
                 repaint();
+                if (elapsed >= 4) ((Timer)e.getSource()).stop();
             });
             timer.start();
         }
@@ -385,6 +402,7 @@ public final class ResultView extends JPanel implements View {
             timer = new Timer(16, e -> {
                 elapsed = (System.nanoTime() - started) / 1_000_000_000.0;
                 repaint();
+                if (elapsed >= 4) ((Timer)e.getSource()).stop();
             });
             timer.start();
         }

@@ -16,6 +16,8 @@ public final class MenuGUIEvent implements ActionListener {
         this.menuFeature = menuFeature;
     }
 
+    public void refreshProfile() { view.showProgress(menuFeature.profile(), menuFeature.nextGoal()); }
+
     public void refreshPersons() {
         view.setPersons(menuFeature.getCandidates(view.getCategory()));
     }

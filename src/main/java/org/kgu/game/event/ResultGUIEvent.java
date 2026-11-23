@@ -12,7 +12,7 @@ public final class ResultGUIEvent {
     public void refresh(ResultView view){
         try{
             gameFeature.saveRewards();
-            view.display(gameFeature.getSession(),gameFeature.getSavedRewards(),"보상 처리 완료 (중복 단계 제외)",false);
+            view.display(gameFeature.getSession(),gameFeature.getSavedRewards(),gameFeature.getSession().receipt() + "<br>다음 목표: " + gameFeature.nextGoal(),false);
         }catch(IOException e){
             view.display(gameFeature.getSession(),gameFeature.getSavedRewards(),"보상 저장 실패: "+e.getMessage(),true);
         }
@@ -20,4 +20,5 @@ public final class ResultGUIEvent {
     public Optional<BufferedImage> image(String key){return gameFeature.image(key);}
     public void returnToMenu(){gameFeature.returnToMenu();}
     public void openCollection(){gameFeature.openCollection();}
+    public void openAdventure(){gameFeature.openAdventure();}
 }
