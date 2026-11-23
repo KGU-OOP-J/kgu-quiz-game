@@ -222,9 +222,9 @@ public final class CardArt {
         Rectangle b = map.get().villageBounds(lockedVillage);
         float s = w / 780f;
         int cx = b.x + b.width / 2, cy = b.y + b.height * 3 / 10;
-        if (unlock <= 0) {  // 자물쇠 바로 아래, 마을 이름표보다 위
+        if (unlock <= 0) {  // 자물쇠 바로 위: 아래쪽엔 경기대 로고 간판과 마을 이름표가 있다
             g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 12f * s));
-            int tw = g.getFontMetrics().stringWidth(hint) + Math.round(24 * s), th = Math.round(26 * s), ty = cy + Math.round(38 * s);
+            int tw = g.getFontMetrics().stringWidth(hint) + Math.round(24 * s), th = Math.round(26 * s), ty = cy - Math.round(46 * s) - th;
             UiStyle.round(g, cx - tw / 2, ty, tw, th, th, new Color(16, 28, 56, 220));
             g.setColor(Color.WHITE);
             UiStyle.center(g, hint, cx, ty + th / 2 + g.getFontMetrics().getAscent() / 2 - Math.round(2 * s));
