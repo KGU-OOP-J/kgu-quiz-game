@@ -330,7 +330,7 @@ public final class BattlePanel extends JPanel {
         submit.setEnabled(asking && engine.selected() >= 0);
         submit.setText(ending ? "결과 확인 중" : asking ? engine.selected() < 0 ? "보기를 선택하세요" : (engine.selected() + 1) + "번 답안 제출  →" : "다음 문제로…");
         if (ending) {
-            hitText.setText(engine.result() == BattleEngine.Result.WIN ? "" : "");
+            hitText.setText("");
             feedback.setText("응답 " + engine.answeredCount() + "/5 · 정답 " + engine.correctCount() + " · 재도전 보충 " + engine.retryCorrectCount());
         } else if (asking) {
             hitText.setText(engine.successCount() >= 3 ? "승리 조건 달성 · 마지막까지 공격!" : "답을 골라 공격하세요");

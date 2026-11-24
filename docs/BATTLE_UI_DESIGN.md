@@ -67,4 +67,48 @@
 | 아이돌 | 스포트라이트·음표·음파 | 화면 전체 무대 조명과 음파 피날레 |
 | 교수님 | 플레이어의 얇은 서류 뭉치 투척과 낱장 비산 | 플레이어 승리 시 두꺼운 서류 뭉치 투척, 플레이어 패배 시 교수님의 대형 F 도장 |
 
-기존 공통 원형 파편 효과와 기억 해방/기억 붕괴 결과 문구는 제거했다. 정보 물약은 표시 이름만 변경했고 `TONIC` 저장 키와 효과는 유지한다. `BattleAttackStyle`은 분야별 그림, `BattleAttackEffect`는 일반 공격 타이밍, `BattleFinishEffect`는 마무리 타이밍을 맡는다. 공통 판정과 저장 로직은 변경하지 않는다.
+기존 공통 원형 파편 효과와 기억 해방/기억 붕괴 결과 문구는 제거했다. MVP의 회복 물약은 정보 물약으로 변경했고, `TONIC` 저장 키와 가격은 유지하지만 효과는 HP 회복에서 정보 열람으로 변경했다. `BattleAttackStyle`은 분야별 그림, `BattleAttackEffect`는 일반 공격 타이밍, `BattleFinishEffect`는 마무리 타이밍을 맡는다. 연출 클래스는 판정과 저장을 수행하지 않는다. 전체 PR에는 아래의 공용 연동 변경이 포함된다.
+
+## MVP 대상 PR의 범위와 연동 확인
+
+비교 기준은 로컬에 저장된 `origin/feat/mvp-implementation`의 `02d2b9c`이다. 최신 원격 조회는 인증 오류로 확인하지 못했으므로, PR 생성 전 fetch 또는 GitHub의 base 커밋 확인이 필요하다.
+
+### 배틀 구현 경계
+
+기존 `QuestionView.display()`가 BATTLE 모드에서 `BattlePanel`을 포함한다. 일반 게임에서 별도 창이나 별도 내비게이터를 만들지 않는다.
+
+`BattlePanel` → 기존 `BattleGUIEvent` → `GameFeature` → `BattleEngine` 순서로 명령을 전달한다. 이펙트 클래스는 그림과 타이밍만 처리한다. 문제·인물·그림은 기존 `QuestionBank`/`PersonManager`/`ImageManager`에서 읽고, 저장은 기존 `SaveFactory`/`ProgressStore`를 사용한다.
+
+MVP 기준으로 `QuestionView`, `BattleGUIEvent`, `Application`, 로그인·메뉴·도감·스토리·데이터 파일·로더·공통 `GameTheme`는 이번 PR에서 변경하지 않았다. 배틀 전용 버튼과 진행 막대는 `game/view/Battle*`에 분리했다.
+
+### 공용 연동 파일 7개 — 리뷰 필요
+
+| 파일 | 필요한 변경과 영향 |
+| --- | --- |
+| `game/feature/GameFeature.java` | 선택 인물의 5문제 출제, 재도전 기록 중복 방지, 보호 부적 재고를 종료 판정에 전달. 일반 보스를 분야 혼합 8문제에서 해당 인물 5문제로 변경. |
+| `game/feature/GameSession.java` | 배틀일 때 실제 응답 수와 재도전 문제/보기 반환. 연습 모드 분기는 유지. |
+| `game/view/ResultView.java` | 삭제한 플레이어 HP 참조 제거. 최초 정답과 재도전 보충 점수를 나누어 표시. |
+| `progression/ShopItem.java` | 방어/회복 효과를 재도전/정보 열람으로 변경한 것에 맞춘 이름·설명. enum 키와 가격 유지. 기존 재고에도 새 효과가 적용됨. |
+| `progression/CardPower.java` | 지원 카드가 피해량·HP·스킬 자원에 영향을 주지 않도록 변경된 배틀에 맞는 설명. 기존 집중 XP 보너스와 숙련도 유지. |
+| `adventure/AdventureView.java` | 보스 버튼의 8문제를 5문제로 수정한 한 줄. |
+| `adventure/TutorialView.java` | 새 배틀 규칙과 아이템 설명으로 수정. |
+
+이 PR은 배틀 GUI뿐 아니라 배틀 규칙 개편을 포함한다. 위 밸런스와 공용 변경을 담당자가 승인해야 한다. 공용 변경을 단순 삭제하면 새 엔진과 결과 표시가 맞지 않으므로, UI만 통합하려면 별도의 규칙 복원 작업이 필요하다.
+
+### 테스트와 배포의 구분
+
+`runBattleTest` 및 `src/test/java/org/kgu/game/preview`는 테스트 전용이다. 임시 프로필에만 교수님 해금과 아이템 각 5개를 넣는다. 일반 게임의 초기 재고·잠금 조건은 변경하지 않는다. 테스트 클래스는 기본 Java 플러그인의 배포 JAR에 포함되지 않는다.
+
+`run.bat`은 MVP에 이미 있던 `gradlew.bat run` 실행 스크립트이며 이번 PR에서 변경하지 않았다. `run-professor-test.bat`과 Gradle의 `runBattleTest`만 테스트용으로 추가했다. `build.gradle`의 나머지 변경은 소스 UTF-8 고정이다.
+
+### 연동 검증 범위
+
+- 실제 인물/문제/이미지 데이터로 네 분야 전투 및 마무리 화면 렌더링.
+- 실제 배틀 버튼 → 자동 진행 → 구출 대화 → 결과와 보상 저장.
+- 결과 화면 저장 실패 후 재시도와 중복 보상 방지.
+- 도감에서 획득 인물 조회 및 상세 화면 표시.
+- 상점 구매·배틀 사용·재고 차감과 재로딩, 사용 불가 및 저장 실패 처리.
+- 연습·오답 복습·튜토리얼·재로그인 흐름의 회귀 테스트.
+- 교수님 미해금 일반 프로필과 해금된 임시 테스트 프로필의 분리.
+
+자동 검증은 로컬 MVP 기준이다. 팀원의 최신 미확인 원격 변경까지 호환된다고 보장하는 것은 아니다.

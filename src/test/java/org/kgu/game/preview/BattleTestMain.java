@@ -7,6 +7,7 @@ import org.kgu.game.feature.GameFeature;
 import org.kgu.game.view.BattlePanel;
 import org.kgu.manager.*;
 import org.kgu.model.*;
+import org.kgu.progression.ShopItem;
 import org.kgu.window.GameTheme;
 import javax.swing.*;
 import java.awt.*;
@@ -27,7 +28,16 @@ public final class BattleTestMain {
                     project.resolve("images/cards/" + person.create().getName() + "_" + stage + ".png"));
             }
         }
-        SaveFactory save = new SaveFactory(scratch.resolve("preview.txt")); save.open();
+        SaveFactory save = new SaveFactory(scratch.resolve("preview.txt"));
+        if (!Files.exists(save.progress().path())) {
+            java.util.Properties seed = new java.util.Properties();
+            seed.setProperty("version", "1"); seed.setProperty("coins", "120");
+            for (ShopItem item : ShopItem.values()) seed.setProperty("item." + item.name(), "5");
+            try (var writer = Files.newBufferedWriter(save.progress().path())) {
+                seed.store(writer, "Temporary battle preview inventory only");
+            }
+        }
+        save.open();
         GameFeature game = new GameFeature(new PlayerSession("배틀 미리보기", save), people, images,
             new SettingFactory(scratch.resolve("settings.properties"), new Setting()), view -> { });
         // Seed only the throwaway profile; no production unlock API or real user save is changed.
@@ -43,12 +53,15 @@ public final class BattleTestMain {
             } catch (Exception ignored) { /* OS temporary storage remains isolated even on cleanup failure. */ }
         }));
         GameFeature game = createGame(Path.of(System.getProperty("game.projectDir", ".")), scratch);
-        SwingUtilities.invokeLater(() -> new PreviewWindow(game).showBattle());
+        SwingUtilities.invokeLater(() -> {
+            new PreviewWindow(game).showBattle();
+            System.out.println("BATTLE_PREVIEW_READY: professor battle, five of each item, temporary profile");
+        });
     }
 
     private static final class PreviewWindow {
         private final GameFeature game;
-        private final JFrame frame = new JFrame("배틀 테스트 — 교수님 잠금 해제 / 임시 프로필");
+        private final JFrame frame = new JFrame("배틀 테스트 — 교수님 잠금 해제 / 아이템 각 5개 / 임시 프로필");
         private final JComboBox<String> categories = new JComboBox<>(Application.CATEGORIES.toArray(String[]::new));
         private final JComboBox<Difficulty> difficulties = new JComboBox<>(Difficulty.values());
         private BattlePanel battle;

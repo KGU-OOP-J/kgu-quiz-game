@@ -82,6 +82,6 @@ gradlew.bat -g .gradle-user-home "-Dorg.gradle.jvmargs=-Dfile.encoding=COMPAT" c
 Windows: `run-professor-test.bat` 더블클릭. WSL: 저장소 루트에서 `cmd.exe /c run-professor-test.bat`.
 Gradle 직접 실행: `gradlew.bat runBattleTest` 또는 JDK가 설치된 Linux에서 `./gradlew runBattleTest`.
 
-로그인과 해금 작업 없이 이은정 교수님 전투로 시작합니다. 상단에서 분야·난이도를 바꾸거나 정답/오답 버튼으로 실제 타격과 마무리 연출을 확인할 수 있습니다. 임시 테스트 프로필만 해금하며 기존 `saves/`와 일반 게임의 잠금 조건은 바꾸지 않습니다. 이 런처는 `src/test`에만 있어 배포용 앱에 포함되지 않습니다.
+로그인과 해금 작업 없이 이은정 교수님 전투로 시작하며, 테스트 프로필에 각 아이템을 5개씩 지급합니다. 정보 물약을 클릭하면 왼쪽 인물 정보 영역에서 소개와 정보를 읽을 수 있습니다. 상단에서 분야·난이도를 바꾸거나 정답/오답 버튼으로 실제 타격과 마무리 연출을 확인할 수 있습니다. 임시 테스트 프로필만 해금하며 기존 `saves/`와 일반 게임의 잠금 조건은 바꾸지 않습니다. 이 런처는 `src/test`에만 있어 배포용 앱에 포함되지 않습니다.
 
 필살기는 K.O.·기술명·승패 제목을 별도로 덮지 않고 효과만 보여 줍니다. 교수님 패배의 F 도장은 유지합니다.
