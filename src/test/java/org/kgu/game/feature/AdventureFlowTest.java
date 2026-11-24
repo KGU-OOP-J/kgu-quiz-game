@@ -45,7 +45,7 @@ class AdventureFlowTest {
     private void completeBattle() throws Exception {
         BattleEngine battle = game.getSession().getBattle();
         while (battle.phase() != BattleEngine.Phase.FINISHED) {
-            battle.chooseAction(BattleEngine.Action.HEAVY); game.selectBattleAnswer(battle.current().getAnswer() - 1);
+            game.selectBattleAnswer(battle.current().getAnswer() - 1);
             game.submitBattleAnswer(); game.advanceBattle();
         }
         assertEquals(BattleEngine.Result.WIN, battle.result()); game.finishBattle(); game.saveRewards();
@@ -57,7 +57,7 @@ class AdventureFlowTest {
         assertTrue(game.profile().bossUnlocked("과학자")); assertTrue(game.profile().level() > 1);
         assertEquals(3, game.profile().cleared("과학자")); assertEquals(3, game.ownedCards().size());
         game.equip(targets.getFirst()); assertEquals(CardPower.key(targets.getFirst()), game.equippedPower().personKey());
-        game.startChallenge("과학자", Difficulty.LOW, targets.getLast(), true); assertEquals(8, game.getSession().getQuestionCount()); completeBattle();
+        game.startChallenge("과학자", Difficulty.LOW, targets.getLast(), true); assertEquals(5, game.getSession().getQuestionCount()); completeBattle();
         assertEquals(1, game.profile().bossWins()); assertTrue(Achievement.BOSS.unlocked(game.profile()));
         int xp = game.profile().experience(), coins = game.profile().coins(); game.saveRewards();
         assertEquals(xp, game.profile().experience()); assertEquals(coins, game.profile().coins());
@@ -91,11 +91,63 @@ class AdventureFlowTest {
         Person target = game.getCandidates("과학자").getFirst();
         assertThrows(IllegalArgumentException.class, () -> game.equip(target)); game.progress().buy(ShopItem.TONIC);
         game.startBattle("과학자", Difficulty.LOW, target);
-        assertThrows(IllegalArgumentException.class, () -> game.useItem(ShopItem.TONIC)); assertEquals(1, game.profile().inventory(ShopItem.TONIC));
-        BattleEngine b = game.getSession().getBattle(); b.chooseAction(BattleEngine.Action.HEAVY); b.select(b.current().getAnswer() % 4); game.submitBattleAnswer(); game.advanceBattle();
-        game.useItem(ShopItem.TONIC); assertEquals(0, game.profile().inventory(ShopItem.TONIC)); assertEquals(b.maxPlayerHp(), b.playerHp());
+        game.useItem(ShopItem.TONIC);
+        assertEquals(0, game.profile().inventory(ShopItem.TONIC));
+        assertTrue(game.getSession().getBattle().memoryVisible());
         assertThrows(IllegalArgumentException.class, () -> game.useItem(ShopItem.TONIC));
+        assertThrows(IllegalArgumentException.class, () -> game.useItem(ShopItem.SHIELD));
+
     }
+    @Test void retryCreditsWinButNeverDuplicatesLearningOrCurrency() throws Exception {
+        Person target = game.getCandidates("과학자").getFirst();
+        game.progress().buy(ShopItem.SHIELD);
+        game.startBattle("과학자", Difficulty.LOW, target);
+        game.useItem(ShopItem.SHIELD);
+        BattleEngine battle = game.getSession().getBattle();
+        String wrongId = "";
+        for (int i = 0; i < 5; i++) {
+            if (i == 2) wrongId = game.getSession().currentEntry().id();
+            game.selectBattleAnswer(i < 2 ? battle.current().getAnswer() - 1 : battle.current().getAnswer() % 4);
+            game.submitBattleAnswer();
+            game.advanceBattle();
+        }
+        assertTrue(battle.isRetry());
+        assertEquals(wrongId, game.getSession().currentEntry().id());
+        assertSame(battle.current(), game.getSession().getCurrentQuiz());
+        int before = game.profile().coins();
+        game.selectBattleAnswer(battle.current().getAnswer() - 1);
+        game.submitBattleAnswer();
+        game.advanceBattle();
+        assertEquals(2, game.profile().number("correct"));
+        assertEquals(5, game.profile().number("attempts"));
+        assertEquals(2, game.profile().rescueProgress());
+        assertTrue(game.profile().wrongQuestions().contains(wrongId));
+        game.saveRewards();
+        game.saveRewards();
+        assertEquals(84, game.profile().experience());
+        assertEquals(before + 52, game.profile().coins());
+        assertEquals(1, game.getSavedRewards().size());
+        assertEquals(1, battle.stars());
+        SaveFactory reloaded = new SaveFactory(save.getPath());
+        reloaded.open();
+        assertEquals(0, reloaded.progress().snapshot().inventory(ShopItem.SHIELD));
+    }
+
+    @Test void unavailableItemDoesNotApplyAndFailedSubmissionKeepsQuestionState() throws Exception {
+        game.startBattle("과학자", Difficulty.LOW, game.getCandidates("과학자").getFirst());
+        BattleEngine battle = game.getSession().getBattle();
+        assertThrows(IllegalArgumentException.class, () -> game.useItem(ShopItem.INSIGHT));
+        assertTrue(battle.itemUsed().isEmpty());
+        assertTrue(battle.eliminated().isEmpty());
+        // Block the atomic temporary file without affecting the player's actual save.
+        Path temporary = save.progress().path().resolveSibling(save.progress().path().getFileName() + ".tmp");
+        Files.createDirectories(temporary);
+        game.selectBattleAnswer(battle.current().getAnswer() - 1);
+        assertThrows(java.io.UncheckedIOException.class, game::submitBattleAnswer);
+        assertEquals(BattleEngine.Phase.QUESTION, battle.phase());
+        assertEquals(0, battle.correctCount());
+    }
+
     @Test void tutorialButtonsPersistCompletionWithoutDuplicatingRewards() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             TutorialView view = new TutorialView(game); assertFalse(game.profile().flag("tutorial"));
@@ -128,6 +180,8 @@ class AdventureFlowTest {
                 java.lang.reflect.Method login = Application.class.getDeclaredMethod("startPlayer", PlayerSession.class); login.setAccessible(true);
                 java.lang.reflect.Field windowField = Application.class.getDeclaredField("mainWindow"); windowField.setAccessible(true);
                 MainWindow window = (MainWindow)windowField.get(app);
+                // This test exercises login routing after the separate prologue flow.
+                window.show(ViewId.LOGIN);
                 java.lang.reflect.Field frameField = MainWindow.class.getDeclaredField("frame"); frameField.setAccessible(true);
                 JFrame frame = (JFrame)frameField.get(window); frame.setLocation(-5000, -5000);
                 PlayerSession first = new PlayerSession("first", save);
@@ -149,12 +203,16 @@ class AdventureFlowTest {
                 TutorialView tutorial = new TutorialView(game); render(tutorial, "tutorial-preview.png");
                 game.startBattle("과학자", Difficulty.LOW, game.getCandidates("과학자").getFirst());
                 BattleGUIEvent event = new BattleGUIEvent(game);
-                BattlePanel panel = new BattlePanel(game.getSession().getBattle(), event, event::finish, event::returnToMenu);
-                render(panel, "tactical-battle-preview.png");
+                BattlePanelDriver driver = new BattlePanelDriver(game.getSession().getBattle(), event, event::finish, event::returnToMenu);
+                BattlePanel panel = driver.panel();
+                render(panel, "quiz-battle-preview.png");
                 while (game.getSession().getBattle().phase() != BattleEngine.Phase.FINISHED) {
-                    find(panel, "actionHEAVY").doClick(); find(panel, "choice" + (game.getSession().getBattle().current().getAnswer() - 1)).doClick();
-                    find(panel, "submit").doClick(); find(panel, "next").doClick();
+                    find(panel, "choice" + (game.getSession().getBattle().current().getAnswer() - 1)).doClick();
+                    find(panel, "submit").doClick(); driver.finishAnimation();
                 }
+                assertEquals(ViewId.DIALOGUE, destination.get());
+                assertEquals(game.getSession().getBattle().computer(), game.rescuePerson());
+                game.finishDialogue();
                 assertEquals(ViewId.RESULT, destination.get()); assertEquals(BattleEngine.Result.WIN, game.getSession().getBattle().result());
                 ResultGUIEvent resultEvent = new ResultGUIEvent(game); ResultView result = new ResultView(resultEvent); resultEvent.refresh(result);
                 render(result, "result-preview.png"); result.stopAnimations(); panel.stopAnimation();
@@ -162,6 +220,251 @@ class AdventureFlowTest {
             } catch (Exception ex) { throw new RuntimeException(ex); }
         });
     }
+    @Test void wrongAnswerDoesNotHitPortraitAndEnterCannotSkipFeedback() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            game.startBattle("과학자", Difficulty.LOW, game.getCandidates("과학자").getFirst());
+            BattleEngine battle = game.getSession().getBattle();
+            BattleGUIEvent event = new BattleGUIEvent(game);
+            var finishes = new java.util.concurrent.atomic.AtomicInteger();
+            BattlePanelDriver driver = new BattlePanelDriver(battle, event, finishes::incrementAndGet, () -> { });
+            BattlePanel panel = driver.panel();
+            try {
+                assertFalse(find(panel, "submit").isEnabled());
+                assertNull(findOrNull(panel, "next"));
+                assertNull(findOrNull(panel, "actionHEAVY"));
+                find(panel, "choice" + (battle.current().getAnswer() % 4)).doClick();
+                find(panel, "submit").doClick();
+                assertFalse(driver.portraitAnimating());
+                panel.getActionMap().get("submit").actionPerformed(null);
+                assertEquals(0, battle.turn());
+                assertEquals(1, battle.answeredCount());
+                assertEquals(BattleEngine.Phase.FEEDBACK, battle.phase());
+                driver.finishAnimation();
+                assertEquals(1, battle.turn());
+                assertEquals(BattleEngine.Phase.QUESTION, battle.phase());
+                assertEquals(0, finishes.get());
+                find(panel, "choice" + (battle.current().getAnswer() - 1)).doClick();
+                find(panel, "submit").doClick();
+                assertTrue(driver.portraitAnimating());
+                for (int i = 0; i < 5; i++) driver.tick();
+                render(panel, "quiz-battle-hit-preview.png");
+                panel.stopAnimation();
+                driver.finishAnimation();
+                panel.getActionMap().get("submit").actionPerformed(null);
+                assertEquals(1, battle.turn());
+                assertEquals(0, finishes.get());
+            } catch (Exception ex) { throw new RuntimeException(ex); }
+            finally { panel.stopAnimation(); }
+        });
+    }
+
+    @Test void professorDefeatPlaysFBeforeOneResultCallback() throws Exception {
+        for (int i = 0; i < 30; i++) game.progress().answer("unlock-" + i, "과학자", true);
+        SwingUtilities.invokeAndWait(() -> {
+            game.startBattle("교수님", Difficulty.LOW, game.getChallengeCandidates("교수님").getFirst());
+            BattleEngine battle = game.getSession().getBattle();
+            BattleGUIEvent event = new BattleGUIEvent(game);
+            var finishes = new java.util.concurrent.atomic.AtomicInteger();
+            BattlePanelDriver driver = new BattlePanelDriver(battle, event, finishes::incrementAndGet, () -> { });
+            BattlePanel panel = driver.panel();
+            try {
+                for (int i = 0; i < 2; i++) {
+                    find(panel, "choice" + (battle.current().getAnswer() % 4)).doClick();
+                    find(panel, "submit").doClick();
+                    driver.finishAnimation();
+                }
+                find(panel, "choice" + (battle.current().getAnswer() % 4)).doClick();
+                find(panel, "submit").doClick();
+                for (int i = 0; i < 65; i++) driver.tick();
+                assertEquals(BattleEngine.Phase.FINISHED, battle.phase());
+                assertEquals(BattleEngine.Result.LOSE, battle.result());
+                assertTrue(driver.finalEffectRunning());
+                assertEquals(0, finishes.get());
+                for (int i = 0; i < 28; i++) driver.tick();
+                render(panel, "quiz-battle-defeat-preview.png");
+                driver.finishAnimation();
+                assertEquals(1, finishes.get());
+                driver.finishAnimation();
+                panel.getActionMap().get("submit").actionPerformed(null);
+                assertEquals(1, finishes.get());
+            } catch (Exception ex) { throw new RuntimeException(ex); }
+            finally { panel.stopAnimation(); }
+        });
+    }
+
+    @Test void leavingDuringFinalEffectCancelsNavigation() throws Exception {
+        for (int i = 0; i < 30; i++) game.progress().answer("unlock-" + i, "과학자", true);
+        SwingUtilities.invokeAndWait(() -> {
+            game.startBattle("교수님", Difficulty.LOW, game.getChallengeCandidates("교수님").getFirst());
+            BattleEngine battle = game.getSession().getBattle();
+            BattleGUIEvent event = new BattleGUIEvent(game);
+            var finishes = new java.util.concurrent.atomic.AtomicInteger();
+            BattlePanelDriver driver = new BattlePanelDriver(battle, event, finishes::incrementAndGet, () -> { });
+            BattlePanel panel = driver.panel();
+            for (int i = 0; i < 3; i++) {
+                find(panel, "choice" + (battle.current().getAnswer() % 4)).doClick();
+                find(panel, "submit").doClick();
+                if (i < 2) driver.finishAnimation();
+            }
+            for (int i = 0; i < 65; i++) driver.tick();
+            assertTrue(driver.finalEffectRunning());
+            panel.removeNotify();
+            assertFalse(driver.running());
+            driver.finishAnimation();
+            assertEquals(0, finishes.get());
+        });
+    }
+
+    @Test void battleKeyboardSelectionRemainsUsableAtSmallWindowSize() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            game.startBattle("과학자", Difficulty.LOW, game.getCandidates("과학자").getFirst());
+            BattleEngine battle = game.getSession().getBattle();
+            BattleGUIEvent event = new BattleGUIEvent(game);
+            BattlePanelDriver driver = new BattlePanelDriver(battle, event, () -> { }, () -> { });
+            BattlePanel panel = driver.panel();
+            try {
+                panel.setSize(960, 720);
+                layout(panel);
+                for (int i = 0; i < 4; i++) {
+                    AbstractButton choice = find(panel, "choice" + i);
+                    assertTrue(panel.getBounds().contains(choice.getBounds()));
+                    assertTrue(choice.getHeight() >= 44, "Answer targets remain usable after resizing");
+                    assertFalse(choice.getBounds().intersects(find(panel, "submit").getBounds()));
+                }
+                panel.getActionMap().get("choice0").actionPerformed(null);
+                assertEquals(0, battle.selected());
+                assertTrue(find(panel, "submit").getText().contains("1번"));
+                BufferedImage preview = new BufferedImage(960, 720, BufferedImage.TYPE_INT_RGB);
+                Graphics2D graphics = preview.createGraphics();
+                panel.paint(graphics); graphics.dispose();
+                ImageIO.write(preview, "png", project.resolve("build/quiz-battle-small-preview.png").toFile());
+                panel.getActionMap().get("submit").actionPerformed(null);
+                assertEquals(BattleEngine.Phase.FEEDBACK, battle.phase());
+                assertFalse(find(panel, "choice0").isEnabled());
+                driver.finishAnimation();
+                assertEquals(1, battle.turn());
+                assertFalse(find(panel, "submit").isEnabled());
+            } catch (Exception ex) { throw new RuntimeException(ex); }
+            finally { panel.stopAnimation(); }
+        });
+    }
+
+    @Test void countdownPaintsShrinksAndResetsUnderTheInstalledTeamTheme() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            GameTheme.install();
+            game.startBattle("과학자", Difficulty.LOW, game.getCandidates("과학자").getFirst());
+            BattleEngine battle = game.getSession().getBattle();
+            BattleGUIEvent event = new BattleGUIEvent(game);
+            BattlePanelDriver driver = new BattlePanelDriver(battle, event, () -> { }, () -> { });
+            BattlePanel panel = driver.panel();
+            try {
+                panel.setSize(1280, 960); layout(panel);
+                find(panel, "choice" + (battle.current().getAnswer() - 1)).doClick();
+                find(panel, "submit").doClick();
+                JProgressBar bar = driver.countdown();
+                assertTrue(bar.isVisible()); assertEquals(1000, bar.getValue());
+                BufferedImage full = new BufferedImage(bar.getWidth(), bar.getHeight(), BufferedImage.TYPE_INT_RGB);
+                Graphics2D g = full.createGraphics(); bar.paint(g); g.dispose();
+                int previous = bar.getValue();
+                for (int i = 0; i < 24; i++) { driver.tick(); assertTrue(bar.getValue() <= previous); previous = bar.getValue(); }
+                assertTrue(bar.getValue() > 0 && bar.getValue() < 500);
+                BufferedImage half = new BufferedImage(bar.getWidth(), bar.getHeight(), BufferedImage.TYPE_INT_RGB);
+                g = half.createGraphics(); bar.paint(g); g.dispose();
+                int x = bar.getWidth() * 3 / 4, y = bar.getHeight() / 2;
+                assertNotEquals(full.getRGB(x, y), half.getRGB(x, y), "Visible fill must shrink, not just its model value");
+                driver.finishAnimation(); assertFalse(bar.isVisible());
+                find(panel, "choice" + (battle.current().getAnswer() - 1)).doClick();
+                find(panel, "submit").doClick();
+                assertEquals(1000, bar.getValue()); assertTrue(bar.isVisible());
+            } finally { panel.stopAnimation(); }
+        });
+    }
+
+    @Test void victoryFinisherCompletesBeforeOneNavigationCallback() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            game.startBattle("과학자", Difficulty.LOW, game.getCandidates("과학자").getFirst());
+            BattleEngine battle = game.getSession().getBattle();
+            BattleGUIEvent event = new BattleGUIEvent(game);
+            var finishes = new java.util.concurrent.atomic.AtomicInteger();
+            BattlePanelDriver driver = new BattlePanelDriver(battle, event, finishes::incrementAndGet, () -> { });
+            BattlePanel panel = driver.panel();
+            try {
+                for (int i = 0; i < 5; i++) {
+                    find(panel, "choice" + (battle.current().getAnswer() - 1)).doClick();
+                    find(panel, "submit").doClick();
+                    if (i < 4) driver.finishAnimation();
+                }
+                for (int i = 0; i < 45; i++) driver.tick();
+                assertEquals(BattleEngine.Result.WIN, battle.result());
+                assertTrue(driver.finishEffectRunning()); assertEquals(0, finishes.get());
+                assertFalse(driver.countdown().isVisible());
+                for (int i = 0; i < 34; i++) driver.tick();
+                render(panel, "quiz-battle-victory-finisher-preview.png");
+                assertEquals(0, finishes.get());
+                driver.finishAnimation(); assertEquals(1, finishes.get());
+                driver.finishAnimation(); assertEquals(1, finishes.get());
+            } catch (Exception ex) { throw new RuntimeException(ex); }
+            finally { panel.stopAnimation(); }
+        });
+    }
+
+    @Test void nonProfessorAlsoFinishesThePlayerWhenVictoryBecomesImpossible() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            game.startBattle("과학자", Difficulty.LOW, game.getCandidates("과학자").getFirst());
+            BattleEngine battle = game.getSession().getBattle();
+            BattleGUIEvent event = new BattleGUIEvent(game);
+            var finishes = new java.util.concurrent.atomic.AtomicInteger();
+            BattlePanelDriver driver = new BattlePanelDriver(battle, event, finishes::incrementAndGet, () -> { });
+            BattlePanel panel = driver.panel();
+            try {
+                for (int i = 0; i < 3; i++) {
+                    find(panel, "choice" + (battle.current().getAnswer() % 4)).doClick(); find(panel, "submit").doClick();
+                    if (i < 2) driver.finishAnimation();
+                }
+                for (int i = 0; i < 65; i++) driver.tick();
+                assertEquals(3, battle.answeredCount()); assertEquals(BattleEngine.Result.LOSE, battle.result());
+                assertTrue(driver.finishEffectRunning()); assertFalse(driver.finalEffectRunning());
+                assertEquals(0, finishes.get());
+                for (int i = 0; i < 32; i++) driver.tick();
+                render(panel, "quiz-battle-enemy-finisher-preview.png");
+                driver.finishAnimation(); assertEquals(1, finishes.get());
+            } catch (Exception ex) { throw new RuntimeException(ex); }
+            finally { panel.stopAnimation(); }
+        });
+    }
+
+    @Test void allCategoryAttacksRenderThroughNormalHitsAndFinishers() throws Exception {
+        for (int i = 0; i < 30; i++) game.progress().answer("category-unlock-" + i, "과학자", true);
+        SwingUtilities.invokeAndWait(() -> {
+            for (String category : Application.CATEGORIES) {
+                game.startBattle(category, Difficulty.LOW, game.getChallengeCandidates(category).getFirst());
+                BattleEngine battle = game.getSession().getBattle();
+                BattleGUIEvent event = new BattleGUIEvent(game);
+                var finishes = new java.util.concurrent.atomic.AtomicInteger();
+                BattlePanelDriver driver = new BattlePanelDriver(battle, event, finishes::incrementAndGet, () -> { });
+                BattlePanel panel = driver.panel();
+                try {
+                    for (int question = 0; question < 5; question++) {
+                        find(panel, "choice" + (battle.current().getAnswer() - 1)).doClick();
+                        find(panel, "submit").doClick();
+                        if (question == 0) {
+                            for (int i = 0; i < 4; i++) driver.tick();
+                            render(panel, "attack-" + category + "-preview.png");
+                        }
+                        if (question < 4) driver.finishAnimation();
+                    }
+                    for (int i = 0; i < 53; i++) driver.tick();
+                    render(panel, "charge-" + category + "-preview.png");
+                    for (int i = 0; i < 15; i++) driver.tick();
+                    assertTrue(driver.finishEffectRunning()); assertEquals(0, finishes.get());
+                    render(panel, "finisher-" + category + "-preview.png");
+                    driver.finishAnimation(); assertEquals(1, finishes.get());
+                } catch (Exception ex) { throw new RuntimeException(ex); }
+                finally { panel.stopAnimation(); }
+            }
+        });
+    }
+
     private void render(JComponent component, String name) throws Exception {
         component.setSize(1280, 960); layout(component); BufferedImage image = new BufferedImage(1280, 960, BufferedImage.TYPE_INT_RGB);
         Graphics2D graphics = image.createGraphics(); component.paint(graphics); graphics.dispose();

@@ -104,9 +104,10 @@ public final class ResultView extends JPanel implements View {
                 verdict.setForeground(new Color(105, 200, 255));
                 verdict.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 50f));
             }
-            hp.add(hpPanel("플레이어", battle.playerHp(), battle.maxPlayerHp()));
+
             hp.add(hpPanel("상대", battle.computerHp(), battle.maxComputerHp()));
-            score.setText("정답 " + battle.correctCount() + " / " + session.getAnsweredCount() + " · 최고 콤보 " + battle.bestCombo());
+            score.setText("최초 정답 " + battle.correctCount() + " / " + battle.answeredCount() + "문제 응답 · 재도전 보충 " + battle.retryCorrectCount()
+                    + " · 성공 기준 " + battle.successCount() + "/3 · " + "★".repeat(battle.stars()));
         } else {
             title.setText(session.getMode() + " 결과");
             verdict.setText(session.getQuestionCount() + "문제를 모두 풀었습니다!");
@@ -152,7 +153,7 @@ public final class ResultView extends JPanel implements View {
         revalidate();
         repaint();
     }
-    
+
     private static final class RewardPanel extends JPanel {
         RewardPanel() {
             super(new FlowLayout(FlowLayout.CENTER, 20, 12));
@@ -358,7 +359,7 @@ public final class ResultView extends JPanel implements View {
             textG.dispose();
         }
     }
-    
+
     private static final class VictoryHeader extends JPanel {
     	private final JLabel verdictLabel;
     	private boolean defeat;
@@ -516,7 +517,7 @@ public final class ResultView extends JPanel implements View {
             g.setColor(new Color(255, 252, 221));
             g.fill(new Ellipse2D.Double(-2, pivotY - 2, 4, 4));
             g.dispose();
-        }        
+        }
         @Override
         protected void paintComponent(Graphics source) {
             super.paintComponent(source);

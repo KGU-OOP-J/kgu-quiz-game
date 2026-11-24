@@ -82,12 +82,14 @@ public final class GameFeature {
         if (!getChallengeCandidates(category).contains(target)) throw new IllegalArgumentException("도전할 인물을 선택하세요. 최종 교수님 구출 대상은 이은정 교수님입니다.");
         if (category.equals("교수님")) boss = true;
         if (boss && !profile().bossUnlocked(category)) throw new IllegalArgumentException("이 마을의 서로 다른 인물 3명에게 승리하면 보스가 열립니다.");
-        boolean mixed = boss && !category.equals("교수님");
-        List<QuestionBank.Entry> pool = bank(category).stream().filter(e -> e.difficulty() == difficulty && (mixed || e.person() == target)).toList();
-        List<QuestionBank.Entry> entries = QuestionBank.choose(pool, boss ? 8 : 5, profile(), random, false);
-        Person support = equippedCard().orElseGet(() -> new Person(category, "견습 탐험가", List.of("나만의 탐험", "카드를 모으세요", "스킬을 활용하세요", "마을을 탐험하세요")));
-        BattleEngine battle = new BattleEngine(support, target, entries.stream().map(QuestionBank.Entry::quiz).toList(),
-            equippedPower(), profile().level(), difficulty, boss);
+
+        List<QuestionBank.Entry> pool = bank(category).stream().filter(e -> e.difficulty() == difficulty && e.person() == target).toList();
+        List<QuestionBank.Entry> entries = QuestionBank.choose(pool, BattleEngine.QUESTION_COUNT, profile(), random, false);
+        if (entries.size() != BattleEngine.QUESTION_COUNT) {
+            throw new IllegalArgumentException("선택한 인물과 난이도에 서로 다른 문제 5개가 필요합니다.");
+        }
+        BattleEngine battle = new BattleEngine(target, entries.stream().map(QuestionBank.Entry::quiz).toList(),
+            equippedPower(), boss, random);
         gameSession = GameSession.battle(category, difficulty, entries, battle); navigate.accept(ViewId.QUESTION);
     }
     public GameSession getSession() {
@@ -113,9 +115,11 @@ public final class GameFeature {
     public void submitBattleAnswer() {
         BattleEngine b = getSession().getBattle();
         if (b.phase() != BattleEngine.Phase.QUESTION || b.selected() < 0) throw new IllegalStateException("정답을 먼저 선택하세요.");
-        recordAnswer(b.selected() + 1 == b.current().getAnswer()); b.submit();
+        // A retry has already exposed the answer: do not award XP, unlock credit or clear the wrong-answer notebook.
+        if (!b.isRetry()) recordAnswer(b.selected() + 1 == b.current().getAnswer());
+        b.submit();
     }
-    public void advanceBattle() { getSession().getBattle().advance(); }
+    public void advanceBattle() { getSession().getBattle().advance(profile().inventory(ShopItem.SHIELD) > 0); }
     public void useItem(ShopItem item) throws IOException {
         BattleEngine b = getSession().getBattle(); b.validateItem(item);
         progress().consume(item); b.useItem(item);

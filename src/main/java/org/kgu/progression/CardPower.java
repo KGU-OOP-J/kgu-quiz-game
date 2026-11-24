@@ -6,10 +6,10 @@ import java.util.Map;
 /** Every owned person is an equipable support, with a reproducible, named affinity. */
 public record CardPower(String title, Kind kind, int strength, String personKey) {
     public enum Kind {
-        ANALYSIS("분석", "분석 스킬 비용 감소, 시작 자원 증가"),
-        POWER("돌파", "정답 공격 피해 증가"),
-        GUARD("수호", "최대 HP 증가, 받는 피해 감소"),
-        FOCUS("집중", "콤보 자원과 전투 경험치 증가");
+        ANALYSIS("분석", "수집 카드의 분석 성향"),
+        POWER("돌파", "수집 카드의 돌파 성향"),
+        GUARD("수호", "수집 카드의 수호 성향"),
+        FOCUS("집중", "전투 경험치 증가");
         private final String label, description;
         Kind(String label, String description) { this.label = label; this.description = description; }
         public String label() { return label; }
@@ -30,11 +30,8 @@ public record CardPower(String title, Kind kind, int strength, String personKey)
     }
     public static CardPower beginner() { return new CardPower("견습 탐험가 — 카드 획득 후 장착 가능", Kind.GUARD, 0, ""); }
     public String description() {
-        return switch (kind) {
-            case ANALYSIS -> "시작 자원 +" + strength + " · 분석 비용 " + (strength > 0 ? 1 : 2);
-            case POWER -> "정답 공격 피해 +" + strength * 2;
-            case GUARD -> "최대 HP +" + strength * 4 + " · 반격 피해 -" + strength;
-            case FOCUS -> "연속 정답 추가 자원 +1 · 전투 XP +" + strength * 5 + "%";
-        };
+        return kind == Kind.FOCUS
+            ? "전투 XP +" + strength * 5 + "% · 정답 피해와 성공 조건은 모든 카드가 같아요"
+            : "함께 승리하면 숙련도가 올라요 · 정답 피해와 성공 조건은 모든 카드가 같아요";
     }
 }
