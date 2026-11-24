@@ -45,6 +45,3 @@ bin/
 ### Custom ###
 saves/
 .integration-runtime/
-
-# Local Gradle download cache used by run.bat
-.gradle-user-home/

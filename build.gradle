@@ -3,9 +3,6 @@ plugins {
     id 'application'
 }
 
-// Source files stay UTF-8 even when Windows Gradle uses native path encoding.
-tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8' }
-
 group = 'org.kgu'
 version = '0.1.0'
 
@@ -85,14 +82,4 @@ tasks.register('runIntegration', JavaExec) {
     classpath = sourceSets.test.runtimeClasspath
     mainClass = 'org.kgu.integration.IntegrationMain'
     workingDir integrationDir
-}
-// New battle preview uses production assets and only an OS-temporary unlocked profile.
-tasks.register('runBattleTest', JavaExec) {
-    group = 'verification'
-    description = 'Open the current professor battle without changing player unlocks.'
-    dependsOn 'testClasses'
-    classpath = sourceSets.test.runtimeClasspath
-    mainClass = 'org.kgu.game.preview.BattleTestMain'
-    workingDir projectDir
-    systemProperty 'game.projectDir', projectDir.absolutePath
 }
