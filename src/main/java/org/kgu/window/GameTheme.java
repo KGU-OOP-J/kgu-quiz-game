@@ -170,13 +170,21 @@ public final class GameTheme {
         UiStyle.prepare(g); int w = button.getWidth(), h = button.getHeight();
         boolean selected = button.getModel().isSelected() || Boolean.TRUE.equals(button.getClientProperty("selected"));
         boolean hover = button.getModel().isRollover(), pressed = button.getModel().isPressed();
+        Color selectionTint = button.getClientProperty("selectionTint") instanceof Color color ? color : null;
         if (tint == null || tint.getRed() + tint.getGreen() + tint.getBlue() > 600) tint = TEAL;
         if (Boolean.TRUE.equals(button.getClientProperty("correct"))) tint = new Color(33, 116, 80);
         if (Boolean.TRUE.equals(button.getClientProperty("incorrect"))) tint = new Color(130, 51, 59);
         if (!button.isEnabled() && !Boolean.TRUE.equals(button.getClientProperty("correct"))) tint = new Color(38, 48, 60);
         String state = !button.isEnabled() ? "button-disabled" : pressed ? "button-pressed" : selected ? "button-selected" : hover ? "button-hover" : "button-primary";
         Optional<BufferedImage> art = asset(state);
-        if (art.isPresent()) ninePatch(g, art.get(), 0, 0, w, h, 18);
+        if (selectionTint != null) {
+            g.setColor(new Color(0, 0, 0, 100)); g.fillRoundRect(0, 3, w, Math.max(0, h - 3), 12, 12);
+            g.setPaint(new GradientPaint(0, 0, selectionTint.brighter(), w, h, selectionTint.darker()));
+            g.fillRoundRect(1, 1, w - 3, h - 5, 12, 12);
+            g.setColor(new Color(191, 226, 255)); g.setStroke(new BasicStroke(2f));
+            g.drawRoundRect(1, 1, w - 3, h - 5, 12, 12);
+        }
+        else if (art.isPresent()) ninePatch(g, art.get(), 0, 0, w, h, 18);
         else {
             g.setColor(new Color(0, 0, 0, 90)); g.fillRoundRect(0, 3, w, Math.max(0, h - 3), 12, 12);
             g.setPaint(new GradientPaint(0, 0, pressed ? tint.darker() : tint.brighter(), w, h, tint.darker()));

@@ -42,7 +42,7 @@ public final class QuestionGUIEvent {
         try {
             boolean correct = gameFeature.submitAnswer();
             if (gameFeature.isSoundEnabled()) Toolkit.getDefaultToolkit().beep();
-            view.showPractice();
+            view.showPractice(correct);
             if (correct) gameFeature.saveRewards();
         } catch (java.io.UncheckedIOException e) {
             JOptionPane.showMessageDialog(view, e.getMessage(), "답안 기록 실패", JOptionPane.ERROR_MESSAGE);
