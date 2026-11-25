@@ -85,10 +85,11 @@ public final class CollectionFeature {
         return persons.filter(person -> person.getCategory().equals(category)).toList();
     }
 
-    public boolean categoryAvailable(String category) { return !category.equals("교수님") || playerSession.saveFactory().progress().snapshot().professorUnlocked(); }
+    public boolean categoryAvailable(String category) { return playerSession.isDemoMode() || !category.equals("교수님") || playerSession.saveFactory().progress().snapshot().professorUnlocked(); }
     public int rescueProgress() { return playerSession.saveFactory().progress().snapshot().rescueProgress(); }
 
     public List<Integer> getStages(Person person) {
+        if (playerSession.isDemoMode()) return List.of(1, 2, 3);
         return playerSession.saveFactory().create().getStages(person.getCategory(), person.getName());
     }
 

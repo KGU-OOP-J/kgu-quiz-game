@@ -21,6 +21,7 @@ public final class GameSession {
     private final Difficulty difficulty;
     private final List<QuestionBank.Entry> entries;
     private final BattleEngine battle;
+    private final List<AnswerRecord> answers = new ArrayList<>();
     private final List<Person> earnedPersons = new ArrayList<>();
     private final Set<CardKey> newlyAcquiredCards = new HashSet<>();
     private int questionIndex, selectedAnswer, correctCount, hints;
@@ -89,6 +90,7 @@ public final class GameSession {
         if (selectedAnswer == 0) throw new IllegalStateException("정답을 선택해 주세요.");
         boolean correct = selectedAnswer == getCurrentQuiz().getAnswer();
         if (correct) { correctCount++; if (mode == Mode.PRACTICE) earnedPersons.add(getCurrentPerson()); }
+        answers.add(new AnswerRecord(currentEntry(), selectedAnswer, correct));
         phase = Phase.FEEDBACK;
         return correct;
     }
@@ -96,6 +98,19 @@ public final class GameSession {
         require(Phase.FEEDBACK); questionIndex++; selectedAnswer = 0;
         phase = questionIndex == entries.size() ? Phase.FINISHED : Phase.QUESTION;
     }
+    /** Only original submissions are recorded; shield retries do not replace learning history. */
+    public record AnswerRecord(QuestionBank.Entry entry, int selectedAnswer, boolean correct) {
+        public String selectedText() { return entry.quiz().getChoices().get(selectedAnswer - 1); }
+        public String correctText() { return entry.quiz().getChoices().get(entry.quiz().getAnswer() - 1); }
+    }
+    public List<AnswerRecord> answers() { return List.copyOf(answers); }
+    public List<QuestionBank.Entry> wrongEntries() {
+        return answers.stream().filter(answer -> !answer.correct()).map(AnswerRecord::entry).toList();
+    }
+    void recordBattleAnswer() {
+        if (!battle.isRetry()) answers.add(new AnswerRecord(currentEntry(), battle.selected() + 1, battle.feedback().correct()));
+    }
+
     public List<Person> getRewards() { return mode == Mode.BATTLE ? battle.rewards() : List.copyOf(earnedPersons); }
 
     void recordNewCard(Person person) {

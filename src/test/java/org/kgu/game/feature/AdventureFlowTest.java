@@ -90,6 +90,115 @@ class AdventureFlowTest {
         assertEquals(1, save.create().getCollectedCount());
     }
 
+    @Test void demoAccountsUnlockChallengesAndPreviewCardsWithoutGrantingProgress() throws Exception {
+        for (String id : List.of("admin", " CHEAT ")) {
+            SaveFactory demoSave = new SaveFactory(temp.resolve(id.trim() + ".txt")); demoSave.open();
+            PlayerSession player = new PlayerSession(id, demoSave);
+            assertTrue(player.isDemoMode());
+            GameFeature demo = new GameFeature(player, PersonManager.getInstance(), ImageManager.getInstance(),
+                new SettingFactory(temp.resolve("demo-settings"), new Setting()), destination::set);
+            CollectionFeature gallery = new CollectionFeature(PersonManager.getInstance(), ImageManager.getInstance(), player, destination::set);
+            assertTrue(demo.categoryUnlocked("교수님")); assertTrue(gallery.categoryAvailable("교수님"));
+            assertEquals(80, gallery.getCollectedCount()); assertEquals(60, gallery.getStageCount("교수님"));
+            assertEquals(List.of(1, 2, 3), gallery.getStages(demo.getChallengeCandidates("교수님").getFirst()));
+            demo.startChallenge("교수님", Difficulty.LOW, demo.getChallengeCandidates("교수님").getFirst(), true);
+            assertEquals(5, demo.getSession().getQuestionCount());
+            demo.startChallenge("과학자", Difficulty.LOW, demo.getChallengeCandidates("과학자").getLast(), true);
+            assertTrue(demo.profile().bossUnlocked("과학자"));
+            assertEquals(0, demoSave.create().getCollectedCount());
+            assertEquals(0, demoSave.progress().snapshot().rescueProgress());
+            assertFalse(demoSave.progress().snapshot().professorUnlocked());
+            assertFalse(demoSave.progress().snapshot().bossUnlocked("과학자"));
+        }
+        assertFalse(new PlayerSession("admin2", save).isDemoMode());
+        assertFalse(game.categoryUnlocked("교수님"));
+        assertFalse(game.profile().bossUnlocked("과학자"));
+        assertEquals(0, game.ownedCards().size());
+    }
+
+    @Test void challengeHelpSwitchesCardsWithoutChangingSelectionOrInventory() throws Exception {
+        game.progress().buy(ShopItem.INSIGHT);
+        SwingUtilities.invokeAndWait(() -> {
+            try {
+                AdventureView view = new AdventureView(game); view.refresh();
+                find(view, "village한국사").doClick(); find(view, "difficultyHIGH").doClick();
+                JComboBox<?> targets = (JComboBox<?>) namedComponent(view, "challengeTarget"); targets.setSelectedIndex(2);
+                Object selected = targets.getSelectedItem();
+                find(view, "challengeDetails").doClick(); render(view, "evaluation-help-rules.png");
+                find(view, "helpItems").doClick(); render(view, "evaluation-help-items.png");
+                assertEquals("보유 1개", ((JLabel) namedComponent(view, "helpStockINSIGHT")).getText());
+                find(view, "helpBack").doClick();
+                assertSame(selected, ((JComboBox<?>) namedComponent(view, "challengeTarget")).getSelectedItem());
+                assertEquals(Boolean.TRUE, find(view, "difficultyHIGH").getClientProperty("selected"));
+                assertEquals(1, game.profile().inventory(ShopItem.INSIGHT));
+                assertTrue(namedComponent(view, "challengeTarget").isVisible());
+            } catch (Exception e) { throw new AssertionError(e); }
+        });
+    }
+
+    @Test void mapOffersChallengeAndCollectionForTheChosenVillage() throws Exception {
+        ImageManager.getInstance().register("ui/map", project.resolve("images/ui/map.png"));
+        var event = new CollectionGUIEvent(new CollectionFeature(PersonManager.getInstance(), ImageManager.getInstance(),
+            new PlayerSession("테스터", save), destination::set));
+        SwingUtilities.invokeAndWait(() -> {
+            try {
+                CollectionView view = new CollectionView(event);
+                var chosen = new AtomicReference<String>(); view.configureAdventure(chosen::set);
+                event.refresh(view); view.showMap();
+                find(view, "mapVillage한국사").doClick();
+                render(view, "evaluation-village-actions-preview.png");
+                find(view, "villageChallenge").doClick(); assertEquals("한국사", chosen.get());
+                view.showMap(); find(view, "mapVillage과학자").doClick();
+                find(view, "villageCollection").doClick();
+                render(view, "evaluation-village-collection-preview.png");
+                assertFalse(find(view, "villageCollection").getParent().getParent().isVisible());
+                assertFalse(find(view, "mapVillage교수님").isEnabled());
+                view.stopAnimations();
+            } catch (Exception e) { throw new AssertionError(e); }
+        });
+    }
+
+    @Test void practiceKeepsSelectionAndCompletesSparkleOrDisappearance() throws Exception {
+        game.startPractice("과학자", Difficulty.LOW);
+        SwingUtilities.invokeAndWait(() -> {
+            try {
+                var view = new org.kgu.game.view.QuestionView(new org.kgu.game.event.QuestionGUIEvent(game), new BattleGUIEvent(game));
+                view.display(); render(view, "evaluation-practice-preview.png");
+                var card = (org.kgu.collection.view.CardView) namedComponent(view, "practicePortrait");
+                find(view, "practiceChoice0").doClick();
+                assertSame(card, namedComponent(view, "practicePortrait"));
+                find(view, "practiceHint").doClick(); assertTrue(view.isPracticeHintVisible());
+                render(view, "evaluation-practice-hint.png");
+                assertEquals(1, game.getSession().getSelectedAnswer());
+                find(view, "practiceHintClose").doClick(); assertFalse(view.isPracticeHintVisible());
+                assertSame(card, namedComponent(view, "practicePortrait"));
+                game.submitAnswer(); view.showPractice();
+                assertSame(card, namedComponent(view, "practicePortrait")); view.stopAnimations();
+                for (boolean correct : new boolean[]{true, false}) {
+                    card.startPracticeFeedback(true, 0); card.updateHit(1_300_000_000);
+                    renderAt(card, "practice-rest.png", 320, 460);
+                    var rest = ImageIO.read(project.resolve("build/practice-rest.png").toFile());
+                    card.startPracticeFeedback(correct, 0); card.updateHit(240_000_000);
+                    assertTrue(card.isHitAnimating());
+                    renderAt(card, "practice-feedback-" + correct + ".png", 320, 460);
+                    var mid = ImageIO.read(project.resolve("build/practice-feedback-" + correct + ".png").toFile());
+                    assertFalse(java.util.Arrays.equals(rest.getRGB(0, 0, 320, 460, null, 0, 320), mid.getRGB(0, 0, 320, 460, null, 0, 320)), "effect must be visible");
+                    card.updateHit(1_100_000_000);
+                    assertTrue(card.isHitAnimating(), "recovery must continue after the initial effect");
+                    renderAt(card, "practice-recovery-" + correct + ".png", 320, 460);
+                    card.updateHit(1_300_000_000); assertFalse(card.isHitAnimating());
+                    renderAt(card, "practice-restored.png", 320, 460);
+                    var restored = ImageIO.read(project.resolve("build/practice-restored.png").toFile());
+                    if (correct) assertArrayEquals(rest.getRGB(0, 0, 320, 460, null, 0, 320), restored.getRGB(0, 0, 320, 460, null, 0, 320));
+                    else assertTrue(Arrays.stream(restored.getRGB(0, 0, 320, 460, null, 0, 320)).allMatch(pixel -> (pixel & 0xffffff) == 0), "wrong-answer card must stay invisible");
+                }
+                game.nextQuestion(); view.showPractice();
+                assertNotSame(card, namedComponent(view, "practicePortrait"));
+                render(view, "practice-next-question.png"); view.stopAnimations();
+            } catch (Exception e) { throw new AssertionError(e); }
+        });
+    }
+
     @Test void collectionAndBattleShareUnlockAndAnimationIsOncePerAccount() throws Exception {
         PlayerSession player = new PlayerSession("테스터", save);
         CollectionFeature feature = new CollectionFeature(PersonManager.getInstance(), ImageManager.getInstance(), player, destination::set);
@@ -131,6 +240,152 @@ class AdventureFlowTest {
             catch (Exception e) { throw new AssertionError(e); }
             finally { view.stopAnimations(); }
         });
+    }
+
+    private void finishMixedBattle() {
+        game.startBattle("과학자", Difficulty.LOW, game.getCandidates("과학자").getFirst());
+        BattleEngine battle = game.getSession().getBattle();
+        for (int i = 0; i < 5; i++) {
+            game.selectBattleAnswer(i < 3 ? battle.current().getAnswer() - 1 : battle.current().getAnswer() % 4);
+            game.submitBattleAnswer(); game.advanceBattle();
+        }
+        assertEquals(GameSession.Phase.FINISHED, game.getSession().getPhase());
+    }
+
+    @Test void resultReviewUsesOnlyThisRunAndKeepsOriginalSettlement() throws Exception {
+        game.startPractice("한국사", Difficulty.LOW);
+        String historicalWrong = game.getSession().currentEntry().id();
+        game.selectAnswer(game.getSession().getCurrentQuiz().getAnswer() % 4 + 1); game.submitAnswer();
+        finishMixedBattle();
+        GameSession finished = game.getSession();
+        assertEquals(5, finished.answers().size());
+        assertEquals(2, finished.wrongEntries().size());
+        Set<String> expected = new HashSet<>(finished.wrongEntries().stream().map(QuestionBank.Entry::id).toList());
+        game.saveRewards();
+        int xp = game.profile().experience(), coins = game.profile().coins();
+        SwingUtilities.invokeAndWait(() -> {
+            ResultView result = new ResultView(new ResultGUIEvent(game));
+            try {
+                result.display(finished, game.getSavedRewards(), "이번 오답을 복습해 보세요.", false);
+                assertTrue(find(result, "reviewCurrent").isEnabled());
+                render(result, "evaluation-result-preview.png");
+                renderAt(new LearningReviewPanel(finished.answers()), "evaluation-learning-preview.png", 760, 520);
+                find(result, "reviewCurrent").doClick();
+            } catch (Exception e) { throw new AssertionError(e); }
+            finally { result.stopAnimations(); }
+        });
+        assertEquals(GameSession.Mode.REVIEW, game.getSession().getMode());
+        assertEquals(2, game.getSession().getQuestionCount());
+        assertEquals(xp, game.profile().experience()); assertEquals(coins, game.profile().coins());
+        Set<String> actual = new HashSet<>();
+        while (game.getSession().getPhase() != GameSession.Phase.FINISHED) {
+            actual.add(game.getSession().currentEntry().id());
+            game.selectAnswer(game.getSession().getCurrentQuiz().getAnswer()); game.submitAnswer(); game.nextQuestion();
+        }
+        assertEquals(expected, actual);
+        game.saveRewards();
+        assertEquals(xp + 12, game.profile().experience());
+        assertEquals(coins + 8, game.profile().coins());
+        assertTrue(game.profile().wrongQuestions().contains(historicalWrong));
+        assertTrue(Collections.disjoint(expected, game.profile().wrongQuestions()));
+    }
+
+    @Test void resultReviewDoesNotDiscardSessionWhenRewardSaveFails() throws Exception {
+        finishMixedBattle();
+        GameSession finished = game.getSession();
+        Path temporary = save.progress().path().resolveSibling(save.progress().path().getFileName() + ".tmp");
+        Files.createDirectories(temporary);
+        assertThrows(java.io.IOException.class, game::startCurrentReview);
+        assertSame(finished, game.getSession());
+        assertEquals(GameSession.Phase.FINISHED, finished.getPhase());
+        game.startCurrentReview();
+        assertEquals(GameSession.Mode.REVIEW, game.getSession().getMode());
+        assertEquals(96, finished.rewardSettlement().orElseThrow().xpEarned());
+        assertEquals(58, finished.rewardSettlement().orElseThrow().coinsEarned());
+        assertEquals(1, save.create().getCollectedCount());
+    }
+
+    @Test void perfectRunHasNoCurrentReviewAndKeepsItsSession() throws Exception {
+        game.startBattle("과학자", Difficulty.LOW, game.getCandidates("과학자").getFirst()); completeBattle();
+        GameSession finished = game.getSession();
+        assertEquals(5, finished.answers().size());
+        assertThrows(IllegalArgumentException.class, game::startCurrentReview);
+        assertSame(finished, game.getSession());
+        SwingUtilities.invokeAndWait(() -> {
+            ResultView result = new ResultView(new ResultGUIEvent(game));
+            result.display(finished, game.getSavedRewards(), "완료", false);
+            assertEquals("다음 도전  →", find(result, "reviewCurrent").getText());
+            find(result, "reviewCurrent").doClick();
+            assertEquals(ViewId.ADVENTURE, destination.get());
+        });
+    }
+
+    @Test void homeStartsOnTheMapAndKeepsPreparationReachable() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            try {
+                var view = new org.kgu.menu.view.MenuView();
+                var event = new org.kgu.menu.event.MenuGUIEvent(view,
+                    new org.kgu.menu.feature.MenuFeature(game, destination::set));
+                view.getCollectionButton().addActionListener(event);
+                view.configureAdventure(tab -> game.openAdventure(), () -> {});
+                view.setPlayerId("테스터");
+                view.showProgress(game.profile(), "서로 다른 문제 30개를 맞히면 교수님 마을이 열립니다.");
+                render(view, "evaluation-menu-preview.png");
+                view.getCollectionButton().doClick();
+                assertEquals(ViewId.COLLECTION, destination.get());
+                find(view, "openWorld").doClick();
+                assertEquals(ViewId.ADVENTURE, destination.get());
+            } catch (Exception e) { throw new AssertionError(e); }
+        });
+    }
+
+    @Test void preparationShowsPortraitAndStartsTheSelectedPersonAndDifficulty() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            try {
+                AdventureView view = new AdventureView(game); view.refresh();
+                find(view, "village한국사").doClick();
+                JComboBox<?> targets = (JComboBox<?>) namedComponent(view, "challengeTarget");
+                targets.setSelectedIndex(2);
+                render(view, "evaluation-preparation-person.png");
+                find(view, "preparationNext").doClick();
+                find(view, "difficultyHIGH").doClick();
+                find(view, "preparationPerson").doClick();
+                assertEquals(targets.getSelectedItem(), ((JComboBox<?>) namedComponent(view, "challengeTarget")).getSelectedItem());
+                find(view, "preparationSettings").doClick();
+                render(view, "evaluation-preparation-preview.png");
+                Component portrait = namedComponent(view, "challengePortrait");
+                assertTrue(portrait.getWidth() > 150 && portrait.getHeight() > 200, "portrait must remain visible");
+                assertFalse(find(view, "village교수님").isEnabled());
+                find(view, "startChallenge").doClick();
+                assertEquals("한국사", game.getSession().getCategory());
+                assertEquals(Difficulty.HIGH, game.getSession().getDifficulty());
+                assertSame(game.getCandidates("한국사").get(2), game.getSession().getBattle().computer());
+            } catch (Exception e) { throw new AssertionError(e); }
+        });
+    }
+
+    @Test void practicePaysFiveCoinsOnlyForACompletedPerfectRun() throws Exception {
+        int initialCoins = game.profile().coins();
+        for (boolean perfect : new boolean[]{false, true}) {
+            game.startPractice("과학자", Difficulty.LOW);
+            int baseline = game.profile().coins();
+            int count = 0;
+            while (game.getSession().getPhase() != GameSession.Phase.FINISHED) {
+                int answer = game.getSession().getCurrentQuiz().getAnswer();
+                game.selectAnswer(!perfect && count == 0 ? answer % 4 + 1 : answer);
+                game.submitAnswer(); game.saveRewards();
+                assertEquals(baseline, game.profile().coins(), "no coin reward before finishing");
+                game.nextQuestion(); count++;
+            }
+            game.saveRewards();
+            assertEquals(baseline + (perfect ? 5 : 0), game.profile().coins());
+            assertEquals(perfect ? 5 : 0, game.getSession().rewardSettlement().orElseThrow().coinsEarned());
+            game.saveRewards(); assertEquals(baseline + (perfect ? 5 : 0), game.profile().coins(), "no duplicate payout");
+        }
+        assertEquals(initialCoins + 5, game.profile().coins());
+        game.startPractice("과학자", Difficulty.LOW);
+        game.selectAnswer(game.getSession().getCurrentQuiz().getAnswer()); game.submitAnswer(); game.saveRewards();
+        assertEquals(initialCoins + 5, game.profile().coins(), "abandoning a partial perfect run pays nothing");
     }
 
     @Test void practiceUsesAllPeopleAndVariedProblemsWithoutRecentRepeats() throws Exception {
@@ -196,6 +451,8 @@ class AdventureFlowTest {
         assertEquals(before + 52, game.profile().coins());
         assertEquals(1, game.getSavedRewards().size());
         assertEquals(1, battle.stars());
+        assertEquals(5, game.getSession().answers().size());
+        assertEquals(3, game.getSession().wrongEntries().size());
         ResultPresentation result = ResultGUIEvent.presentation(game.getSession(), game.getSavedRewards(), "", false);
         assertEquals(2, result.correctCount());
         assertEquals(5, result.answeredCount());
@@ -274,6 +531,8 @@ class AdventureFlowTest {
     @Test void productionViewsRenderAndBattleControlsFinishAndSave() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             try {
+                var login = new org.kgu.login.view.LoginView(); login.getIdField().setText("한글아이디 admin_123");
+                render(login, "evaluation-login-preview.png");
                 AdventureView hub = new AdventureView(game); hub.refresh(); render(hub, "adventure-preview.png");
                 TutorialView tutorial = new TutorialView(game); render(tutorial, "tutorial-preview.png");
                 game.startBattle("과학자", Difficulty.LOW, game.getCandidates("과학자").getFirst());
@@ -540,11 +799,24 @@ class AdventureFlowTest {
         });
     }
 
+    private Component namedComponent(Container parent, String name) {
+        for (Component component : parent.getComponents()) {
+            if (name.equals(component.getName())) return component;
+            if (component instanceof Container child) {
+                Component found = namedComponent(child, name);
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
     private void render(JComponent component, String name) throws Exception {
-        component.setSize(1280, 960); layout(component); BufferedImage image = new BufferedImage(1280, 960, BufferedImage.TYPE_INT_RGB);
+        renderAt(component, name, 1280, 960);
+    }
+    private void renderAt(JComponent component, String name, int width, int height) throws Exception {
+        component.setSize(width, height); layout(component); BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
         Graphics2D graphics = image.createGraphics(); component.paint(graphics); graphics.dispose();
         Path output = project.resolve("build/" + name); ImageIO.write(image, "png", output.toFile());
-        assertNotEquals(0, image.getRGB(640, 480));
+        assertNotEquals(0, image.getRGB(width / 2, height / 2));
     }
     private void layout(Container parent) { parent.doLayout(); for (Component c : parent.getComponents()) if (c instanceof Container child) layout(child); }
     private AbstractButton find(Container parent, String name) {

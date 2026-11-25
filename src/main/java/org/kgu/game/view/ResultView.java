@@ -38,7 +38,6 @@ public final class ResultView extends JPanel implements View {
 
     private final ResultGUIEvent event;
     private final CardArt art;
-    private final Image background = new ImageIcon(ResultView.class.getResource("/org/kgu/result/result_background.png")).getImage();
     private final JLabel title = new JLabel("게임 결과", SwingConstants.CENTER);
     private final JLabel verdict = new JLabel("", SwingConstants.CENTER);
     private final JLabel score = new JLabel("", SwingConstants.CENTER);
@@ -63,7 +62,11 @@ public final class ResultView extends JPanel implements View {
     private final JButton retry = new UiButton("보상 저장 재시도", new Color(239, 151, 43));
     private final VictoryHeader victoryHeader = new VictoryHeader(title, verdict, score);
     private final JPanel rewardPanels = new JPanel(new GridLayout(1, 2, 24, 0));
-    private final JPanel actions = new JPanel(new GridLayout(1, 3, 10, 0));
+    private final JPanel learning = new JPanel(new GridLayout(1, 1));
+    private final JButton study = new JButton("학습 기록");
+    private final JButton reviewCurrent = new UiButton("이번 오답 복습", org.kgu.window.GameTheme.TEAL);
+    private List<GameSession.AnswerRecord> answerRecords = List.of();
+    private final JPanel actions = new JPanel(new GridLayout(1, 4, 10, 0));
     private final SectionPanel cardSection = new SectionPanel("획득한 보상 카드");
     private final SectionPanel xpSection = new SectionPanel("경험치");
     private final SectionPanel coinSection = new SectionPanel("획득 코인");
@@ -130,10 +133,21 @@ public final class ResultView extends JPanel implements View {
         add(rewardPanels);
 
         add(status);
+        learning.setOpaque(false);
+        reviewCurrent.putClientProperty("selectionTint", new Color(43, 104, 165));
+        study.setName("studySummary"); reviewCurrent.setName("reviewCurrent");
+        study.addActionListener(e -> JOptionPane.showMessageDialog(this, new LearningReviewPanel(answerRecords),
+                "이번 학습 정리", JOptionPane.PLAIN_MESSAGE));
+        reviewCurrent.addActionListener(e -> {
+            if (answerRecords.stream().anyMatch(answer -> !answer.correct())) event.reviewCurrent(this);
+            else event.openAdventure();
+        });
+        learning.add(reviewCurrent); add(learning);
         actions.setOpaque(false);
-        actions.add(action("메인으로", new Color(14, 134, 222), event::returnToMenu));
-        actions.add(action("도감 확인", new Color(15, 165, 102), event::openCollection));
-        actions.add(action("다음 도전 · 상점", new Color(137, 78, 191), event::openAdventure));
+        quietLink(study); actions.add(study);
+        actions.add(action("도감", event::openCollection));
+        actions.add(action("도전 준비", event::openAdventure));
+        actions.add(action("메인으로", event::returnToMenu));
         add(actions);
         retry.setForeground(Color.WHITE);
         retry.addActionListener(e -> event.refresh(this));
@@ -141,9 +155,19 @@ public final class ResultView extends JPanel implements View {
         add(retry);
     }
 
-    private JButton action(String text, Color color, Runnable callback) {
-        JButton button = new UiButton(text, color);
-        button.setForeground(Color.WHITE);
+    private static JButton quietLink(JButton original) {
+        JButton link = original;
+        link.setUI(new javax.swing.plaf.basic.BasicButtonUI());
+        link.setContentAreaFilled(true); link.setOpaque(true); link.setBorderPainted(true);
+        link.setBackground(new Color(35, 53, 73));
+        link.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(new Color(88, 117, 144)), BorderFactory.createEmptyBorder(8, 12, 8, 12)));
+        link.setForeground(org.kgu.window.GameTheme.PAPER);
+        link.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return link;
+    }
+
+    private JButton action(String text, Runnable callback) {
+        JButton button = quietLink(new JButton(text));
         button.addActionListener(e -> callback.run());
         return button;
     }
@@ -184,7 +208,8 @@ public final class ResultView extends JPanel implements View {
         setTextSize(status, 17, scale);
         setTextSize(emptyRewardMessage, 16, scale);
         setTextSize(retry, 19, scale);
-        for (Component button : actions.getComponents()) setTextSize(button, 24, scale);
+        for (Component button : actions.getComponents()) setTextSize(button, 17, scale);
+        setTextSize(study, 17, scale); setTextSize(reviewCurrent, 20, scale);
         for (SectionPanel panel : List.of(cardSection, xpSection, coinSection)) panel.resizeTitle(scale);
 
         int headerWidth = Math.min(width - 2 * margin, Math.round(1140 * scale));
@@ -195,7 +220,9 @@ public final class ResultView extends JPanel implements View {
         if (hpHeight > 0) top += hpHeight + gap;
 
         int buttonsTop = height - margin - buttonHeight;
-        int retryTop = buttonsTop - (retryHeight > 0 ? retryHeight + gap : 0);
+        int learningTop = buttonsTop - Math.round(48 * scale) - gap;
+        learning.setBounds((width - Math.round(420 * scale)) / 2, learningTop, Math.round(420 * scale), Math.round(48 * scale));
+        int retryTop = learningTop - (retryHeight > 0 ? retryHeight + gap : 0);
         int statusTop = retryTop - statusHeight;
         int bodyHeight = Math.min(Math.round(440 * scale), Math.max(0, statusTop - gap - top));
         int bodyTop = top + Math.max(0, statusTop - gap - top - bodyHeight) / 2;
@@ -215,6 +242,12 @@ public final class ResultView extends JPanel implements View {
     }
 
     public void display(ResultPresentation result) {
+        answerRecords = result.answers();
+        int wrong = (int) answerRecords.stream().filter(answer -> !answer.correct()).count();
+        study.setEnabled(!answerRecords.isEmpty());
+        study.setText("학습 기록 · " + answerRecords.size() + "문제");
+        reviewCurrent.setText(wrong == 0 ? "다음 도전  →" : "이번 오답 " + wrong + "개 복습 →");
+        reviewCurrent.setEnabled(!result.saveFailed());
         hp.removeAll();
         showingBattle = result.battle().isPresent();
         var battle = result.battle().orElse(null);
@@ -223,7 +256,7 @@ public final class ResultView extends JPanel implements View {
             title.setText(battle.professor() && victory ? "이은정 교수님 구출 완료" : "최종 배틀 결과");
             verdict.setText(victory ? "승리" : "패배");
             verdict.setForeground(victory ? new Color(255, 222, 154) : new Color(255, 158, 168));
-            hp.add(hpPanel("상대", battle.opponentHp(), battle.maxOpponentHp()));
+            // The battle is finished; rewards and the next action take priority over HP.
             score.setText("최초 정답 " + result.correctCount() + " / " + result.questionCount()
                     + " · 풀이 " + result.answeredCount() + "문제"
                     + (battle.retryCorrectCount() > 0 ? " · 재도전 성공 +1" : "")
@@ -232,7 +265,7 @@ public final class ResultView extends JPanel implements View {
             title.setText(result.modeLabel() + " 결과");
             verdict.setText(result.questionCount() + "문제를 모두 풀었습니다!");
             score.setText("맞힌 문제: " + result.correctCount() + " / " + result.questionCount());
-            verdict.setForeground(new Color(170, 223, 255));
+            verdict.setForeground(new Color(170, 213, 255));
         }
         rewards.removeAll();
         for (CardReward card : result.cardRewards()) {
@@ -244,7 +277,7 @@ public final class ResultView extends JPanel implements View {
         showSettlement(result);
         showCoins(result);
         status.setText("<html><div style='text-align:center'>" + result.statusMessage() + "</div></html>");
-        status.setForeground(result.saveFailed() ? new Color(180, 30, 30) : new Color(20, 35, 60));
+        status.setForeground(result.saveFailed() ? new Color(255, 158, 168) : org.kgu.window.GameTheme.PAPER);
         retry.setVisible(result.saveFailed());
         victoryHeader.showEffect(result.sessionId(), battle == null ? HeaderEffect.NONE
                 : battle.victory() ? HeaderEffect.VICTORY : HeaderEffect.DEFEAT);
@@ -793,7 +826,7 @@ public final class ResultView extends JPanel implements View {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        org.kgu.window.GameTheme.asset("scene-result").ifPresentOrElse(image -> org.kgu.window.GameTheme.cover((Graphics2D)g, image, 0, 0, getWidth(), getHeight()), () -> g.drawImage(background, 0, 0, getWidth(), getHeight(), this));
+        org.kgu.window.GameTheme.backdrop((Graphics2D) g, getWidth(), getHeight(), "result", 0.62f);
     }
     private static final class GlossyHpBar extends JPanel {
         private final int MAX_HP;

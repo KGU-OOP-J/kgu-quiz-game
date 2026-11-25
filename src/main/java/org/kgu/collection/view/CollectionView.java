@@ -59,6 +59,9 @@ public final class CollectionView extends JPanel implements View {
     private final CardSliderPanel slider;
     private final CardDetailPanel detail;
     private String selected = "";
+    private String pendingVillage;
+    private final JPanel villageActions = org.kgu.window.GameTheme.panel(new BorderLayout(0, 14));
+    private final JLabel villageTitle = new JLabel("", SwingConstants.CENTER);
     private int collectedPersons;
     private int totalPersons;
     private int collectedStages;
@@ -79,7 +82,9 @@ public final class CollectionView extends JPanel implements View {
         map.setBounds(0, 0, 780, 560);
         for (int i = 0; i < VILLAGES.length; i++) {
             String category = VILLAGES[i];
-            UiButton button = CardArt.button(villageName(category) + " 마을", Color.WHITE, 16f, () -> event.selectCategory(this, category));
+            UiButton button = CardArt.button(villageName(category) + " 마을", Color.WHITE, 16f, () -> chooseVillage(category));
+            button.setName("mapVillage" + category);
+            button.putClientProperty("selectionTint", new Color(39, 61, 84));
             button.setBounds(LABELS[i].x, LABELS[i].y, 190, 44);
             int village = i;
             button.addMouseListener(new MouseAdapter() {
@@ -99,7 +104,7 @@ public final class CollectionView extends JPanel implements View {
         JButton mapMenu = CardArt.button("메인으로", Color.WHITE, 14f, event::returnToMenu);
         mapMenu.setBounds(330, 510, 120, 38);
         map.add(mapMenu);
-        JButton challengeMap = CardArt.button("도전 · 카드 장착", Color.WHITE, 14f, () -> adventure.accept(selected));
+        JButton challengeMap = CardArt.button("준비 · 상점", Color.WHITE, 14f, () -> adventure.accept(selected));
         challengeMap.setBounds(510, 510, 190, 38); map.add(challengeMap);
         // 이름표 말고 마을 섬 자체를 눌러도 들어간다(바다·가운데 광장은 안 눌림)
         MouseAdapter villageMouse = new MouseAdapter() {
@@ -119,12 +124,34 @@ public final class CollectionView extends JPanel implements View {
             public void mouseClicked(MouseEvent e) {
                 int village = art.villageAt(e.getX(), e.getY(), map.getWidth(), map.getHeight());
                 if (village >= 0) {
-                    event.selectCategory(CollectionView.this, VILLAGES[village]);
+                    chooseVillage(VILLAGES[village]);
                 }
             }
         };
         map.addMouseListener(villageMouse);
         map.addMouseMotionListener(villageMouse);
+        villageActions.setBounds(205, 175, 370, 220);
+        villageActions.setBorder(BorderFactory.createEmptyBorder(22, 24, 22, 24));
+        villageTitle.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 22f));
+        villageTitle.setForeground(org.kgu.window.GameTheme.PAPER); villageActions.add(villageTitle, BorderLayout.NORTH);
+        JPanel routes = new JPanel(new GridLayout(2, 1, 0, 12)); routes.setOpaque(false);
+        JButton enter = CardArt.button("도전하기  →", CardArt.BLUE, 18f, () -> {
+            if (pendingVillage != null && event.categoryAvailable(pendingVillage)) {
+                villageActions.setVisible(false); adventure.accept(pendingVillage);
+            }
+        });
+        enter.setName("villageChallenge"); enter.putClientProperty("selectionTint", new Color(43, 104, 165)); routes.add(enter);
+        JButton cards = CardArt.button("수집 카드 보기", Color.WHITE, 17f, () -> {
+            if (pendingVillage != null) { villageActions.setVisible(false); event.selectCategory(this, pendingVillage); }
+        });
+        cards.setName("villageCollection"); cards.putClientProperty("selectionTint", new Color(39, 61, 84)); routes.add(cards);
+        villageActions.add(routes);
+        JButton close = CardArt.button("지도로 돌아가기", Color.WHITE, 14f, () -> villageActions.setVisible(false));
+        close.setName("villageCancel"); close.putClientProperty("selectionTint", new Color(39, 61, 84));
+        villageActions.add(close, BorderLayout.SOUTH); villageActions.setVisible(false);
+        map.add(villageActions); map.setComponentZOrder(villageActions, 0);
+        mapMenu.putClientProperty("selectionTint", new Color(39, 61, 84));
+        challengeMap.putClientProperty("selectionTint", new Color(39, 61, 84));
         add(map);
 
         list.setOpaque(false);
@@ -148,6 +175,13 @@ public final class CollectionView extends JPanel implements View {
         detail.setVisible(false);
         add(detail);
         for (Component child : getComponents()) scale(child);
+    }
+
+    private void chooseVillage(String category) {
+        if (!event.categoryAvailable(category)) { showGateNotice(event.rescueProgress()); return; }
+        pendingVillage = category;
+        villageTitle.setText(villageName(category) + " 마을");
+        villageActions.setVisible(true); map.repaint();
     }
 
     /** 780x560 기준으로 놓은 부품의 위치·크기·글자 크기를 창 크기에 맞게 늘린다(자식까지). */
@@ -190,6 +224,7 @@ public final class CollectionView extends JPanel implements View {
 
     /** 마을 지도를 보여 주고 바다 물결을 움직인다. */
     public void showMap() {
+        villageActions.setVisible(false); pendingVillage = null;
         hovered = -1;
         locked = !event.isVillageOpen(CollectionGUIEvent.LOCKED_VILLAGE);
         // 열린 뒤 처음 지도를 볼 때 계정마다 한 번만 풀리는 모션을 튼다(본 기록은 세이브 옆 파일에 남는다)

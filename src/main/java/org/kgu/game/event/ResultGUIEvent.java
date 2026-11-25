@@ -42,10 +42,16 @@ public final class ResultGUIEvent {
                 .toList();
         return new ResultPresentation(session.id(), session.getMode().toString(), battleSummary,
                 session.getCorrectCount(), session.getAnsweredCount(), session.getQuestionCount(), cards,
-                session.getDifficulty().getStage(), session.rewardSettlement(), statusMessage, saveFailed);
+                session.getDifficulty().getStage(), session.rewardSettlement(), session.answers(), statusMessage, saveFailed);
     }
 
     public Optional<BufferedImage> image(String key){return gameFeature.image(key);}
+    public void reviewCurrent(ResultView view) {
+        try { gameFeature.startCurrentReview(); }
+        catch (IOException | IllegalArgumentException | IllegalStateException e) {
+            javax.swing.JOptionPane.showMessageDialog(view, e.getMessage(), "복습을 시작할 수 없습니다", javax.swing.JOptionPane.ERROR_MESSAGE);
+        }
+    }
     public void returnToMenu(){gameFeature.returnToMenu();}
     public void openCollection(){gameFeature.openCollection();}
     public void openAdventure(){gameFeature.openAdventure();}

@@ -17,11 +17,12 @@ public final class LoginView extends JPanel implements View {
         story.add(GameTheme.label("사라진 교수님, 멈춰 버린 졸업.", 21, GameTheme.MUTED));
         story.add(GameTheme.label("당신의 지식으로 구출 경로를 열어 보세요.", 18, GameTheme.MUTED)); introduction.add(story); add(introduction, BorderLayout.CENTER);
         JPanel right = GameTheme.clear(new GridBagLayout()); right.setPreferredSize(new Dimension(420, 500));
-        JPanel form = GameTheme.panel(new BorderLayout(0, 28)); form.setPreferredSize(new Dimension(420, 390)); form.setBorder(BorderFactory.createEmptyBorder(35, 30, 35, 30));
+        JPanel form = GameTheme.panel(new BorderLayout(0, 28)); form.setPreferredSize(new Dimension(420, 410)); form.setBorder(BorderFactory.createEmptyBorder(35, 30, 35, 30));
         JPanel heading = GameTheme.clear(new GridLayout(2, 1, 0, 12)); heading.add(GameTheme.label("TRAVELER'S RECORD", 16, GameTheme.GOLD)); heading.add(GameTheme.label("탐험가 이름", 29, GameTheme.PAPER)); form.add(heading, BorderLayout.NORTH);
         JPanel input = GameTheme.clear(new BorderLayout(0, 12)); input.add(GameTheme.label("개인 ID", 17, GameTheme.MUTED), BorderLayout.NORTH);
-        playerId.setFont(UiStyle.FONT.deriveFont(23f)); playerId.setForeground(GameTheme.PAPER); playerId.setCaretColor(GameTheme.GOLD); playerId.setPreferredSize(new Dimension(350, 55)); input.add(playerId, BorderLayout.CENTER);
-        input.add(GameTheme.label("이 이름으로 수집 기록과 진행 상황을 불러옵니다.", 13, GameTheme.MUTED), BorderLayout.SOUTH); form.add(input);
+        playerId.setFont(UiStyle.FONT.deriveFont(23f)); playerId.setForeground(GameTheme.PAPER); playerId.setBackground(GameTheme.DARK); playerId.setCaretColor(GameTheme.GOLD); playerId.setPreferredSize(new Dimension(350, 60)); playerId.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(GameTheme.TEAL), BorderFactory.createEmptyBorder(8, 12, 8, 12))); input.add(playerId, BorderLayout.CENTER);
+        input.setPreferredSize(new Dimension(350, 102));
+        JPanel inputArea = GameTheme.clear(new BorderLayout()); inputArea.add(input, BorderLayout.NORTH); form.add(inputArea);
         login.setPreferredSize(new Dimension(350, 58)); login.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 22f)); form.add(login, BorderLayout.SOUTH); right.add(form); add(right, BorderLayout.EAST);
     }
     public String getPlayerId() { return playerId.getText(); }

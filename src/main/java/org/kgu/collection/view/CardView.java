@@ -23,6 +23,8 @@ public final class CardView extends JComponent {
     private long hitStartedAt;
     private double hitProgress = -1;
     private boolean positiveHit;
+    private boolean practiceFeedback;
+    private boolean practiceHidden;
 
     public CardView(Person person, int stage, CardArt art) {
         this.art = art;
@@ -34,6 +36,7 @@ public final class CardView extends JComponent {
         if (stage < 0 || stage > 3) throw new IllegalArgumentException("카드 단계는 0~3입니다.");
         this.person = java.util.Objects.requireNonNull(person);
         this.stage = stage;
+        practiceHidden = false; practiceFeedback = false; hitProgress = -1; hitSnapshot = null;
         repaint();
     }
 
@@ -46,11 +49,16 @@ public final class CardView extends JComponent {
     public void startHit(long now) { startHit(false, now); }
     public void startCorrectHit(long now) { startHit(true, now); }
     private void startHit(boolean positive, long now) {
-        positiveHit = positive; hitStartedAt = now; hitProgress = 0; hitSnapshot = null; repaint();
+        practiceHidden = false; practiceFeedback = false; positiveHit = positive; hitStartedAt = now; hitProgress = 0; hitSnapshot = null; repaint();
+    }
+    /** Sparkles settle back; torn practice cards disappear until the next question. */
+    public void startPracticeFeedback(boolean correct, long now) {
+        startHit(correct, now); practiceFeedback = true;
     }
     public void updateHit(long now) {
         if (!isHitAnimating()) return;
-        hitProgress = Math.min(1, Math.max(0, (now - hitStartedAt) / 850_000_000.0));
+        hitProgress = Math.min(1, Math.max(0, (now - hitStartedAt) / (practiceFeedback ? 1_200_000_000.0 : 850_000_000.0)));
+        if (practiceFeedback && hitProgress >= 1) { practiceHidden = !positiveHit; hitProgress = -1; hitSnapshot = null; practiceFeedback = false; }
         repaint();
     }
     public boolean isHitAnimating() { return hitProgress >= 0 && hitProgress < 1; }
@@ -64,6 +72,7 @@ public final class CardView extends JComponent {
 
     @Override
     protected void paintComponent(Graphics source) {
+        if (practiceHidden) return;
         if (hitProgress >= 0) {
             if (hitSnapshot == null || hitSnapshot.getWidth() != getWidth() || hitSnapshot.getHeight() != getHeight()) {
                 hitSnapshot = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_ARGB);
@@ -73,7 +82,12 @@ public final class CardView extends JComponent {
             Graphics2D g = (Graphics2D) source.create();
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             if (positiveHit) paintAcquiredCard(g);
-            else paintHorizontalTear(g);
+            else if (practiceFeedback) {
+                // Both pieces move apart and fade out; never restore a wrong-answer card.
+                float fade = (float) smooth((hitProgress - .4) / .6);
+                g.setComposite(AlphaComposite.SrcOver.derive(1 - fade));
+                paintHorizontalTear(g);
+            } else paintHorizontalTear(g);
             g.dispose(); return;
         }
         drawCard((Graphics2D) source);
@@ -98,7 +112,7 @@ public final class CardView extends JComponent {
         upperPath.lineTo(w, 0); upperPath.lineTo(0, 0); upperPath.closePath();
         Area upper = new Area(upperPath);
         Area lower = new Area(new Rectangle(0, 0, w, h)); lower.subtract(upper);
-        int separation = (int)(h * .095 * Math.min(1, hitProgress));
+        int separation = (int)(h * (practiceFeedback ? .18 * smooth(hitProgress) : .095 * Math.min(1, hitProgress)));
         float darken = .12f + .5f * (float)Math.min(1, hitProgress);
         drawTornHalf(g, upper, 0, -separation, darken);
         drawTornHalf(g, lower, 0, separation, darken);
@@ -107,13 +121,13 @@ public final class CardView extends JComponent {
     private void paintAcquiredCard(Graphics2D g) {
         int w = getWidth(), h = getHeight();
         boolean held = hitProgress >= 1;
-        double pulse = held ? 0 : Math.sin(Math.PI * hitProgress);
-        double scale = 1 + .13 * pulse;
+        double pulse = held ? 0 : practiceFeedback ? Math.pow(Math.sin(Math.PI * hitProgress), 2) : Math.sin(Math.PI * hitProgress);
+        double scale = practiceFeedback ? 1 - .06 * pulse : 1 + .13 * pulse;
         int drawW = (int)(w * scale), drawH = (int)(h * scale);
-        int lift = (int)(h * .11 * hitProgress);
+        int lift = practiceFeedback ? (int)(h * .03 * pulse) : (int)(h * .11 * hitProgress);
         g.drawImage(hitSnapshot, (w - drawW) / 2, (h - drawH) / 2 - lift, drawW, drawH, null);
 
-        float alpha = held ? .7f : (float)Math.min(1, 1.15 * (1 - hitProgress));
+        float alpha = practiceFeedback ? (float) Math.pow(Math.sin(Math.PI * hitProgress), .7) : held ? .7f : (float)Math.min(1, 1.15 * (1 - hitProgress));
         g.setComposite(AlphaComposite.SrcOver.derive(alpha));
         g.setColor(new Color(255, 239, 176));
         if (!held) {
@@ -137,6 +151,10 @@ public final class CardView extends JComponent {
         }
     }
 
+    private static double smooth(double value) {
+        double t = Math.max(0, Math.min(1, value)); return t * t * (3 - 2 * t);
+    }
+
     private void paintSpark(Graphics2D g, int x, int y, int size) {
         Polygon star = new Polygon();
         for (int i = 0; i < 8; i++) {
@@ -150,7 +168,8 @@ public final class CardView extends JComponent {
     private void drawTornHalf(Graphics2D source, Shape clip, int dx, int dy, float darken) {
         Graphics2D g = (Graphics2D)source.create();
         g.translate(dx, dy); g.clip(clip); g.drawImage(hitSnapshot, 0, 0, null);
-        g.setComposite(AlphaComposite.SrcOver.derive(darken));
+        float opacity = ((AlphaComposite) g.getComposite()).getAlpha();
+        g.setComposite(AlphaComposite.SrcOver.derive(darken * opacity));
         g.setColor(new Color(24, 30, 48)); g.fillRect(-dx, -dy, getWidth(), getHeight());
         g.dispose();
     }

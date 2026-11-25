@@ -30,8 +30,9 @@ public final class QuestionGUIEvent {
     }
 
     public void showHint(QuestionView view) {
-        getSession().recordHint();
-        JOptionPane.showMessageDialog(view, String.join("\n", getSession().getCurrentPerson().getInformation()), "힌트", JOptionPane.INFORMATION_MESSAGE);
+        if (view.isPracticeHintVisible()) { view.hidePracticeHint(); return; }
+        if (getSession().getPhase() != GameSession.Phase.QUESTION) return;
+        getSession().recordHint(); view.showPracticeHint();
     }
 
     public void submit(QuestionView view) {

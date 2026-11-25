@@ -16,6 +16,7 @@ import java.util.*;
 import java.util.function.Consumer;
 
 public final class GameFeature {
+    public static final int PRACTICE_PERFECT_COINS = 5;
     private final PlayerSession playerSession;
     private final PersonManager personManager;
     private final ImageManager imageManager;
@@ -35,7 +36,8 @@ public final class GameFeature {
         this.navigate = Objects.requireNonNull(navigate); this.random = Objects.requireNonNull(random);
     }
     public ProgressStore progress() { return playerSession.saveFactory().progress(); }
-    public PlayerProgress profile() { return progress().snapshot(); }
+    public PlayerProgress profile() { var profile = progress().snapshot(); return playerSession.isDemoMode() ? profile.withDemoAccess() : profile; }
+    public boolean isDemoMode() { return playerSession.isDemoMode(); }
     public String playerId() { return playerSession.playerId(); }
     public List<Person> getCandidates(String category) { return factories(category).stream().map(PersonFactory::create).toList(); }
     public List<Person> getChallengeCandidates(String category) {
@@ -75,6 +77,18 @@ public final class GameFeature {
         if (entries.isEmpty()) throw new IllegalArgumentException("저장된 오답이 없습니다. 먼저 연습이나 배틀에 도전하세요.");
         gameSession = GameSession.practice("오답 노트", entries.getFirst().difficulty(), entries, true); navigate.accept(ViewId.QUESTION);
     }
+    /** Start a shuffled review of only the completed run's mistakes, after persisting its rewards. */
+    public void startCurrentReview() throws IOException {
+        GameSession completed = getSession();
+        if (completed.getPhase() != GameSession.Phase.FINISHED) throw new IllegalStateException("문제를 마친 뒤 복습할 수 있습니다.");
+        List<QuestionBank.Entry> wrong = completed.wrongEntries();
+        if (wrong.isEmpty()) throw new IllegalArgumentException("이번 도전에는 오답이 없습니다.");
+        saveRewards();
+        List<QuestionBank.Entry> entries = QuestionBank.choose(wrong, wrong.size(), profile(), random, false);
+        gameSession = GameSession.practice("이번 오답 복습", entries.getFirst().difficulty(), entries, true);
+        navigate.accept(ViewId.QUESTION);
+    }
+
     /** The selected person is now the challenge target, not an unowned playable character. */
     public void startBattle(String category, Difficulty difficulty, Person target) { startChallenge(category, difficulty, target, false); }
     public void startChallenge(String category, Difficulty difficulty, Person target, boolean boss) {
@@ -118,6 +132,7 @@ public final class GameFeature {
         // A retry has already exposed the answer: do not award XP, unlock credit or clear the wrong-answer notebook.
         if (!b.isRetry()) recordAnswer(b.selected() + 1 == b.current().getAnswer());
         b.submit();
+        getSession().recordBattleAnswer();
     }
     public void advanceBattle() { getSession().getBattle().advance(profile().inventory(ShopItem.SHIELD) > 0); }
     public void useItem(ShopItem item) throws IOException {
@@ -163,7 +178,9 @@ public final class GameFeature {
             boolean boss = battle && s.getBattle().boss();
             int xp = s.getCorrectCount() * (battle ? 12 : s.getMode() == GameSession.Mode.REVIEW ? 6 : 8) + (win ? boss ? 120 : 60 : 0);
             if (battle && s.getBattle().power().kind() == CardPower.Kind.FOCUS) xp += xp * s.getBattle().power().strength() * 5 / 100;
-            int coins = s.getCorrectCount() * (battle ? 6 : 4) + (win ? boss ? 100 : 40 : 0);
+            int coins = s.getMode() == GameSession.Mode.PRACTICE
+                ? (s.getCorrectCount() == s.getQuestionCount() ? PRACTICE_PERFECT_COINS : 0)
+                : s.getCorrectCount() * (battle ? 6 : 4) + (win ? boss ? 100 : 40 : 0);
             String stage = battle ? (boss ? "boss." : "normal.") + s.getCategory() + "|" + s.getBattle().computer().getName() + "|" + s.getDifficulty().getLabel() : "";
             List<String> mastery = new ArrayList<>(s.getRewards().stream().map(CardPower::key).toList());
             if (win && !s.getBattle().power().personKey().isBlank()) mastery.add(s.getBattle().power().personKey());
@@ -184,6 +201,7 @@ public final class GameFeature {
             .contains(person.getCategory(), person.getName(), getSession().getDifficulty())).toList();
     }
     public String nextGoal() {
+        if (playerSession.isDemoMode()) return "시연 모드 · 모든 마을·보스 도전 가능 · 도감 전체 카드 미리보기";
         if (!profile().professorUnlocked()) return "최종 구출 해금 · 다른 분야 문제 " + profile().rescueProgress() + "/" + PlayerProgress.PROFESSOR_REQUIRED + "개 정답";
         if (!profile().professorRescued()) return "최종 구출 해금 완료! 교수님 마을에서 이은정 교수님을 구출하세요.";
         for (String category : org.kgu.application.Application.CATEGORIES.stream().filter(c -> !c.equals("교수님")).toList()) {
