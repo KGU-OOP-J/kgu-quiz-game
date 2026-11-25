@@ -106,7 +106,7 @@ public final class AdventureView extends JPanel implements View {
         JPanel actions = GameTheme.clear(new GridLayout(1, category.equals("교수님") ? 1 : 3, 10, 0));
         actions.add(button(category.equals("교수님") ? "이은정 교수님 구출 · 최종 5문제" : "인물 도전 · 5문제", "startChallenge", () -> game.startChallenge(category, difficulty, target, false)));
         if (!category.equals("교수님")) {
-            JButton boss = button("마을 보스 · 8문제", "startBoss", () -> game.startChallenge(category, difficulty, candidates.getLast(), true));
+            JButton boss = button("마을 보스 · 5문제", "startBoss", () -> game.startChallenge(category, difficulty, candidates.getLast(), true));
             boss.setEnabled(game.profile().bossUnlocked(category)); actions.add(boss);
             actions.add(button("연습하기", "worldPractice", () -> game.startPractice(category, difficulty)));
         }

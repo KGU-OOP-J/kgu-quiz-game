@@ -36,7 +36,7 @@ final class MemoryFileSystem extends FileSystem {
     @Override public UserPrincipalLookupService getUserPrincipalLookupService() { throw new UnsupportedOperationException(); }
     @Override public WatchService newWatchService() { throw new UnsupportedOperationException(); }
 
-    private String key(Path path) { return Path.of("/").resolve(((MemoryPath) path).delegate).normalize().toString(); }
+    private String key(Path path) { return Path.of("/").resolve(((MemoryPath) path).delegate).normalize().toString().replace('\\', '/'); }
 
     private final class MemoryPath implements Path {
         private final Path delegate;

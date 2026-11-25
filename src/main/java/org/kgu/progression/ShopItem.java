@@ -1,12 +1,21 @@
 package org.kgu.progression;
 
+/** Keep enum keys stable so existing inventories remain readable. */
 public enum ShopItem {
-    INSIGHT("분석 렌즈", 40, "전투당 1개: 스킬 자원 없이 오답 보기 1개 제거"),
-    SHIELD("보호 부적", 50, "전투당 1개: 다음 반격 피해 15 감소"),
-    TONIC("회복 물약", 60, "전투당 1개: HP 25 회복 (최대 HP에서는 사용 불가)");
-    private final String label, description;
+    INSIGHT("분석 렌즈", 40, "현재 문제의 오답 보기 1개 제거 · 한 전투에 아이템 하나"),
+    SHIELD("보호 부적", 50, "5문제 뒤 첫 오답 1개 재도전 · 정답 시 성공 조건만 +1 · 오답이 없으면 발동 없음"),
+    TONIC("정보 물약", 60, "이번 전투 동안 인물 정보 열람 · 한 전투에 아이템 하나");
+
+    private final String label;
+    private final String description;
     private final int price;
-    ShopItem(String label, int price, String description) { this.label = label; this.price = price; this.description = description; }
+
+    ShopItem(String label, int price, String description) {
+        this.label = label;
+        this.price = price;
+        this.description = description;
+    }
+
     public String label() { return label; }
     public int price() { return price; }
     public String description() { return description; }

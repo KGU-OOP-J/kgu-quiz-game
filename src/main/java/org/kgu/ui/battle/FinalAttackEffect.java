@@ -3,30 +3,30 @@ package org.kgu.ui.battle;
 import java.awt.*;
 
 /** Professor's defeat cutscene. The engine has already decided failure before this starts. */
-final class FinalAttackEffect {
+public final class FinalAttackEffect {
     private static final long DURATION_NANOS = 2_800_000_000L;
     private long startedAt;
     private double progress = -1;
 
-    void start(long now) {
+    public void start(long now) {
         startedAt = now;
         progress = 0;
     }
 
-    void update(long now) {
+    public void update(long now) {
         if (isRunning()) progress = Math.min(1, Math.max(0, (now - startedAt) / (double) DURATION_NANOS));
     }
 
-    boolean isVisible() { return progress >= 0; }
-    boolean isRunning() { return progress >= 0 && progress < 1; }
+    public boolean isVisible() { return progress >= 0; }
+    public boolean isRunning() { return progress >= 0 && progress < 1; }
 
-    int shakeOffset() {
+    public int shakeOffset() {
         if (progress < 0.42 || progress >= 0.7) return 0;
         double impact = (progress - 0.42) / 0.28;
-        return (int) (Math.sin(impact * 80) * 18 * (1 - impact));
+        return (int) (Math.sin(impact * 110) * 30 * (1 - impact));
     }
 
-    void paint(Graphics2D source, int width, int height) {
+    public void paint(Graphics2D source, int width, int height) {
         if (!isVisible()) return;
         Graphics2D g = (Graphics2D) source.create();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
@@ -64,6 +64,23 @@ final class FinalAttackEffect {
                         640 + (int) (Math.cos(angle) * radius), 350 + (int) (Math.sin(angle) * radius));
             }
         }
+        if (progress >= 0.42 && progress < 0.47) {
+            g.setColor(new Color(255, 235, 235, (int) (210 * (1 - (progress - 0.42) / 0.05))));
+            g.fillRect(0, 0, 1280, 960);
+        }
+        if (progress >= 0.42) {
+            g.setColor(new Color(250, 75, 95, 180));
+            g.setStroke(new BasicStroke(3));
+            for (int i = 0; i < 11; i++) {
+                double a = i * Math.PI * 2 / 11;
+                int x = 640, y = 350;
+                for (int j = 1; j <= 4; j++) {
+                    int nx = 640 + (int) (Math.cos(a + Math.sin(i * 9 + j) * 0.12) * j * 150);
+                    int ny = 350 + (int) (Math.sin(a + Math.sin(i * 9 + j) * 0.12) * j * 150);
+                    g.drawLine(x, y, nx, ny); x = nx; y = ny;
+                }
+            }
+        }
         paintStamp(g, stampScale, (float) Math.min(1, 0.35 + landing));
     }
 
@@ -79,7 +96,7 @@ final class FinalAttackEffect {
         Graphics2D g = (Graphics2D) source.create();
         g.setComposite(AlphaComposite.SrcOver.derive(opacity));
         g.translate(640, 350);
-        g.scale(scale, scale);
+        g.scale(scale * 1.18, scale * 1.18);
         g.rotate(Math.toRadians(-12));
         g.setColor(new Color(186, 18, 35, 35));
         g.fillRoundRect(-145, -175, 290, 350, 14, 14);

@@ -42,14 +42,14 @@ public final class GameSession {
     public String getCategory() { return category; }
     public Difficulty getDifficulty() { return difficulty; }
     public Phase getPhase() { return mode == Mode.BATTLE ? Phase.valueOf(battle.phase().name()) : phase; }
-    public int getQuestionIndex() { return mode == Mode.BATTLE ? battle.turn() : questionIndex; }
+    public int getQuestionIndex() { return mode == Mode.BATTLE ? battle.currentQuestionIndex() : questionIndex; }
     public int getQuestionCount() { return entries.size(); }
-    public int getAnsweredCount() { return mode == Mode.BATTLE ? battle.turn() : questionIndex; }
+    public int getAnsweredCount() { return mode == Mode.BATTLE ? battle.answeredCount() : questionIndex; }
     public int getCorrectCount() { return mode == Mode.BATTLE ? battle.correctCount() : correctCount; }
     public int getSelectedAnswer() { return mode == Mode.BATTLE ? battle.selected() + 1 : selectedAnswer; }
     public QuestionBank.Entry currentEntry() { return entries.get(Math.min(getQuestionIndex(), entries.size() - 1)); }
     public Person getCurrentPerson() { return currentEntry().person(); }
-    public Quiz getCurrentQuiz() { return currentEntry().quiz(); }
+    public Quiz getCurrentQuiz() { return mode == Mode.BATTLE ? battle.current() : currentEntry().quiz(); }
     public BattleEngine getBattle() {
         if (battle == null) throw new IllegalStateException("배틀 모드가 아닙니다.");
         return battle;
