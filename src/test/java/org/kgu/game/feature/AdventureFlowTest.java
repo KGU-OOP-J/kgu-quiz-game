@@ -5,6 +5,9 @@ import org.junit.jupiter.api.io.TempDir;
 import org.kgu.adventure.*;
 import org.kgu.application.*;
 import org.kgu.factory.*;
+import org.kgu.collection.feature.CollectionFeature;
+import org.kgu.collection.event.CollectionGUIEvent;
+import org.kgu.collection.view.CollectionView;
 import org.kgu.game.event.*;
 import org.kgu.game.view.*;
 import org.kgu.manager.*;
@@ -65,6 +68,71 @@ class AdventureFlowTest {
         assertEquals(xp, reloaded.progress().snapshot().experience()); assertEquals(1, reloaded.progress().snapshot().bossWins());
         assertEquals(game.profile().equipped(), reloaded.progress().snapshot().equipped());
     }
+    @Test void mergedResultKeepsNewCardAndSettlementAcrossRefreshAndRepeatWin() throws Exception {
+        Person target = game.getCandidates("과학자").getFirst();
+        game.startBattle("과학자", Difficulty.LOW, target);
+        completeBattle();
+        ResultPresentation first = ResultGUIEvent.presentation(game.getSession(), game.getSavedRewards(), "", false);
+        assertEquals(ResultPresentation.CardStatus.NEW, first.cardRewards().getFirst().status());
+        var settlement = first.settlement().orElseThrow();
+        assertEquals(120, settlement.xpEarned());
+        assertEquals(70, settlement.coinsEarned());
+        int xp = game.profile().experience(), coins = game.profile().coins();
+        game.saveRewards();
+        ResultPresentation refreshed = ResultGUIEvent.presentation(game.getSession(), game.getSavedRewards(), "", false);
+        assertEquals(first, refreshed);
+        assertEquals(xp, game.profile().experience());
+        assertEquals(coins, game.profile().coins());
+        game.startBattle("과학자", Difficulty.LOW, target);
+        completeBattle();
+        ResultPresentation repeated = ResultGUIEvent.presentation(game.getSession(), game.getSavedRewards(), "", false);
+        assertEquals(ResultPresentation.CardStatus.ALREADY_OWNED, repeated.cardRewards().getFirst().status());
+        assertEquals(1, save.create().getCollectedCount());
+    }
+
+    @Test void collectionAndBattleShareUnlockAndAnimationIsOncePerAccount() throws Exception {
+        PlayerSession player = new PlayerSession("테스터", save);
+        CollectionFeature feature = new CollectionFeature(PersonManager.getInstance(), ImageManager.getInstance(), player, destination::set);
+        CollectionGUIEvent event = new CollectionGUIEvent(feature);
+        ImageManager.getInstance().register("ui/map", project.resolve("images/ui/map.png"));
+        assertFalse(event.isVillageOpen("교수님"));
+        assertFalse(game.categoryUnlocked("교수님"));
+        assertFalse(event.takeUnlockMotion("교수님"));
+        SwingUtilities.invokeAndWait(() -> {
+            CollectionView view = new CollectionView(event);
+            event.refresh(view); view.showMap();
+            try { render(view, "collection-locked-preview.png"); }
+            catch (Exception e) { throw new AssertionError(e); }
+            finally { view.stopAnimations(); }
+        });
+        for (int i = 0; i < PlayerProgress.PROFESSOR_REQUIRED - 1; i++)
+            game.progress().answer("unlock-test-" + i, "과학자", true);
+        assertFalse(event.isVillageOpen("교수님"));
+        game.progress().answer("unlock-test-last", "아이돌", true);
+        assertTrue(game.categoryUnlocked("교수님"));
+        assertTrue(event.isVillageOpen("교수님"));
+        assertEquals(20, feature.getPersons("교수님").size());
+        assertTrue(event.takeUnlockMotion("교수님"));
+        assertFalse(event.takeUnlockMotion("교수님"));
+        SaveFactory reloaded = new SaveFactory(save.getPath()); reloaded.open();
+        CollectionGUIEvent reopened = new CollectionGUIEvent(new CollectionFeature(PersonManager.getInstance(),
+            ImageManager.getInstance(), new PlayerSession("테스터", reloaded), destination::set));
+        assertTrue(reopened.isVillageOpen("교수님"));
+        assertFalse(reopened.takeUnlockMotion("교수님"));
+        SaveFactory another = new SaveFactory(temp.resolve("another.txt")); another.open();
+        CollectionGUIEvent other = new CollectionGUIEvent(new CollectionFeature(PersonManager.getInstance(),
+            ImageManager.getInstance(), new PlayerSession("다른 사용자", another), destination::set));
+        assertFalse(other.isVillageOpen("교수님"));
+        assertFalse(other.takeUnlockMotion("교수님"));
+        SwingUtilities.invokeAndWait(() -> {
+            CollectionView view = new CollectionView(reopened);
+            reopened.refresh(view); view.showMap();
+            try { render(view, "collection-unlocked-preview.png"); }
+            catch (Exception e) { throw new AssertionError(e); }
+            finally { view.stopAnimations(); }
+        });
+    }
+
     @Test void practiceUsesAllPeopleAndVariedProblemsWithoutRecentRepeats() throws Exception {
         Set<String> people = new HashSet<>(), ids = new HashSet<>();
         for (int run = 0; run < 8; run++) {
@@ -128,6 +196,13 @@ class AdventureFlowTest {
         assertEquals(before + 52, game.profile().coins());
         assertEquals(1, game.getSavedRewards().size());
         assertEquals(1, battle.stars());
+        ResultPresentation result = ResultGUIEvent.presentation(game.getSession(), game.getSavedRewards(), "", false);
+        assertEquals(2, result.correctCount());
+        assertEquals(5, result.answeredCount());
+        assertEquals(1, result.battle().orElseThrow().retryCorrectCount());
+        assertTrue(result.battle().orElseThrow().victory());
+        assertEquals(84, result.settlement().orElseThrow().xpEarned());
+        assertEquals(52, result.settlement().orElseThrow().coinsEarned());
         SaveFactory reloaded = new SaveFactory(save.getPath());
         reloaded.open();
         assertEquals(0, reloaded.progress().snapshot().inventory(ShopItem.SHIELD));
