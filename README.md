@@ -34,7 +34,8 @@ Windows에서는 `run.bat`을 실행하거나 `gradlew.bat run`을 사용합니�
 
 `feat/final`은 통합본 위에 화면 흐름, 연습 연출, 학습 기록, 시연 모드를 개선한 브랜치입니다.
 
-- **[실행·치트 사용법·발표 준비 및 기능 정리](docs/FINAL_PRESENTATION.md)**
+- **[8분 발표안: 핵심 화면·코드·발표 대사](docs/FINAL_PRESENTATION.md)**
+- [실행·치트 사용법 및 전체 기능 참고](docs/FINAL_RUN_GUIDE.md)
 - 로그인 ID `admin` 또는 `cheat`: 마을·보스·교수님 도전 해제 및 도감 전체 카드 미리보기. 무한 코인·아이템 기능은 아닙니다.
 - 최종 교수님 도전 대상은 현재 **이은정 교수님**입니다.
 
