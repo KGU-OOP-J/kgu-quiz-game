@@ -1,0 +1,227 @@
+졸업을 향한 마지막 여정 — 이미지 생성 목록
+
+공통 스타일
+현재 images/cards/ 인물 일러스트의 2D 카툰 스타일을 유지한다. 한국 대학교 캠퍼스를 무대로 한 지식 수집 어드벤처. 잉크 네이비 #08101D, 딥 틸 #2C717A, 앤티크 골드 #DEB468, 웜 아이보리 #F2E9D3. 과장된 중세 판타지 대신 책, 별자리, 캠퍼스 건축, 졸업 문장, 연구 노트의 모티프를 사용한다. 금속 장식은 얇고 절제하며 글자 영역은 충분히 비운다.
+공통 네거티브: stock desktop UI, native Swing, Windows controls, gray beveled widgets, dashboard template, photorealism, 3D render, pixel art, neon cyberpunk, excessive ornate borders, illegible text, watermark, logo, fake lettering.
+배경은 4:3, 2560×1920 PNG. UI 프레임과 아이콘은 PNG RGBA 투명 배경. 버튼·프레임에 글자나 숫자를 굽지 않는다. 텍스트와 상호작용은 코드가 그린다. 아래 01~37 및 43은 지정 경로에 배치하면 사용된다. 파일 추가 후 앱을 재시작한다. 현재 파일이 없어도 기본 Swing 위젯 대신 커스텀 드로잉과 기존 그림이 표시된다.
+
+01. 매 실행 프롤로그 배경
+경로: src/main/resources/org/kgu/art/scene-prologue.png
+규격: 2560×1920, 불투명 PNG
+Prompt: A hand-painted 2D Korean university campus at midnight after everyone has left, a single distant office window glowing antique gold, quiet mysterious disappearance, subtle drifting dust and very faint constellation lines, deep ink navy and muted teal, cinematic storybook illustration matching stylized cartoon portrait cards. Keep the entire central 75 percent low-detail and very dark for upward-floating ivory story text. No people, no text, no UI, no bright central objects. Reserve a calm lower-right area for a skip control. 4:3 composition.
+
+02. 구출 대사 배경
+경로: src/main/resources/org/kgu/art/scene-dialogue.png
+규격: 2560×1920, 불투명 PNG
+Prompt: A quiet magical-realist university courtyard after a rescue, twilight blue foliage and warm distant campus windows, painterly 2D cartoon illustration, ink navy, restrained teal and antique gold. Symmetrical composition with a completely unobstructed central portrait area from x=35% to 65%, y=8% to 72%. Lower 30 percent dark and visually empty for a dialogue panel. No characters, no text, no buttons, no portrait frame, no HUD. Emotional relief with a lingering mystery. 4:3.
+
+03. 로그인 배경
+경로: src/main/resources/org/kgu/art/scene-login.png
+규격: 2560×1920
+Prompt: A stylized Korean university entrance under a deep-blue evening sky, an illuminated academic arch and distant paths suggesting a rescue adventure, elegant hand-painted 2D art with navy and gold palette. Low-contrast negative space on the left half for a large title, and an especially calm dark right third for a login form. No people, no letters, no logo, no interface. 4:3.
+
+04. 메인 허브 배경
+경로: src/main/resources/org/kgu/art/scene-menu.png
+규격: 2560×1920
+Prompt: An atmospheric campus expedition room, academic maps pinned at the edges, books and a graduation cap near the bottom corners, soft amber lamps and teal evening shadows, sophisticated 2D storybook game art. Upper 25 percent and central 75 percent must remain subdued and uncluttered for status text and three menu cards. No characters, no text, no UI widgets. 4:3.
+
+05. 진행 지도 배경
+경로: src/main/resources/org/kgu/art/scene-map.png
+규격: 2560×1920
+Prompt: A painterly fantasy-academic archipelago map on a very dark ocean, three faint regional motifs of science observatory, Korean historical pavilion, and music stage connected by gold-dotted routes toward a sealed university tower at lower right. Keep all landmarks low contrast and near outer edges because interactive region cards will be overlaid. Ink navy, antique gold, muted turquoise. No labels, no icons pretending to be buttons, no people, no text. 4:3.
+
+06. 상점 배경
+경로: src/main/resources/org/kgu/art/scene-shop.png
+규격: 2560×1920
+Prompt: A campus supply atelier at night, shelves of brass analysis lenses, protective paper charms and blue recovery vials visible only at the outer edges, warm small lamps against navy shadows, hand-painted 2D cartoon RPG illustration. Leave center and right 75 percent dark and calm for purchasable item rows, with no shopkeeper, no price tags, no letters and no UI. Academic magical realism, not a medieval potion store. 4:3.
+
+07. 도전과제·카드·오답 노트 공용 배경
+경로: src/main/resources/org/kgu/art/scene-guild.png
+규격: 2560×1920
+Prompt: A quiet university archive with deep teal shelves, subtly embossed star-chart and graduation crest motifs at the corners, antique gold edge lighting and warm ivory highlights. An understated painted 2D game background with a near-empty dark center for collection cards and achievement rows, no characters, no visible writing, no interface or frames. 4:3.
+
+08. 튜토리얼 배경
+경로: src/main/resources/org/kgu/art/scene-tutorial.png
+규격: 2560×1920
+Prompt: A scholar's desk viewed frontally in a softly lit midnight campus room, subtle open-book shapes at the bottom corners and a faint celestial diagram along the outer top edge. Wide calm central navy area for a large tutorial page, restrained gold and teal trim in environmental details, hand-painted 2D storybook style. No readable text, no buttons, no characters, no rendered instruction panel. 4:3.
+
+09. 전략 전투 배경
+경로: src/main/resources/org/kgu/art/scene-battle.png
+규격: 2560×1920
+Prompt: An academic trial arena in a Korean campus courtyard at blue hour, magical chalk geometry in the paving, a distant college building and trees with controlled warm lights. Painterly 2D cartoon art, dark navy and teal with antique gold accents. Keep upper 20 percent calm for battle status, left-middle dark for an opponent portrait, right-middle very low detail for quiz options, and lower 25 percent empty for tactical controls. No people, no text, no HUD, no weapons, no UI elements. 4:3.
+
+10. 연습 문제 배경
+경로: src/main/resources/org/kgu/art/scene-study.png
+규격: 2560×1920
+Prompt: An evening university library study space with a soft teal window glow and distant gold lamps, refined 2D painted cartoon environment. Dark low-detail left third for a portrait card and a nearly plain navy right two-thirds for question and answer controls. Keep bottom and top areas uncluttered for navigation and progress. No people, no letters, no interface, no white worksheet. 4:3.
+
+11. 설정 배경
+경로: src/main/resources/org/kgu/art/scene-settings.png
+규격: 2560×1920
+Prompt: A calm dark-blue campus corridor with delicate antique-gold architectural highlights, illustrated in the same restrained 2D storybook style. Completely uncluttered central rectangular area for a settings panel, muted edge details only, no text, no symbols resembling controls, no characters. 4:3.
+
+12. 공용 패널 프레임
+경로: src/main/resources/org/kgu/art/panel-frame.png
+규격: 512×320 RGBA, 테두리 24px, 중앙은 투명, 9-slice
+Prompt: A clean nine-slice game UI panel border on a transparent background, thin antique-gold and desaturated-teal lines over a subtle ink-navy rim, softly rounded corners, a tiny academic-star detail confined to the corners. Completely transparent center, straight stretchable middle edges, no shadow outside the canvas, no text or icons, no desktop-window appearance. Keep all corner ornament within 24 pixels. 512x320 RGBA.
+
+13. 대사창 전용 프레임
+경로: src/main/resources/org/kgu/art/dialogue-frame.png
+규격: 1280×256 RGBA, 모서리 28px, 중앙 투명, 9-slice
+Prompt: A wide restrained visual-novel dialogue box border, dark navy rim with thin warm-gold inlay and tiny campus-crest corner etchings, elegant readable storybook RPG UI. Transparent center for a code-drawn dark backing and dialogue text. No text, no portrait area, no speaker name, no next arrow, no buttons. Corners within 28px and straight stretchable edges. 1280x256 transparent PNG.
+
+14. 기본 버튼
+경로: src/main/resources/org/kgu/art/button-primary.png
+규격: 384×96 RGBA, 모서리 18px, 9-slice
+Prompt: A single elegant textless 2D adventure-game button, deep teal enamel over ink-navy base, thin aged-gold rim, soft upper edge highlight, shallow depth and small rounded corners. Transparent outside silhouette, blank center, no icons or letters, no gray desktop bevel. Straight stretchable center with ornament limited to 18px corners. 384x96.
+
+15. 버튼 호버
+경로: src/main/resources/org/kgu/art/button-hover.png
+규격: 384×96 RGBA, 기본 버튼과 동일 실루엣
+Prompt: The exact same textless deep-teal enamel button as the provided primary reference, same geometry and 18px corners, subtly brighter teal surface and a fine warm-gold hover highlight around the rim. Do not change size, shape or center composition. Transparent outside, no text, no icon, no excessive bloom. 384x96 RGBA.
+
+16. 버튼 눌림
+경로: src/main/resources/org/kgu/art/button-pressed.png
+규격: 384×96 RGBA
+Prompt: Pressed state of the supplied deep-teal and antique-gold academic adventure button, identical silhouette and corners, slightly darker recessed face with restrained edge highlight. Blank center, transparent outside, no text, no icons, no displacement baked into the image. 384x96 RGBA.
+
+17. 선택된 행동·내비게이션 버튼
+경로: src/main/resources/org/kgu/art/button-selected.png
+규격: 384×96 RGBA
+Prompt: Selected state of the same academic RPG button, identical 384x96 geometry, deep teal face and a more legible thin gold outline, tiny gold underline centered along the lower inner edge. No text, symbols or baked glow outside the silhouette. 18px stretch-safe corners, transparent background.
+
+18. 잠김·비활성 버튼
+경로: src/main/resources/org/kgu/art/button-disabled.png
+규격: 384×96 RGBA
+Prompt: Disabled state of the same 384x96 academic RPG button, identical geometry, desaturated ink-slate face with a very faint bronze rim. Clearly inactive but still readable when text is added by code. No lock icon, no text, no gray Windows bevel, transparent outside, 18px corners.
+
+19. 진행 막대 트랙
+경로: src/main/resources/org/kgu/art/bar-track.png
+규격: 512×32 RGBA, 모서리 10px, 9-slice
+Prompt: A thin pill-shaped RPG progress track, almost black navy interior, very fine antique-gold outline, restrained hand-painted finish, transparent outside, no tick marks, no numbers, no text. Straight stretchable middle and 10px corners. 512x32.
+
+20. 진행 막대 채움
+경로: src/main/resources/org/kgu/art/bar-fill.png
+규격: 512×28 RGBA, 모서리 9px, 9-slice
+Prompt: A luminous but restrained teal progress-bar fill matching the supplied navy and gold track, turquoise upper highlight and deeper teal bottom, pill ends confined to 9px corners. Blank center, no text or numbers, transparent outside silhouette, no spark particles. 512x28.
+
+21. 과학자 지역 카드 배경
+경로: src/main/resources/org/kgu/art/village-science.png
+규격: 1024×640
+Prompt: A compact university observatory island with a brass telescope, research pavilion and subtle orbital motifs, hand-painted 2D storybook style, navy night and teal roofs with small antique-gold lights. Regional selection-card illustration, strongest landmark in the upper-right half, lower 45 percent dark and unobstructed for text and a button. No people, no labels, no interface. 8:5.
+
+22. 한국사 지역 카드 배경
+경로: src/main/resources/org/kgu/art/village-history.png
+규격: 1024×640
+Prompt: A small Korean historical pavilion island with a stone path, pine trees and dignified tiled roofs, matching the science region's hand-painted 2D academic-fantasy art and navy-teal-gold palette. Landmark in upper-right, lower 45 percent dark and calm for interactive labels. No people, flags with writing, text or UI. 8:5.
+
+23. 아이돌 지역 카드 배경
+경로: src/main/resources/org/kgu/art/village-idol.png
+규격: 1024×640
+Prompt: A stylized music-stage island with a small campus amphitheater, restrained warm spotlights and subtle musical geometry, illustrated 2D storybook style consistent with the other regions. Navy and muted teal, gold accents rather than neon. Landmark upper-right, lower 45 percent unobstructed and dark. No performers, text, logos or interface. 8:5.
+
+24. 최종 교수님 지역 카드 배경
+경로: src/main/resources/org/kgu/art/village-professor.png
+규격: 1024×640
+Prompt: A mysterious sealed university faculty tower on a final island, one softly illuminated office window, a subtle golden graduation-crest aura and a narrow approaching bridge. Painterly 2D cartoon academic adventure, dark navy, restrained teal and gold. Leave lower 45 percent empty for a code-drawn lock state and rescue button. Do not draw the lock or any text; one illustration must work for both locked and unlocked states. No people. 8:5.
+
+25. 이은정 교수님 구출 장면 인물
+경로: src/main/resources/org/kgu/art/portrait-이은정.png
+참조: images/cards/이은정_1.png
+규격: 768×1024 RGBA
+Prompt: Edit the supplied stylized portrait only. Preserve this exact person's face, hairstyle, clothing, proportions, expression and original 2D cartoon illustration style. Remove the navy background cleanly, keep a natural upper-body portrait centered with transparent background and clean hair edges. Do not invent another person or add new clothing, poses, expression variants, card frame, text, symbols or UI. One static rescue-dialogue sprite, 768x1024 RGBA.
+
+26. 아인슈타인 대사 인물
+경로: src/main/resources/org/kgu/art/portrait-알베르트 아인슈타인.png
+참조: images/cards/알베르트 아인슈타인_1.png
+규격: 768×1024 RGBA
+Prompt: Extract the exact supplied Einstein cartoon portrait into a clean transparent upper-body sprite. Preserve facial identity, hair, expression, original drawing style and clothing without reinterpretation. Remove background and any card decorations only. Center the bust, no expression sheets, text or UI. 768x1024 RGBA.
+
+27. 장원영 대사 인물
+경로: src/main/resources/org/kgu/art/portrait-장원영.png
+참조: images/cards/장원영_1.png
+규격: 768×1024 RGBA
+Prompt: Edit the supplied existing character portrait, preserving the exact stylized face, original hairstyle, modest clothing, proportions and expression. Remove only its background and framing to produce one transparent static upper-body dialogue sprite. Do not make a new photo or reinterpret the person. No alternate poses, letters or UI. 768x1024 RGBA.
+
+28. 광개토대왕 대사 인물
+경로: src/main/resources/org/kgu/art/portrait-광개토대왕.png
+참조: images/cards/광개토대왕_1.png
+규격: 768×1024 RGBA
+Prompt: Extract the supplied historical king's exact cartoon portrait as a static upper-body visual-novel sprite on a transparent background. Preserve the original face, costume, headwear, expression and linework; no additional weapons, new armor, labels, frames or expression variants. Clean edges, centered portrait. 768x1024 RGBA.
+
+29. 분석 렌즈 아이콘
+경로: src/main/resources/org/kgu/art/item-insight.png
+규격: 256×256 RGBA
+Prompt: A single stylized brass analysis lens with a restrained teal glass glint, elegant 2D painted academic-adventure inventory icon, antique gold and ink-navy shading, clear silhouette readable at 64px. Centered, generous padding, transparent background, no labels or text, no surrounding card.
+
+30. 보호 부적 아이콘
+경로: src/main/resources/org/kgu/art/item-shield.png
+규격: 256×256 RGBA
+Prompt: A single protective academic charm shaped like a small shield with a subtle star-and-book emblem, antique-gold edges, deep-teal center, matching the analysis lens inventory art style. Readable 64px silhouette, transparent background, no written characters, no labels and no surrounding frame.
+
+31. 회복 물약 아이콘
+경로: src/main/resources/org/kgu/art/item-tonic.png
+규격: 256×256 RGBA
+Prompt: A small rounded recovery vial containing calm luminous teal liquid, brass cap and a simple unlettered ivory label, hand-painted 2D academic RPG item icon with restrained gold highlights. Centered, readable at 64px, transparent background, no text, no numbers or surrounding UI frame.
+
+32. 분석 버프 문장
+경로: src/main/resources/org/kgu/art/buff-analysis.png
+규격: 256×256 RGBA
+Prompt: A clean academic RPG ability emblem combining a gold lens and a small orbital ring, navy-teal-gold 2D painted style, round compact silhouette that reads at 48px. Transparent background, no letters, no UI frame, no bright bloom.
+
+33. 돌파 버프 문장
+경로: src/main/resources/org/kgu/art/buff-power.png
+규격: 256×256 RGBA
+Prompt: A clean ability emblem of a gold falling apple with a precise downward force arrow, an academic reference to Newton, matching the supplied analysis emblem style. Restrained navy, teal and gold, readable at 48px, transparent background, no text or weapons.
+
+34. 수호 버프 문장
+경로: src/main/resources/org/kgu/art/buff-guard.png
+규격: 256×256 RGBA
+Prompt: A dignified compact shield emblem with a small Korean naval-wave motif, antique-gold rim and deep-teal center, academic adventure 2D painted icon matching the other buff symbols. Clear 48px silhouette, transparent background, no writing or frame.
+
+35. 집중 버프 문장
+경로: src/main/resources/org/kgu/art/buff-focus.png
+규격: 256×256 RGBA
+Prompt: A centered four-point academic star above a small calm teal flame, a visual emblem of concentration, thin gold and ink-navy edges, 2D painted game icon consistent with the other support buffs. Readable at 48px, transparent background, no text or card border.
+
+36. 달성한 도전과제 배지
+경로: src/main/resources/org/kgu/art/badge-unlocked.png
+규격: 256×256 RGBA
+Prompt: An elegant round academic-achievement medal, antique-gold laurel surrounding a simple graduation star, muted teal enamel, hand-painted 2D game art, distinct at 64px. Transparent background, no text, numbers, ribbon lettering or surrounding card.
+
+37. 미달성 도전과제 배지
+경로: src/main/resources/org/kgu/art/badge-locked.png
+규격: 256×256 RGBA
+Prompt: The exact same achievement-medal silhouette as the supplied unlocked reference, but subdued slate-navy and worn bronze, center replaced by a restrained small closed-lock symbol. Clearly inactive, no text, no numbers, transparent background, readable at 64px.
+
+전체 GUI 디자인 검토용 — 38~42와 44는 코드에 통째로 넣지 않는 레퍼런스다. 43은 실제 교체용 결과 배경이다. 입력·버튼·대사를 래스터 이미지로 대체하지 않는다.
+
+38. 전체 지도·해금 GUI 레퍼런스
+출력 권장: design-references/world-gui.png, 2560×1920
+Prompt: A polished full-screen 4:3 interface concept for a Korean campus rescue quiz adventure. Dark navy academic storybook visual design, restrained gold borders and muted teal actions. Top player status strip, a narrow left navigation rail, central quest progress toward rescuing a missing professor, four illustrated regional cards in a two-by-two arrangement with the final faculty tower visibly locked, and a compact challenge-preparation section below. Intentional spacing and clear visual hierarchy, no desktop window chrome or gray widgets. Use blank bars or minimal placeholder glyphs instead of fabricated Korean paragraphs. Present this as a precise game UI art-direction reference, not a web admin dashboard.
+
+39. 전체 상점·카드 GUI 레퍼런스
+출력 권장: design-references/shop-deck-gui.png, 2560×1920
+Prompt: A full-screen 4:3 academic RPG shop and support-card interface concept, same navy, antique-gold and teal art direction as the world reference. Top economy and level strip, left navigation rail, three spacious illustrated supply-item rows with brass lens, protective charm and recovery vial icons, thin custom purchase controls, and an inset reference view of a support card with a buff emblem and mastery progress. No stock desktop controls or fake readable text. Clear empty text zones and calm negative space.
+
+40. 전체 전략 전투 GUI 레퍼런스
+출력 권장: design-references/battle-gui.png, 2560×1920
+Prompt: A complete 4:3 visual concept for a tactical quiz battle on a twilight campus. Narrow top status and enemy-intent area with custom thin HP bars, a single large stylized opponent portrait at left, a readable question panel and four spacious answer choices at right, and three aligned lower control rows for tactical actions, skills and consumable items. Restrained gold rims, teal active states, dark navy plates, readable ivory placeholder text, no desktop chrome or gray Swing controls. Do not add party members, joystick controls, minimaps or unrelated RPG HUD clutter.
+
+41. 전체 구출 대사 GUI 레퍼런스
+출력 권장: design-references/rescue-dialogue-gui.png, 2560×1920
+참조 인물: images/cards/이은정_1.png
+Prompt: A minimal 4:3 rescue conversation scene using the supplied professor's exact existing cartoon portrait. One static upper-body person centered in a dim campus courtyard, a wide low dark-navy dialogue plate along the bottom with a tiny gold speaker-name tab. Only one understated lower-right hold-Ctrl-to-skip hint and a thin hold-progress line. No next button, no choice buttons, no avatar swapping, no side portraits, no expression variants, no extra HUD. Warm relief, precise composition and ample empty dialogue space, navy and antique-gold palette. Use neutral placeholder lines for text.
+
+42. 전체 프롤로그·튜토리얼 GUI 레퍼런스
+출력 권장: design-references/onboarding-gui.png, 2560×1920
+Prompt: A cohesive two-screen 4:3 game UI art-direction sheet: first, an atmospheric near-black campus prologue with upward-floating ivory narrative lines and one tiny lower-right skip control; second, a premium academic guidebook tutorial with a large dark page, restrained gold rules, teal interactive example buttons and simple bottom navigation. Same 2D cartoon navy-teal-gold world as the other references, no stock text areas, no gray operating-system buttons, no white dashboard panels. Typography zones must remain clean and reusable; do not invent long readable paragraphs.
+
+43. 결과·구출 완료 배경
+경로: src/main/resources/org/kgu/art/scene-result.png
+규격: 2560×1920
+Prompt: A peaceful university courtyard at the end of an academic rescue adventure, deep twilight turning into a restrained warm dawn, golden campus windows reflected in teal paving, elegant hand-painted 2D cartoon environment. Keep the upper 28 percent subdued for a victory heading and HP summary, center clear for reward cards, and lower 18 percent dark and empty for reward text and custom navigation buttons. No characters, baked UI, text, medals or confetti. Navy, antique gold and warm ivory highlights, visual continuity with the rescue dialogue scene. 4:3.
+
+44. 전체 결과 GUI 레퍼런스
+출력 권장: design-references/result-gui.png, 2560×1920
+Prompt: A premium 4:3 results screen for the same campus rescue quiz adventure, restrained navy and gold storybook UI, centered clear victory heading, two slim custom HP summaries, one or more collected portrait cards displayed like a small academic collection, a compact XP and coin reward line with earned stars, and three carefully aligned custom action buttons along the bottom. Include an alternate small final-professor-rescued header treatment, but no new characters or expression variants. No desktop widgets, gray bevels, fake readable text or unrelated RPG clutter. Leave actual text as neutral placeholders for code-rendered labels.

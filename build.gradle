@@ -6,6 +6,80 @@ plugins {
 group = 'org.kgu'
 version = '0.1.0'
 
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:6.0.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
 application {
     mainClass = 'org.kgu.Main'
+}
+
+tasks.named('processResources') {
+    from('prologue-dialog.txt') { into 'org/kgu/story' }
+}
+
+// Team pages/data are test fixtures and never enter the production source set.
+def fixtureDir = layout.projectDirectory.dir('src/test/resources/integration')
+def integrationDir = layout.projectDirectory.dir('.integration-runtime')
+def testRuntimeDir = layout.buildDirectory.dir('battle-test-runtime')
+
+tasks.register('prepareIntegrationRuntime', Copy) {
+    from(fixtureDir) { exclude 'saves/**' }
+    into integrationDir
+    doLast {
+        copy {
+            from zipTree(fixtureDir.file('images/cards.zip'))
+            into integrationDir.dir('images')
+        }
+        def seed = integrationDir.file('saves/test.txt').asFile
+        if (!seed.exists()) {
+            copy { from fixtureDir.dir('saves'); into integrationDir.dir('saves') }
+        }
+    }
+}
+
+tasks.register('prepareBattleTestRuntime', Copy) {
+    from fixtureDir
+    into testRuntimeDir
+    doLast {
+        copy {
+            from zipTree(fixtureDir.file('images/cards.zip'))
+            into testRuntimeDir.get().dir('images')
+        }
+    }
+}
+
+test {
+    useJUnitPlatform()
+    dependsOn 'prepareBattleTestRuntime'
+    workingDir testRuntimeDir
+    systemProperty 'battle.previewPath', layout.buildDirectory.file('battle-preview.png').get().asFile.absolutePath
+    systemProperty 'game.projectDir', projectDir.absolutePath
+}
+
+tasks.register('integrationChecks', JavaExec) {
+    group = 'verification'
+    description = 'Verify production data, persistence, navigation and UI in memory.'
+    dependsOn 'testClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'org.kgu.IntegrationChecks'
+    workingDir projectDir
+    systemProperty 'java.awt.headless', 'true'
+}
+
+tasks.named('check') { dependsOn 'integrationChecks' }
+
+tasks.register('runIntegration', JavaExec) {
+    group = 'verification'
+    description = 'Launch the test-only login/battle/result/collection integration demo.'
+    dependsOn 'testClasses', 'prepareIntegrationRuntime'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'org.kgu.integration.IntegrationMain'
+    workingDir integrationDir
 }

@@ -1,13 +1,26 @@
 package org.kgu;
 
-import javax.swing.SwingUtilities;
-import org.kgu.ui.navigation.GameNavigator;
+import org.kgu.application.Application;
 
-/** 프로그램 시작점: 화면 생성은 GameNavigator에게 위임한다. */
+import javax.swing.*;
+import java.io.IOException;
+
 public class Main {
     public static void main(String[] args) {
-        // 780x576 기준 레이아웃을 약 1400px 너비로 균일하게 확대한다.
-        System.setProperty("sun.java2d.uiScale", "1.8");
-        SwingUtilities.invokeLater(() -> new GameNavigator().open());
+        SwingUtilities.invokeLater(() -> {
+            Application application = new Application();
+
+            try {
+                application.init();
+                application.load();
+                application.start();
+            }
+            catch (IOException e) {
+                application.shutdown();
+                JOptionPane.showMessageDialog(null,
+                    e.getMessage(),
+                    "시작 실패", JOptionPane.ERROR_MESSAGE);
+            }
+        });
     }
 }
