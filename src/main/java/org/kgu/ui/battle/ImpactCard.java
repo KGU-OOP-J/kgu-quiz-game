@@ -7,7 +7,7 @@ import java.awt.image.BufferedImage;
 import javax.swing.JPanel;
 
 /** Portrait-only hit animation. It never changes HP, rewards or the source image file. */
-final class ImpactCard extends JPanel {
+public final class ImpactCard extends JPanel {
     private final BattleComponents.CardPanel card;
     private final String victoryLabel;
     private BufferedImage snapshot;
@@ -15,13 +15,22 @@ final class ImpactCard extends JPanel {
     private double progress = -1;
     private int damage;
     private boolean defeated;
+    private boolean externalHitEffect;
 
-    ImpactCard(String name, String imagePath, Color color, String victoryLabel) {
+    public void setExternalHitEffect(boolean enabled) { externalHitEffect = enabled; }
+
+    public ImpactCard(String name, String imagePath, Color color, String victoryLabel) {
         this.victoryLabel = victoryLabel;
         setOpaque(false);
         setLayout(new BorderLayout());
         card = new BattleComponents.CardPanel(name, imagePath, color);
         add(card, BorderLayout.CENTER);
+    }
+
+    public ImpactCard(String name, BufferedImage image, Color color, String victoryLabel) {
+        this.victoryLabel = victoryLabel;
+        setOpaque(false); setLayout(new BorderLayout());
+        card = new BattleComponents.CardPanel(name, image, color); add(card, BorderLayout.CENTER);
     }
 
     @Override
@@ -30,7 +39,7 @@ final class ImpactCard extends JPanel {
         card.doLayout();
     }
 
-    void startHit(int damage, boolean defeated, long now) {
+    public void startHit(int damage, boolean defeated, long now) {
         this.damage = damage;
         this.defeated = defeated;
         startedAt = now;
@@ -38,18 +47,18 @@ final class ImpactCard extends JPanel {
         snapshot = null;
     }
 
-    void updateHit(long now) {
+    public void updateHit(long now) {
         if (!isAnimating()) return;
         double duration = defeated ? 1_250_000_000.0 : 850_000_000.0;
         progress = Math.min(1, Math.max(0, (now - startedAt) / duration));
         repaint();
     }
 
-    boolean isAnimating() {
+    public boolean isAnimating() {
         return progress >= 0 && progress < 1;
     }
 
-    int shakeOffset() {
+    public int shakeOffset() {
         if (!isAnimating() || progress > 0.5) return 0;
         return (int) (Math.sin(progress * 95) * 9 * (1 - progress * 2));
     }
@@ -57,8 +66,8 @@ final class ImpactCard extends JPanel {
     @Override
     protected void paintChildren(Graphics graphics) {
         if (!isAnimating()) {
-            super.paintChildren(graphics);
-            if (defeated) paintReleased((Graphics2D) graphics);
+            if (!(externalHitEffect && defeated)) super.paintChildren(graphics);
+            if (defeated && !externalHitEffect) paintReleased((Graphics2D) graphics);
             return;
         }
         if (snapshot == null || snapshot.getWidth() != getWidth() || snapshot.getHeight() != getHeight()) {
@@ -69,8 +78,20 @@ final class ImpactCard extends JPanel {
         }
         Graphics2D g = (Graphics2D) graphics.create();
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        paintSplitPortrait(g);
-        paintSlashAndSparks(g);
+        if (externalHitEffect) {
+            int offset = shakeOffset();
+            float opacity = defeated ? (float) Math.max(0, 1 - progress) : 1;
+            g.setComposite(AlphaComposite.SrcOver.derive(opacity));
+            g.drawImage(snapshot, offset, 0, null);
+            if (progress < 0.18) {
+                g.setColor(new Color(255, 255, 255, (int) (120 * (1 - progress / 0.18))));
+                g.fillRect(0, 0, getWidth(), getHeight());
+            }
+            g.setComposite(AlphaComposite.SrcOver);
+        } else {
+            paintSplitPortrait(g);
+            paintSlashAndSparks(g);
+        }
         paintDamage(g);
         g.dispose();
     }
@@ -135,6 +156,7 @@ final class ImpactCard extends JPanel {
     }
 
     private void paintDamage(Graphics2D g) {
+        if (damage <= 0) return;
         float alpha = (float) Math.min(1, (1 - progress) * 3);
         g.setComposite(AlphaComposite.SrcOver.derive(alpha));
         g.setFont(new Font("Malgun Gothic", Font.BOLD, Math.max(24, getWidth() / 6)));

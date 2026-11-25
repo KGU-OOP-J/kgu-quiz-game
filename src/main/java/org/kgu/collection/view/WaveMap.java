@@ -42,6 +42,7 @@ final class WaveMap {
     private static final double[][] ISLANDS = {
         {225, 155, 150, 105}, {562, 155, 158, 110}, {192, 395, 152, 125}, {578, 405, 162, 120}};
     private final BufferedImage[] sprites = new BufferedImage[4], shadows = new BufferedImage[4];
+    private final java.util.Map<String, BufferedImage> tints = new java.util.HashMap<>();
     private final Rectangle[] bounds = new Rectangle[4];
 
     int villageAt(int x, int y) {
@@ -86,6 +87,38 @@ final class WaveMap {
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
         g.drawImage(shadows[v], nx, ny + (int) (10 * lift), nw, nh, null);
         g.drawImage(sprites[v], nx, ny - (int) (6 * lift), nw, nh, null);
+    }
+
+    /** 잠긴 마을 섬을 섬 모양대로 어둡게 덮는다. dim 0이면 그대로, 1이면 가장 어둡다. */
+    void dimVillage(Graphics2D g, int v, float dim) {
+        if (dim <= 0) return;
+        Graphics2D d = (Graphics2D) g.create();
+        d.setComposite(AlphaComposite.SrcOver.derive(Math.min(1f, dim)));
+        Rectangle b = bounds[v];
+        for (int i = 0; i < 2; i++) d.drawImage(shadows[v], b.x, b.y, null);  // 그림자 한 장은 옅어서 겹쳐 그린다
+        d.dispose();
+    }
+
+    /** 마을 섬을 섬 모양대로 한 가지 색으로 덮는다(잠김의 보랏빛 어둠, 풀릴 때의 금빛). 색마다 한 번 만들어 둔다. */
+    void tintVillage(Graphics2D g, int v, Color color, float alpha) {
+        if (alpha <= 0) return;
+        BufferedImage tint = tints.computeIfAbsent(v + ":" + color.getRGB(), key -> {
+            BufferedImage img = new BufferedImage(sprites[v].getWidth(), sprites[v].getHeight(), BufferedImage.TYPE_INT_ARGB);
+            for (int y = 0; y < img.getHeight(); y++) {
+                for (int x = 0; x < img.getWidth(); x++) {
+                    if ((sprites[v].getRGB(x, y) >>> 24) != 0) img.setRGB(x, y, color.getRGB() | 0xFF000000);
+                }
+            }
+            return img;
+        });
+        Graphics2D d = (Graphics2D) g.create();
+        d.setComposite(AlphaComposite.SrcOver.derive(Math.min(1f, alpha)));
+        d.drawImage(tint, bounds[v].x, bounds[v].y, null);
+        d.dispose();
+    }
+
+    Rectangle villageBounds(int v) {
+        return bounds[v];
     }
 
     BufferedImage frame(double t) {

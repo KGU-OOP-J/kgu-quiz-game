@@ -6,5 +6,9 @@ public enum ViewId {
     QUESTION,
     RESULT,
     COLLECTION,
-    SETTING
+    SETTING,
+    ADVENTURE,
+    TUTORIAL,
+    PROLOGUE,
+    DIALOGUE
 }

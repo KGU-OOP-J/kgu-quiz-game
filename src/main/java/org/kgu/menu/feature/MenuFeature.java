@@ -20,16 +20,22 @@ public final class MenuFeature {
     }
 
     public List<Person> getCandidates(String category) {
-        return gameFeature.getCandidates(category);
+        return gameFeature.getChallengeCandidates(category);
     }
 
     public void start(String category, Difficulty difficulty, GameSession.Mode mode, Person person) {
         if (mode == GameSession.Mode.PRACTICE) {
             gameFeature.startPractice(category, difficulty);
+        } else if (mode == GameSession.Mode.REVIEW) {
+            gameFeature.startReview();
         } else {
             gameFeature.startBattle(category, difficulty, person);
         }
     }
+
+    public org.kgu.progression.PlayerProgress profile() { return gameFeature.profile(); }
+    public String nextGoal() { return gameFeature.nextGoal(); }
+    public boolean categoryUnlocked(String category) { return gameFeature.categoryUnlocked(category); }
 
     public void openCollection() {
         navigate.accept(ViewId.COLLECTION);

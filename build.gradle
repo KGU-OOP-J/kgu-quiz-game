@@ -20,6 +20,10 @@ application {
     mainClass = 'org.kgu.Main'
 }
 
+tasks.named('processResources') {
+    from('prologue-dialog.txt') { into 'org/kgu/story' }
+}
+
 // Team pages/data are test fixtures and never enter the production source set.
 def fixtureDir = layout.projectDirectory.dir('src/test/resources/integration')
 def integrationDir = layout.projectDirectory.dir('.integration-runtime')
@@ -56,7 +60,20 @@ test {
     dependsOn 'prepareBattleTestRuntime'
     workingDir testRuntimeDir
     systemProperty 'battle.previewPath', layout.buildDirectory.file('battle-preview.png').get().asFile.absolutePath
+    systemProperty 'game.projectDir', projectDir.absolutePath
 }
+
+tasks.register('integrationChecks', JavaExec) {
+    group = 'verification'
+    description = 'Verify production data, persistence, navigation and UI in memory.'
+    dependsOn 'testClasses'
+    classpath = sourceSets.test.runtimeClasspath
+    mainClass = 'org.kgu.IntegrationChecks'
+    workingDir projectDir
+    systemProperty 'java.awt.headless', 'true'
+}
+
+tasks.named('check') { dependsOn 'integrationChecks' }
 
 tasks.register('runIntegration', JavaExec) {
     group = 'verification'

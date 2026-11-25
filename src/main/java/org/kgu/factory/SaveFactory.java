@@ -19,9 +19,13 @@ import java.util.Scanner;
  */
 public final class SaveFactory extends TextFileFactory<Save> {
     private Save save = new Save();
+    private final org.kgu.progression.ProgressStore progress;
+
+    public org.kgu.progression.ProgressStore progress() { return progress; }
 
     public SaveFactory(Path path) {
         super(path);
+        progress = new org.kgu.progression.ProgressStore(path.resolveSibling(path.getFileName() + ".progress"));
     }
 
     public static SaveFactory forPlayer(String playerId) {
@@ -41,6 +45,7 @@ public final class SaveFactory extends TextFileFactory<Save> {
     }
 
     public void open() throws IOException {
+        progress.open();
         if (Files.exists(getPath())) {
             load();
         }

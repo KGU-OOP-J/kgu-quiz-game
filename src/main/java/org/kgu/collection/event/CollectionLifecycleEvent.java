@@ -17,4 +17,5 @@ public final class CollectionLifecycleEvent implements LifecycleEvent {
         event.refresh(view);
         view.showMap();
     }
+    @Override public void onExit() { view.stopAnimations(); }
 }

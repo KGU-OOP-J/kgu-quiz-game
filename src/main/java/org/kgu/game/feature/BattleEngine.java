@@ -2,133 +2,200 @@ package org.kgu.game.feature;
 
 import org.kgu.model.Person;
 import org.kgu.model.Quiz;
+import org.kgu.progression.CardPower;
+import org.kgu.progression.ShopItem;
+
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Random;
+import java.util.Set;
 
-/** 프로토타입과 같은 6턴 규칙. Swing과 파일 입출력에 의존하지 않는다. */
+/** Five-question learning battle. Animation, saving and navigation belong to other layers. */
 public final class BattleEngine {
+    public static final int QUESTION_COUNT = 5;
+    public static final int REQUIRED_CORRECT = 3;
+    public static final int MAX_HP = 60;
+    public static final int DAMAGE = 20;
+
     public enum Phase { QUESTION, FEEDBACK, FINISHED }
-    public enum Result { WIN, LOSE, DRAW }
+    public enum Result { WIN, LOSE }
+    public record TurnFeedback(boolean correct, int damage, String explanation) { }
 
-    public record TurnFeedback(
-        boolean correct,
-        boolean attackTurn,
-        int damage,
-        String explanation
-    ) { }
-
-    private final Person player;
-    private final Person computer;
-
+    private final Person target;
     private final List<Quiz> questions;
-
+    private final CardPower power;
+    private final boolean boss;
+    private final Random random;
+    private final Set<Integer> eliminated = new HashSet<>();
     private int turn;
-    private int playerHp = 60;
-    private int computerHp = 60;
+    private int answeredCount;
     private int selected = -1;
     private int correctCount;
+    private int combo;
+    private int bestCombo;
+    private int firstWrong = -1;
+    private int retryCorrectCount;
+    private boolean retry;
+    private Quiz retryQuiz;
+    private ShopItem itemUsed;
     private Phase phase = Phase.QUESTION;
-    private Optional<TurnFeedback> feedback = Optional.empty();
+    private TurnFeedback feedback;
 
-    public BattleEngine(Person player, Person computer, List<Quiz> playerQuestions, List<Quiz> computerQuestions) {
-        if (player == computer || (player.getCategory().equals(computer.getCategory())
-                && player.getName().equals(computer.getName()))) {
-            throw new IllegalArgumentException("상대는 다른 인물이어야 합니다.");
-        }
-
-        if (playerQuestions.size() != 3 || computerQuestions.size() != 3) {
-            throw new IllegalArgumentException("인물별 3문제가 필요합니다.");
-        }
-
-        this.player = player;
-        this.computer = computer;
-
-        List<Quiz> sequence = new ArrayList<>();
-        for (int i = 0; i < 3; i++) {
-            sequence.add(playerQuestions.get(i));
-            sequence.add(computerQuestions.get(i));
-        }
-
-        questions = List.copyOf(sequence);
+    public BattleEngine(Person target, List<Quiz> questions, CardPower power, boolean boss) {
+        this(target, questions, power, boss, new Random());
     }
 
-    public Person player() { return player; }
-    public Person computer() { return computer; }
+    public BattleEngine(Person target, List<Quiz> questions, CardPower power, boolean boss, Random random) {
+        this.target = Objects.requireNonNull(target);
+        this.questions = List.copyOf(questions);
+        this.power = Objects.requireNonNull(power);
+        this.boss = boss;
+        this.random = Objects.requireNonNull(random);
+        if (questions.size() != QUESTION_COUNT) {
+            throw new IllegalArgumentException("전투에는 정확히 5문제가 필요합니다.");
+        }
+    }
+
+    public Person computer() { return target; }
     public Phase phase() { return phase; }
     public int turn() { return turn; }
-    public int playerHp() { return playerHp; }
-    public int computerHp() { return computerHp; }
+    public int questionCount() { return questions.size(); }
+    public int answeredCount() { return answeredCount; }
     public int selected() { return selected; }
+    /** First-attempt answers only: used for XP, accuracy, combos and achievements. */
     public int correctCount() { return correctCount; }
-    public boolean attackTurn() { return turn % 2 == 0; }
-    public Quiz current() { return questions.get(Math.min(turn, 5)); }
-    public Person currentPerson() { return Math.min(turn, 5) % 2 == 0 ? player : computer; }
-    public String hint() { return String.join(" / ", currentPerson().getInformation()); }
-    public String explanation() {
-        return "정답: " + current().getChoices().get(current().getAnswer() - 1);
-    }
+    public int retryCorrectCount() { return retryCorrectCount; }
+    public int successCount() { return correctCount + retryCorrectCount; }
+    public int bestCombo() { return bestCombo; }
+    public int hintsUsed() { return itemUsed == null ? 0 : 1; }
+    public CardPower power() { return power; }
+    public boolean boss() { return boss; }
+    public boolean isRetry() { return retry; }
+    public int currentQuestionIndex() { return retry ? firstWrong : phase == Phase.FINISHED ? Math.max(0, answeredCount - 1) : Math.min(turn, QUESTION_COUNT - 1); }
+    public Quiz current() { return retry ? retryQuiz : questions.get(currentQuestionIndex()); }
+    public Set<Integer> eliminated() { return Set.copyOf(eliminated); }
+    public Optional<ShopItem> itemUsed() { return Optional.ofNullable(itemUsed); }
+    public int maxComputerHp() { return MAX_HP; }
+    public int computerHp() { return Math.max(0, MAX_HP - successCount() * DAMAGE); }
+    public boolean memoryVisible() { return itemUsed == ShopItem.TONIC; }
+    public String memoryText() { return String.join("\n", target.getInformation()); }
+
     public TurnFeedback feedback() {
         require(Phase.FEEDBACK);
-        return feedback.orElseThrow(() -> new IllegalStateException("답안을 먼저 제출하세요."));
+        return feedback;
     }
 
     public void select(int choice) {
         require(Phase.QUESTION);
-        if (choice < 0 || choice >= 4) { throw new IllegalArgumentException("보기는 1~4번입니다."); }
+        if (choice < 0 || choice >= 4 || eliminated.contains(choice)) {
+            throw new IllegalArgumentException("선택할 수 없는 보기입니다.");
+        }
         selected = choice;
+    }
+
+    /** Shared by UI availability and the pre-persistence validation in GameFeature. */
+    public Optional<String> itemUnavailableReason(ShopItem item) {
+        Objects.requireNonNull(item);
+        if (phase != Phase.QUESTION) return Optional.of("답안을 제출하기 전에 사용하세요.");
+        if (retry) return Optional.of("재도전에서는 아이템을 사용할 수 없습니다.");
+        if (itemUsed != null) return Optional.of("한 전투에는 아이템 하나만 사용할 수 있습니다.");
+        return Optional.empty();
+    }
+
+    public void validateItem(ShopItem item) {
+        itemUnavailableReason(item).ifPresent(reason -> { throw new IllegalArgumentException(reason); });
+    }
+
+    public void useItem(ShopItem item) {
+        validateItem(item);
+        itemUsed = item;
+        if (item == ShopItem.INSIGHT) {
+            List<Integer> wrong = new ArrayList<>();
+            for (int i = 0; i < 4; i++) if (i != current().getAnswer() - 1) wrong.add(i);
+            int removed = wrong.get(random.nextInt(wrong.size()));
+            eliminated.add(removed);
+            if (selected == removed) selected = -1;
+        }
     }
 
     public TurnFeedback submit() {
         require(Phase.QUESTION);
-
-        if (selected < 0) {
-            throw new IllegalStateException("정답을 선택해 주세요.");
-        }
-
+        if (selected < 0) throw new IllegalStateException("정답을 선택해 주세요.");
+        int previousHp = computerHp();
         boolean correct = selected + 1 == current().getAnswer();
-        if (correct) correctCount++;
-
-        int damage = 0;
-        if (attackTurn() && correct) {
-            computerHp = Math.max(0, computerHp - 20);
-            damage = 20;
+        if (retry) {
+            retryCorrectCount = correct ? 1 : 0;
+        } else {
+            answeredCount++;
+            if (correct) {
+                correctCount++;
+                bestCombo = Math.max(bestCombo, ++combo);
+            } else {
+                combo = 0;
+                if (firstWrong < 0) firstWrong = turn;
+            }
         }
-        if (!attackTurn() && !correct) {
-            playerHp = Math.max(0, playerHp - 20);
-            damage = 20;
-        }
-
-        TurnFeedback result = new TurnFeedback(correct, attackTurn(), damage, explanation());
-        feedback = Optional.of(result);
+        feedback = new TurnFeedback(correct, previousHp - computerHp(),
+                "정답: " + current().getChoices().get(current().getAnswer() - 1));
         phase = Phase.FEEDBACK;
-
-        return result;
+        return feedback;
     }
 
-    public void advance() {
-        require(Phase.FEEDBACK);
+    public void advance() { advance(false); }
 
-        turn++;
+    /** The feature supplies inventory availability; the engine does not read saves. */
+    public void advance(boolean shieldInInventory) {
+        require(Phase.FEEDBACK);
         selected = -1;
-        phase = turn == 6 ? Phase.FINISHED : Phase.QUESTION;
+        eliminated.clear();
+        if (retry) {
+            phase = Phase.FINISHED;
+            return;
+        }
+        turn++;
+        int remaining = QUESTION_COUNT - turn;
+        boolean retryPossible = firstWrong >= 0 && (itemUsed == ShopItem.SHIELD
+                || (itemUsed == null && shieldInInventory && remaining > 0));
+        if (correctCount + remaining + (retryPossible ? 1 : 0) < REQUIRED_CORRECT) {
+            phase = Phase.FINISHED;
+        } else if (turn < QUESTION_COUNT) {
+            phase = Phase.QUESTION;
+        } else if (itemUsed == ShopItem.SHIELD && firstWrong >= 0) {
+            prepareRetry();
+            phase = Phase.QUESTION;
+        } else {
+            phase = Phase.FINISHED;
+        }
+    }
+
+    private void prepareRetry() {
+        Quiz original = questions.get(firstWrong);
+        // Non-zero rotation guarantees a new answer position, with no repeated original question credit.
+        List<Integer> order = new ArrayList<>(List.of(0, 1, 2, 3));
+        Collections.rotate(order, 1 + random.nextInt(3));
+        retryQuiz = new Quiz(original.getDifficulty(), original.getQuestion(),
+                order.stream().map(original.getChoices()::get).toList(),
+                order.indexOf(original.getAnswer() - 1) + 1);
+        retry = true;
     }
 
     public Result result() {
         require(Phase.FINISHED);
-
-        return playerHp > computerHp
-            ? Result.WIN
-            : playerHp < computerHp
-            ? Result.LOSE
-            : Result.DRAW;
+        return successCount() >= REQUIRED_CORRECT ? Result.WIN : Result.LOSE;
     }
 
-    public List<Person> rewards() {
-        return result() == Result.WIN ? List.of(player, computer) : List.of();
+    public int stars() {
+        if (phase != Phase.FINISHED || result() != Result.WIN) return 0;
+        return 1 + (correctCount >= 4 ? 1 : 0) + (itemUsed == null ? 1 : 0);
     }
+
+    public List<Person> rewards() { return result() == Result.WIN ? List.of(target) : List.of(); }
 
     private void require(Phase expected) {
-        if (phase != expected) { throw new IllegalStateException("배틀 단계가 올바르지 않습니다: " + phase); }
+        if (phase != expected) throw new IllegalStateException("전투 단계가 올바르지 않습니다: " + phase);
     }
 }

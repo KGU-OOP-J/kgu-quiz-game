@@ -5,168 +5,87 @@ import org.kgu.collection.view.CardView;
 import org.kgu.game.event.BattleGUIEvent;
 import org.kgu.game.event.QuestionGUIEvent;
 import org.kgu.game.feature.GameSession;
-import org.kgu.model.Quiz;
-import org.kgu.window.UiButton;
-import org.kgu.window.UiStyle;
-import org.kgu.window.View;
-import org.kgu.window.ViewId;
-
+import org.kgu.window.*;
 import javax.swing.*;
-import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.util.Optional;
 
 public final class QuestionView extends JPanel implements View {
-    private final QuestionGUIEvent questionEvent;
+    private final QuestionGUIEvent event;
     private final BattleGUIEvent battleEvent;
     private final CardArt art;
-    private Optional<BattlePanel> battlePanel = Optional.empty();
-
-    public QuestionView(QuestionGUIEvent questionEvent, BattleGUIEvent battleEvent) {
-        this.questionEvent = questionEvent;
-        this.battleEvent = battleEvent;
-        art = new CardArt(questionEvent::image);
+    private BattlePanel battlePanel;
+    private CardView practiceCard;
+    private final Timer practiceHit = new Timer(16, e -> animatePracticeHit());
+    private void animatePracticeHit() {
+        if (practiceCard == null) { practiceHit.stop(); return; }
+        practiceCard.updateHit(System.nanoTime());
+        if (!practiceCard.isHitAnimating()) practiceHit.stop();
     }
-
-    private static JTextArea text(String value, boolean bold) {
-        JTextArea text = new JTextArea(value);
-        text.setLineWrap(true);
-        text.setWrapStyleWord(true);
-        text.setEditable(false);
-        text.setFocusable(false);
-        text.setOpaque(false);
-        text.setFont(UiStyle.FONT.deriveFont(bold ? Font.BOLD : Font.PLAIN, bold ? 17f : 16f));
-        text.setForeground(UiStyle.NAVY);
-        return text;
-    }
-
-    private static JScrollPane scroll(JTextArea text) {
-        JScrollPane pane = new JScrollPane(text);
-        pane.setBorder(null);
-        pane.setOpaque(false);
-        pane.getViewport().setOpaque(false);
-        return pane;
-    }
-
+    public QuestionView(QuestionGUIEvent event, BattleGUIEvent battleEvent) { this.event = event; this.battleEvent = battleEvent; art = new CardArt(event::image); }
     public void display() {
-        if (questionEvent.getSession().getMode() == GameSession.Mode.PRACTICE) {
-            showPractice();
-        } else {
-            removeAll();
-            setLayout(new BorderLayout());
-            BattlePanel panel = new BattlePanel(battleEvent.getBattle(), battleEvent, battleEvent::finish, battleEvent::returnToMenu);
-            battlePanel = Optional.of(panel);
-            add(panel, BorderLayout.CENTER);
-            revalidate();
-            repaint();
+        stopAnimations(); practiceCard = null; battlePanel = null;
+        getInputMap(WHEN_IN_FOCUSED_WINDOW).clear(); getActionMap().clear();
+        if (event.getSession().getMode() != GameSession.Mode.BATTLE) showPractice();
+        else {
+            removeAll(); setLayout(new BorderLayout()); setBorder(BorderFactory.createEmptyBorder());
+            battlePanel = new BattlePanel(battleEvent.getBattle(), battleEvent, battleEvent::finish, battleEvent::returnToMenu);
+            add(battlePanel); revalidate(); repaint();
         }
     }
-
     public void showPractice() {
-        GameSession session = questionEvent.getSession();
-        Quiz quiz = session.getCurrentQuiz();
-        boolean asking = session.getPhase() == GameSession.Phase.QUESTION;
-        removeAll();
-        setLayout(null);
-        setBackground(new Color(239, 246, 255));
-        JLabel header = new JLabel(session.getCategory() + " · " + session.getDifficulty() + " · 연습 모드");
-        header.setBounds(35, 20, 500, 40);
-        header.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 18f));
-        add(header);
-        JLabel progress = new JLabel("문제 " + (session.getQuestionIndex() + 1) + " / " + session.getQuestionCount(), SwingConstants.RIGHT);
-        progress.setBounds(570, 20, 160, 40);
-        progress.setFont(UiStyle.FONT);
-        add(progress);
-        JProgressBar bar = new JProgressBar(0, session.getQuestionCount());
-        bar.setValue(session.getQuestionIndex() + 1);
-        bar.setBounds(35, 78, 690, 10);
-        add(bar);
-        CardView card = new CardView(session.getCurrentPerson(), session.getDifficulty().getStage(), art);
-        card.setBounds(60, 115, 210, 310);
-        add(card);
-        JTextArea question = text(quiz.getQuestion(), true);
-        JScrollPane questionScroll = scroll(question);
-        questionScroll.setBounds(315, 110, 430, 90);
-        add(questionScroll);
-        JPanel options = new JPanel();
-        options.setLayout(new BoxLayout(options, BoxLayout.Y_AXIS));
-        options.setBackground(Color.WHITE);
-        ButtonGroup group = new ButtonGroup();
+        showPractice(false);
+    }
+    public void showPractice(boolean correctAnswer) {
+        practiceHit.stop();
+        GameSession s = event.getSession(); boolean asking = s.getPhase() == GameSession.Phase.QUESTION;
+        removeAll(); setLayout(new BorderLayout(24, 20)); setBorder(BorderFactory.createEmptyBorder(32, 45, 32, 45));
+        JPanel header = clear(new GridLayout(2, 1, 0, 8));
+        JLabel title = label(s.getCategory() + " · " + s.currentEntry().difficulty() + " · " + s.getMode(), 26);
+        JProgressBar bar = new JProgressBar(0, s.getQuestionCount()); bar.setValue(s.getQuestionIndex() + 1); bar.setStringPainted(true);
+        bar.setString("문제 " + (s.getQuestionIndex() + 1) + "/" + s.getQuestionCount()); bar.setFont(UiStyle.FONT.deriveFont(18f));
+        header.add(title); header.add(bar); add(header, BorderLayout.NORTH);
+        JPanel main = clear(new BorderLayout(30, 0));
+        practiceCard = new CardView(s.getCurrentPerson(), s.currentEntry().difficulty().getStage(), art);
+        practiceCard.setPreferredSize(new Dimension(320, 460)); main.add(practiceCard, BorderLayout.WEST);
+        JPanel qa = clear(new BorderLayout(0, 16));
+        JTextArea question = new JTextArea(s.getCurrentQuiz().getQuestion()); question.setEditable(false); question.setLineWrap(true); question.setWrapStyleWord(true);
+        question.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 32f)); question.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+        question.setForeground(GameTheme.PAPER); question.setBackground(GameTheme.DARK); JScrollPane scroll = GameTheme.scroll(question); scroll.setPreferredSize(new Dimension(600, 155)); qa.add(scroll, BorderLayout.NORTH);
+        JPanel options = clear(new GridLayout(4, 1, 0, 12));
         for (int i = 0; i < 4; i++) {
-            int answer = i + 1;
-            JRadioButton option = new JRadioButton();
-            option.setOpaque(false);
-            option.setEnabled(asking);
-            option.setSelected(session.getSelectedAnswer() == answer);
-            group.add(option);
-            JPanel row = new JPanel(new BorderLayout(8, 0));
-            row.setBorder(new EmptyBorder(8, 8, 8, 8));
-            row.setAlignmentX(Component.LEFT_ALIGNMENT);
-            row.setBackground(!asking && quiz.getAnswer() == answer ? new Color(210, 255, 220) : Color.WHITE);
-            JTextArea label = text(answer + ". " + quiz.getChoices().get(i), false);
-            label.setSize(340, Short.MAX_VALUE);
-            row.add(option, BorderLayout.WEST);
-            row.add(label, BorderLayout.CENTER);
-            row.setMaximumSize(new Dimension(410, Math.max(54, label.getPreferredSize().height + 20)));
-            option.addActionListener(e -> questionEvent.select(answer));
-            label.addMouseListener(new java.awt.event.MouseAdapter() {
-                @Override
-                public void mouseClicked(java.awt.event.MouseEvent e) {
-                    if (asking) option.doClick();
-                }
-            });
-            options.add(row);
-            options.add(Box.createVerticalStrut(4));
+            int answer = i + 1; JButton b = new UiButton("<html>" + answer + ". " + escape(s.getCurrentQuiz().getChoices().get(i)) + "</html>", GameTheme.TEAL);
+            b.setName("practiceChoice" + i); b.setFont(UiStyle.FONT.deriveFont(27f)); b.setEnabled(asking);
+            boolean selected = answer == s.getSelectedAnswer();
+            b.putClientProperty("selected", selected);
+            b.putClientProperty("selectionTint", asking && selected ? new Color(47, 91, 157) : null);
+            b.putClientProperty("correct", !asking && answer == s.getCurrentQuiz().getAnswer());
+            b.setBackground(!asking && answer == s.getCurrentQuiz().getAnswer() ? new Color(185, 245, 205) : answer == s.getSelectedAnswer() ? new Color(177, 218, 255) : Color.WHITE);
+            b.addActionListener(e -> { event.select(answer); showPractice(); }); options.add(b);
+            bind("answer" + i, KeyStroke.getKeyStroke((char)('1' + i)), b::doClick);
         }
-        JScrollPane optionsScroll = new JScrollPane(options);
-        optionsScroll.setBounds(315, 205, 430, 220);
-        optionsScroll.setBorder(null);
-        add(optionsScroll);
-        JButton hint = button("힌트 보기", 35, new Color(75, 139, 224));
-        hint.addActionListener(e -> questionEvent.showHint(this));
-        JButton action = button(asking ? "정답 제출" : "다음 문제", 285, new Color(22, 164, 119));
-        action.addActionListener(e -> {
-            if (asking) questionEvent.submit(this);
-            else questionEvent.next(this);
-        });
-        JButton quit = button("연습 그만", 535, new Color(135, 148, 166));
-        quit.addActionListener(e -> questionEvent.giveUp(this));
-        if (!asking) {
-            boolean correct = session.getSelectedAnswer() == quiz.getAnswer();
-            JLabel feedback = new JLabel((correct ? "정답입니다!" : "오답입니다.") + " 정답: " + quiz.getAnswer() + "번", SwingConstants.CENTER);
-            feedback.setBounds(280, 430, 470, 30);
-            feedback.setFont(UiStyle.FONT);
-            add(feedback);
+        qa.add(options, BorderLayout.CENTER); main.add(qa, BorderLayout.CENTER); add(main, BorderLayout.CENTER);
+        JPanel bottom = clear(new GridLayout(2, 1, 0, 12));
+        bottom.add(label(asking ? "연습에서는 힌트를 자유롭게 볼 수 있습니다. 정답을 맞히면 단계 카드를 얻습니다."
+            : (s.getSelectedAnswer() == s.getCurrentQuiz().getAnswer() ? "정답! " : "오답 — ") + "정답: " + s.getCurrentQuiz().getChoices().get(s.getCurrentQuiz().getAnswer() - 1), 25));
+        JPanel buttons = clear(new GridLayout(1, 3, 20, 0));
+        JButton hint = button("힌트 보기", () -> event.showHint(this)); hint.setEnabled(asking);
+        JButton action = button(asking ? "정답 제출" : "다음 문제", () -> { if (asking) event.submit(this); else event.next(this); }); action.setName("practiceSubmit");
+        buttons.add(hint); buttons.add(action); buttons.add(button("연습 그만", () -> event.giveUp(this))); bottom.add(buttons); add(bottom, BorderLayout.SOUTH);
+        bind("submit", KeyStroke.getKeyStroke("ENTER"), action::doClick); revalidate(); repaint();
+        if (s.getPhase() == GameSession.Phase.FEEDBACK) {
+            if (correctAnswer) practiceCard.startCorrectHit(System.nanoTime());
+            else practiceCard.startHit(System.nanoTime());
+            practiceHit.start();
         }
-        revalidate();
-        repaint();
     }
-
-    private JButton button(String title, int x, Color color) {
-        JButton b = new UiButton(title, color);
-        b.setBounds(x, 475, 180, 48);
-        b.setForeground(Color.WHITE);
-        b.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 18f));
-        add(b);
-        return b;
-    }
-
-    public void stopAnimations() {
-        battlePanel.ifPresent(BattlePanel::stopAnimation);
-    }
-
-    @Override
-    public ViewId getViewId() {
-        return ViewId.QUESTION;
-    }
-
-    @Override
-    public JComponent getComponent() {
-        return this;
-    }
-
-    @Override
-    public Dimension getViewSize() {
-        return questionEvent.getSession().getMode() == GameSession.Mode.BATTLE ? new Dimension(1280, 960) : new Dimension(UiStyle.WIDTH, UiStyle.HEIGHT);
-    }
+    private JButton button(String text, Runnable action) { JButton b = new UiButton(text, GameTheme.TEAL); b.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 22f)); b.addActionListener(e -> action.run()); return b; }
+    private void bind(String name, KeyStroke key, Runnable action) { getInputMap(WHEN_IN_FOCUSED_WINDOW).put(key, name); getActionMap().put(name, new AbstractAction() { @Override public void actionPerformed(java.awt.event.ActionEvent e) { action.run(); } }); }
+    private static String escape(String text) { return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"); }
+    private static JPanel clear(LayoutManager layout) { JPanel p = new JPanel(layout); p.setOpaque(false); return p; }
+    private static JLabel label(String text, int size) { JLabel l = new JLabel(text); l.setFont(UiStyle.FONT.deriveFont(Font.BOLD, (float)size)); l.setForeground(GameTheme.PAPER); return l; }
+    public void stopAnimations() { practiceHit.stop(); if (battlePanel != null) battlePanel.stopAnimation(); }
+    @Override public ViewId getViewId() { return ViewId.QUESTION; }
+    @Override public JComponent getComponent() { return this; }
+    @Override public Dimension getViewSize() { return new Dimension(1280, 960); }
+    @Override protected void paintComponent(Graphics source) { Graphics2D g = (Graphics2D)source.create(); UiStyle.prepare(g); GameTheme.backdrop(g, getWidth(), getHeight(), "study", 0.84f); g.dispose(); }
 }

@@ -90,6 +90,11 @@ final class BattleComponents {
             name = label(text, Color.WHITE); name.setOpaque(true); name.setBackground(new Color(15, 32, 64));
             portrait = new PortraitLabel(imagePath); add(portrait); add(name);
         }
+        CardPanel(String text, BufferedImage image, Color edge) {
+            super(edge.brighter(), edge.darker(), 28); setLayout(null);
+            name = label(text, Color.WHITE); name.setOpaque(true); name.setBackground(new Color(15, 32, 64));
+            portrait = new PortraitLabel(image); add(portrait); add(name);
+        }
         @Override public void doLayout() {
             int inset = Math.max(6, getWidth() / 35), height = Math.max(36, getHeight() / 7);
             portrait.setBounds(inset, inset, getWidth() - inset * 2, getHeight() - height - inset * 2);
@@ -103,6 +108,9 @@ final class BattleComponents {
             super("카드 이미지", SwingConstants.CENTER); setForeground(Color.WHITE);
             try { if (path != null && !path.isBlank()) portrait = ImageIO.read(Path.of(path).toFile()); }
             catch (java.io.IOException | java.nio.file.InvalidPathException ex) { portrait = null; }
+        }
+        PortraitLabel(BufferedImage image) {
+            super("카드 이미지", SwingConstants.CENTER); setForeground(Color.WHITE); portrait = image;
         }
         @Override protected void paintComponent(Graphics graphics) {
             if (portrait == null) { super.paintComponent(graphics); return; }

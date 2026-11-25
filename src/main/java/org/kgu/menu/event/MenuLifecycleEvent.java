@@ -21,6 +21,7 @@ public final class MenuLifecycleEvent implements LifecycleEvent {
     @Override
     public void onEnter() {
         view.showHome();
+        event.refreshProfile();
         event.refreshPersons();
         for (AbstractButton button : buttons()) button.addActionListener(event);
         view.getCategoryBox().addActionListener(event);
@@ -29,6 +30,7 @@ public final class MenuLifecycleEvent implements LifecycleEvent {
 
     @Override
     public void onExit() {
+        view.stopAnimations();
         for (AbstractButton button : buttons()) button.removeActionListener(event);
         view.getCategoryBox().removeActionListener(event);
         view.getModeBox().removeActionListener(event);

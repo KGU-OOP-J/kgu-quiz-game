@@ -48,6 +48,7 @@ public final class IntegrationChecks {
         checkPersistence();
         checkPractice();
         checkBattles();
+        checkBattleItemPersistence();
         SwingUtilities.invokeAndWait(() -> {
             try { checkViews(); }
             catch (Exception e) { throw new AssertionError("View checks", e); }
@@ -188,41 +189,62 @@ public final class IntegrationChecks {
     }
 
     private static void checkBattles() throws Exception {
+        for (int i=0;i<30;i++) saveFactory.progress().answer("unlock-"+i,"과학자",true);
         for (String category : Application.CATEGORIES) {
             for (Difficulty difficulty : Difficulty.values()) {
                 for (int scenario = 0; scenario < 3; scenario++) {
-                    GameFeature game = gameFeature();game.startBattle(category,difficulty,game.getCandidates(category).get(0));
+                    GameFeature game = gameFeature();game.startBattle(category,difficulty,game.getChallengeCandidates(category).get(0));
                     BattleEngine battle = game.getSession().getBattle();
-                    check(battle.player() != battle.computer(), "random opponent differs from player");
+                    check(battle.computer() == game.getChallengeCandidates(category).get(0), "selected person is the target");
                     expect(IllegalStateException.class,battle::result);
                     expect(IllegalStateException.class,battle::submit);
                     expect(IllegalStateException.class,battle::feedback);
-                    for (int turn = 0; turn < 6; turn++) {
-                        check(battle.turn() == turn && battle.attackTurn() == (turn % 2 == 0), "alternating six turns");
+                    while (battle.phase() != BattleEngine.Phase.FINISHED) {
                         int answer=battle.current().getAnswer()-1;
-                        // 0: all correct -> win; 1: all wrong -> lose; 2: attacks wrong, defenses correct -> draw.
-                        boolean correct=scenario==0||(scenario==2&&!battle.attackTurn());
+                        boolean correct=scenario==0 || (scenario==2 && battle.turn()<2);
                         battle.select(correct?answer:(answer+1)%4);
-                        check(battle.submit().correct()==correct,"battle grading");
+                        game.submitBattleAnswer();
+                        check(battle.feedback().correct()==correct,"battle grading");
                         expect(IllegalStateException.class,battle::submit);
                         battle.advance();
-                        check(game.getSession().getPhase()==(turn==5?GameSession.Phase.FINISHED:GameSession.Phase.QUESTION),"session exposes actual battle phase");
-                        if(turn<5)expect(IllegalStateException.class,battle::feedback);
+                        check(game.getSession().getPhase()==GameSession.Phase.valueOf(battle.phase().name()),"session exposes actual battle phase");
                     }
-                    BattleEngine.Result expected=scenario==0?BattleEngine.Result.WIN:scenario==1?BattleEngine.Result.LOSE:BattleEngine.Result.DRAW;
-                    check(battle.result()==expected,"win / lose / draw");
-                    check(battle.rewards().size()==(scenario==0?2:0),"two rewards only on win");
-                    check(battle.correctCount()==(scenario==0?6:scenario==1?0:3),"correct count includes defense");
-                    check(battle.playerHp()==(scenario==1?0:60)&&battle.computerHp()==(scenario==0?0:60),"authoritative HP");
-                    if(scenario==0){game.saveRewards();check(game.getSavedRewards().size()==2,"battle rewards use real save records");}
-                    game.finishBattle();check(destination.get()==ViewId.RESULT,"battle result navigation");
+                    BattleEngine.Result expected=scenario==0?BattleEngine.Result.WIN:BattleEngine.Result.LOSE;
+                    check(battle.result()==expected,"five-question win / loss");
+                    check(battle.rewards().size()==(scenario==0?1:0),"target card only on win");
+                    check(battle.computerHp()>=0 && battle.answeredCount()==(scenario==1?3:5),"authoritative nonnegative HP and early defeat");
+                    if(scenario==0){game.saveRewards();check(game.getSavedRewards().size()==1,"battle rewards use real save records");}
+                    game.finishBattle();
+                    if (destination.get()==ViewId.DIALOGUE) game.finishDialogue();
+                    check(destination.get()==ViewId.RESULT,"battle result navigation");
                 }
             }
         }
-        GameFeature game=gameFeature();game.startBattle("과학자",Difficulty.LOW,game.getCandidates("과학자").get(0));
-        BattleEngine battle=game.getSession().getBattle();
-        for(int i=0;i<6;i++){int answer=battle.current().getAnswer()-1;battle.select(battle.attackTurn()?answer:(answer+1)%4);battle.submit();battle.advance();}
-        check(battle.playerHp()==0&&battle.computerHp()==0&&battle.result()==BattleEngine.Result.DRAW,"simultaneous zero HP is draw after six turns");
+        check(playerSession.saveFactory().progress().snapshot().number("wins") == 12, "battle victories grant profile progression");
+    }
+
+    private static void checkBattleItemPersistence() throws Exception {
+        SaveFactory save = new SaveFactory(memory.getPath("/saves/items.txt"));
+        save.open();
+        GameFeature game = new GameFeature(new PlayerSession("items", save), personManager, imageManager,
+                settingFactory, destination::set, new Random(21));
+        game.progress().buy(org.kgu.progression.ShopItem.TONIC);
+        game.startBattle("과학자", Difficulty.LOW, game.getCandidates("과학자").get(0));
+        BattleEngine battle = game.getSession().getBattle();
+        memory.failWrites = true;
+        try {
+            expect(IOException.class, () -> game.useItem(org.kgu.progression.ShopItem.TONIC));
+            check(game.profile().inventory(org.kgu.progression.ShopItem.TONIC) == 1, "failed save keeps inventory");
+            check(battle.itemUsed().isEmpty() && !battle.memoryVisible(), "failed save grants no item effect");
+        } finally {
+            memory.failWrites = false;
+        }
+        game.useItem(org.kgu.progression.ShopItem.TONIC);
+        check(battle.memoryVisible(), "memory item applied after persistence");
+        SaveFactory reloaded = new SaveFactory(save.getPath());
+        reloaded.open();
+        check(reloaded.progress().snapshot().inventory(org.kgu.progression.ShopItem.TONIC) == 0,
+                "existing TONIC inventory key is consumed and reloads correctly");
     }
 
     private static void checkViews() throws Exception {
@@ -234,6 +256,7 @@ public final class IntegrationChecks {
         menu.getStartButton().doClick();check(game.getSession().getCategory().equals("교수님"),"setup inputs reach Feature");
         paint(menu,780,560);menuLifecycle.onExit();menuLifecycle.onEnter();
         check(menu.getGameButton().getActionListeners().length==1,"no duplicate input on reentry");menuLifecycle.onExit();
+        game.startPractice("과학자", Difficulty.LOW);
         QuestionGUIEvent questionEvent=new QuestionGUIEvent(game);BattleGUIEvent battleEvent=new BattleGUIEvent(game);
         QuestionView question=new QuestionView(questionEvent,battleEvent);QuestionLifecycleEvent lifecycle=new QuestionLifecycleEvent(question);
         lifecycle.onEnter();paint(question,780,560);
@@ -242,13 +265,18 @@ public final class IntegrationChecks {
         BattlePanel panel=(BattlePanel)question.getComponent(0);
         var timerField=BattlePanel.class.getDeclaredField("animation");timerField.setAccessible(true);javax.swing.Timer timer=(javax.swing.Timer)timerField.get(panel);
         timer.start();lifecycle.onExit();check(!timer.isRunning(),"battle timer stopped by lifecycle");
-        for(int i=0;i<6;i++){
+        game.startBattle("과학자",Difficulty.HIGH,game.getCandidates("과학자").get(0));
+        BattlePanelDriver driver=new BattlePanelDriver(game.getSession().getBattle(),battleEvent,battleEvent::finish,battleEvent::returnToMenu);
+        panel=driver.panel();paint(panel,1280,960);
+        while(game.getSession().getBattle().phase()!=BattleEngine.Phase.FINISHED){
             findNamed(panel,"choice"+(game.getSession().getBattle().current().getAnswer()-1),AbstractButton.class).doClick();
             findNamed(panel,"submit",AbstractButton.class).doClick();
-            findNamed(panel,"next",AbstractButton.class).doClick();
+            driver.finishAnimation();
         }
-        check(destination.get()==ViewId.RESULT&&game.getSession().getBattle().result()==BattleEngine.Result.WIN,"real battle buttons finish the game");
-        ResultGUIEvent resultEvent=new ResultGUIEvent(game);ResultView result=new ResultView(resultEvent);resultEvent.refresh(result);paint(result,1280,960);
+        check(destination.get()==ViewId.DIALOGUE,"victory keeps the target dialogue route");
+        game.finishDialogue();
+        check(destination.get()==ViewId.RESULT&&game.getSession().getBattle().result()==BattleEngine.Result.WIN,"real battle buttons and automatic progression finish the game");
+        ResultGUIEvent resultEvent=new ResultGUIEvent(game);ResultView result=new ResultView(resultEvent);resultEvent.refresh(result);paint(result,1280,960);result.stopAnimations();
         CollectionFeature collectionFeature=new CollectionFeature(personManager,imageManager,playerSession,destination::set);
         CollectionGUIEvent collectionEvent=new CollectionGUIEvent(collectionFeature);CollectionView collection=new CollectionView(collectionEvent);
         collectionEvent.refresh(collection);paint(collection,780,560);
@@ -273,13 +301,13 @@ public final class IntegrationChecks {
         SaveFactory retrySave=new SaveFactory(memory.getPath("/saves/retry.txt"));
         GameFeature game=new GameFeature(new PlayerSession("retry",retrySave),personManager,imageManager,settingFactory,destination::set,new Random(9));
         game.startBattle("한국사",Difficulty.HIGH,game.getCandidates("한국사").get(0));BattleEngine battle=game.getSession().getBattle();
-        for(int i=0;i<6;i++){battle.select(battle.current().getAnswer()-1);battle.submit();battle.advance();}
+        while(battle.phase()!=BattleEngine.Phase.FINISHED){battle.select(battle.current().getAnswer()-1);battle.submit();battle.advance();}
         ResultGUIEvent event=new ResultGUIEvent(game);ResultView view=new ResultView(event);
         memory.failWrites=true;event.refresh(view);
         check(retrySave.create().getCollectedCount()==0,"result cannot fake successful save");
         AbstractButton retry=findText(view,"보상 저장 재시도");check(retry.isVisible(),"save failure exposes retry");
-        memory.failWrites=false;retry.doClick();check(retrySave.create().getCollectedCount()==2,"result retry persists both rewards");
-        check(!retry.isVisible(),"retry hidden only after successful persistence");paint(view,1280,960);
+        memory.failWrites=false;retry.doClick();check(retrySave.create().getCollectedCount()==1,"result retry persists target reward");
+        check(!retry.isVisible(),"retry hidden only after successful persistence");paint(view,1280,960);view.stopAnimations();
     }
 
     private static void paint(JComponent component,int width,int height){
