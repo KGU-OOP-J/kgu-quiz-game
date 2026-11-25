@@ -206,17 +206,29 @@ public final class CardArt {
         return waveMap(w, h).map(map -> map.villageAt(x, y)).orElse(-1);
     }
 
-    void paintMap(Graphics2D g, int w, int h, double seconds, double[] villageScales) {
+    /**
+     * @param lockedVillage 자물쇠를 그릴 마을 번호(없으면 -1)
+     * @param unlock 0이면 잠김, 0~1이면 자물쇠가 풀리는 중, 1이면 다 열림
+     * @param hint 잠겨 있을 때 섬 위쪽에 보여 줄 여는 조건
+     */
+    void paintMap(Graphics2D g, int w, int h, double seconds, double[] villageScales, int lockedVillage, double unlock, String hint) {
         Optional<WaveMap> map = waveMap(w, h);
         if (map.isEmpty()) {
             paintBackground(g, w, h);
             return;
         }
-        g.drawImage(map.get().frame(seconds), 0, 0, null);
+        BufferedImage frame = map.get().frame(seconds);
+        boolean sealed = lockedVillage >= 0 && unlock < 1;
+        // 봉인이 있으면 빛 번짐을 더하려고 작업 화면에 그린 뒤 한 번에 옮긴다
+        Graphics2D target = sealed ? lockArt.begin(frame) : g;
+        if (!sealed) g.drawImage(frame, 0, 0, null);
         for (int v = 0; v < villageScales.length; v++) {
-            map.get().paintVillage(g, v, villageScales[v]);
+            map.get().paintVillage(target, v, villageScales[v]);
         }
+        if (sealed) lockArt.paint(g, target, map.get(), lockedVillage, w / 780f, seconds, unlock, hint);
     }
+
+    private final LockArt lockArt = new LockArt();
 
     void paintBackground(Graphics2D g, int w, int h) {
         Optional<BufferedImage> background = image("ui/background");

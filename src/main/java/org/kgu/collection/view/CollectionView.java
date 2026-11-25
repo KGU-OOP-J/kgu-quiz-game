@@ -21,6 +21,8 @@ import java.util.Map;
 public final class CollectionView extends JPanel implements View {
     // WaveMap.ISLANDS와 같은 순서(지도의 왼쪽 위, 오른쪽 위, 왼쪽 아래, 오른쪽 아래 섬)
     private static final String[] VILLAGES = {"과학자", "교수님", "한국사", "아이돌"};
+    private static final int LOCKED = java.util.Arrays.asList(VILLAGES).indexOf(CollectionGUIEvent.LOCKED_VILLAGE);
+    private static final double UNLOCK_SECONDS = LockArt.DURATION;
     private static final Point[] LABELS = {new Point(120, 200), new Point(480, 200), new Point(110, 470), new Point(480, 470)};
     // 배치는 처음 만든 780x560 좌표로 하고, 로그인·메뉴·대전과 같은 1280x960 창에 맞게 한 번에 늘린다.
     private static final int WIDTH = 1280, HEIGHT = 960;
@@ -36,18 +38,17 @@ public final class CollectionView extends JPanel implements View {
             for (int v = 0; v < scales.length; v++) {
                 scales[v] += ((v == hovered ? 1.12 : 1.0) - scales[v]) * 0.3;  // 부드럽게 커지고 줄어든다
             }
-            art.paintMap(g, getWidth(), getHeight(), (System.nanoTime() - startNanos) / 1e9, scales);
-            if (!event.categoryAvailable("교수님")) {
-                org.kgu.window.GameTheme.paintSurface(g, 55, 24, getWidth() - 110, 64, 18, false);
-                g.setColor(org.kgu.window.GameTheme.GOLD); g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 24f));
-                UiStyle.center(g, gateNotice.isBlank() ? "최종 구출 해금 · 다른 분야 문제 " + event.rescueProgress() + "/30 정답" : gateNotice, getWidth() / 2, 65);
-            }
+            double unlock = locked ? 0 : unlockStart < 0 ? 1 : Math.min(1, (System.nanoTime() - unlockStart) / 1e9 / UNLOCK_SECONDS);
+            art.paintMap(g, getWidth(), getHeight(), (System.nanoTime() - startNanos) / 1e9, scales, LOCKED, unlock, lockHint);
             g.dispose();
         }
     };
     private final long startNanos = System.nanoTime();
     private final double[] scales = {1, 1, 1, 1};
     private int hovered = -1;
+    private boolean locked;
+    private long unlockStart = -1;
+    private String lockHint = "";
     // 지도가 화면에 보일 때만 바다를 다시 그린다(약 30fps)
     private final Timer waves = new Timer(33, e -> {
         if (map.isShowing()) map.repaint();
@@ -61,8 +62,7 @@ public final class CollectionView extends JPanel implements View {
     private int collectedPersons;
     private int totalPersons;
     private int collectedStages;
-    private String gateNotice = "";
-    public void showGateNotice(int solved) { gateNotice = "교수님 마을 잠김 · 다른 분야 문제 " + solved + "/30 정답이 필요합니다."; showMap(); }
+    public void showGateNotice(int solved) { showMap(); }
     private java.util.function.Consumer<String> adventure = category -> { };
     public void configureAdventure(java.util.function.Consumer<String> open) { adventure = open; }
     public void stopAnimations() { waves.stop(); }
@@ -79,7 +79,7 @@ public final class CollectionView extends JPanel implements View {
         map.setBounds(0, 0, 780, 560);
         for (int i = 0; i < VILLAGES.length; i++) {
             String category = VILLAGES[i];
-            UiButton button = CardArt.button(category + " 마을", Color.WHITE, 16f, () -> event.selectCategory(this, category));
+            UiButton button = CardArt.button(villageName(category) + " 마을", Color.WHITE, 16f, () -> event.selectCategory(this, category));
             button.setBounds(LABELS[i].x, LABELS[i].y, 190, 44);
             int village = i;
             button.addMouseListener(new MouseAdapter() {
@@ -182,7 +182,7 @@ public final class CollectionView extends JPanel implements View {
         this.collectedStages = collectedStages;
         villageButtons.forEach((category, button) -> {
             boolean available = event.categoryAvailable(category); button.setEnabled(available);
-            button.setText(available ? category + " 마을 " + event.getCollectedCount(category) + "/" + event.getPersonCount(category) : "교수님 잠김 " + event.rescueProgress() + "/30");
+            button.setText(available ? villageName(category) + " 마을 " + event.getCollectedCount(category) + "/" + event.getPersonCount(category) : "교수님 잠김 " + event.rescueProgress() + "/30");
         });
         slider.setPersons(persons);
         repaint();
@@ -191,6 +191,11 @@ public final class CollectionView extends JPanel implements View {
     /** 마을 지도를 보여 주고 바다 물결을 움직인다. */
     public void showMap() {
         hovered = -1;
+        locked = !event.isVillageOpen(CollectionGUIEvent.LOCKED_VILLAGE);
+        // 열린 뒤 처음 지도를 볼 때 계정마다 한 번만 풀리는 모션을 튼다(본 기록은 세이브 옆 파일에 남는다)
+        if (event.takeUnlockMotion(CollectionGUIEvent.LOCKED_VILLAGE)) unlockStart = System.nanoTime();
+        lockHint = "다른 분야 문제 " + event.rescueProgress() + "/"
+            + org.kgu.progression.PlayerProgress.PROFESSOR_REQUIRED + " 정답이면 열려요";
         java.util.Arrays.fill(scales, 1);
         show(map);
         waves.start();
@@ -210,6 +215,15 @@ public final class CollectionView extends JPanel implements View {
     public void showPerson(Person person, List<Person> owned) {
         detail.display(person, owned);
         show(detail);
+    }
+
+    /** 도감에서는 교수님 분야를 "경기대"로 부른다(분야 데이터 이름은 그대로). */
+    private static String villageName(String category) {
+        return CollectionGUIEvent.LOCKED_VILLAGE.equals(category) ? "경기대" : category;
+    }
+
+    private int openOrNone(int village) {
+        return village >= 0 && event.isVillageOpen(VILLAGES[village]) ? village : -1;
     }
 
     private void show(JPanel page) {
@@ -247,7 +261,7 @@ public final class CollectionView extends JPanel implements View {
             CardArt.gradientRound(g, 16, 22, 214, 54, 30, new Color(44, 80, 140), new Color(22, 46, 92));
             g.setColor(Color.WHITE);
             g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 26f));
-            UiStyle.center(g, selected + " 마을", 123, 49);
+            UiStyle.center(g, villageName(selected) + " 마을", 123, 49);
             CardArt.panel(g, 290, 18, 470, 62, 18, new Color(255, 255, 255, 235));
             g.setColor(UiStyle.NAVY);
             g.setFont(UiStyle.FONT.deriveFont(15f));
