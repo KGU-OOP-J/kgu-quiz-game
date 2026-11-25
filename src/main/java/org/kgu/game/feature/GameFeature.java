@@ -150,7 +150,12 @@ public final class GameFeature {
     /** Card persistence and profile settlement are independently idempotent, so retry is safe. */
     public List<Person> saveRewards() throws IOException {
         GameSession s = getSession(); List<Person> added = new ArrayList<>();
-        for (Person person : s.getRewards()) if (playerSession.saveFactory().record(person, s.getDifficulty())) added.add(person);
+        for (Person person : s.getRewards()) {
+            if (playerSession.saveFactory().record(person, s.getDifficulty())) {
+                s.recordNewCard(person);
+                added.add(person);
+            }
+        }
         progress().syncCollected(playerSession.saveFactory().create().getCollectedCount());
         if (s.getPhase() == GameSession.Phase.FINISHED) {
             boolean battle = s.getMode() == GameSession.Mode.BATTLE;
@@ -159,16 +164,18 @@ public final class GameFeature {
             int xp = s.getCorrectCount() * (battle ? 12 : s.getMode() == GameSession.Mode.REVIEW ? 6 : 8) + (win ? boss ? 120 : 60 : 0);
             if (battle && s.getBattle().power().kind() == CardPower.Kind.FOCUS) xp += xp * s.getBattle().power().strength() * 5 / 100;
             int coins = s.getCorrectCount() * (battle ? 6 : 4) + (win ? boss ? 100 : 40 : 0);
-            int oldLevel = profile().level();
             String stage = battle ? (boss ? "boss." : "normal.") + s.getCategory() + "|" + s.getBattle().computer().getName() + "|" + s.getDifficulty().getLabel() : "";
             List<String> mastery = new ArrayList<>(s.getRewards().stream().map(CardPower::key).toList());
             if (win && !s.getBattle().power().personKey().isBlank()) mastery.add(s.getBattle().power().personKey());
+            PlayerProgress before = profile();
             progress().settle(new ProgressStore.Reward(s.id(), xp, coins, battle, win, stage,
                 battle ? s.getBattle().stars() : 0, battle ? s.getBattle().bestCombo() : 0,
                 win && s.getCorrectCount() == s.getAnsweredCount() && s.hintsUsed() == 0,
                 mastery, playerSession.saveFactory().create().getCollectedCount()));
-            if (s.receipt().isBlank()) s.receipt("XP +" + xp + " · 코인 +" + coins + " · Lv." + profile().level()
-                + (profile().level() > oldLevel ? " 레벨 업!" : "") + (win ? " · " + "★".repeat(s.getBattle().stars()) : ""));
+            PlayerProgress after = profile();
+            s.recordRewardSettlement(before, after);
+            if (s.receipt().isBlank()) s.receipt("XP +" + xp + " · 코인 +" + coins + " · Lv." + after.level()
+                + (after.level() > before.level() ? " 레벨 업!" : "") + (win ? " · " + "★".repeat(s.getBattle().stars()) : ""));
         }
         return List.copyOf(added);
     }

@@ -3,6 +3,7 @@ package org.kgu.game.feature;
 import org.kgu.application.Difficulty;
 import org.kgu.model.Person;
 import org.kgu.model.Quiz;
+import org.kgu.progression.PlayerProgress;
 import java.util.*;
 
 /** A single run. Its UUID is also the persistent reward idempotency key. */
@@ -21,9 +22,11 @@ public final class GameSession {
     private final List<QuestionBank.Entry> entries;
     private final BattleEngine battle;
     private final List<Person> earnedPersons = new ArrayList<>();
+    private final Set<CardKey> newlyAcquiredCards = new HashSet<>();
     private int questionIndex, selectedAnswer, correctCount, hints;
     private Phase phase = Phase.QUESTION;
     private String receipt = "";
+    private RewardSettlement rewardSettlement;
     private boolean dialoguePlayed;
     public boolean dialoguePlayed() { return dialoguePlayed; }
     public void markDialoguePlayed() { dialoguePlayed = true; }
@@ -56,6 +59,24 @@ public final class GameSession {
     }
     public String receipt() { return receipt; }
     public void receipt(String receipt) { this.receipt = receipt; }
+    public Optional<RewardSettlement> rewardSettlement() { return Optional.ofNullable(rewardSettlement); }
+
+    void recordRewardSettlement(PlayerProgress before, PlayerProgress after) {
+        if (rewardSettlement != null) return;
+        rewardSettlement = new RewardSettlement(LevelProgress.from(before), LevelProgress.from(after),
+                after.experience() - before.experience(), after.coins() - before.coins());
+    }
+
+    public record RewardSettlement(LevelProgress before, LevelProgress after, int xpEarned, int coinsEarned) { }
+
+    public record LevelProgress(int totalXp, int level, int levelXp, int nextLevelXp) {
+        private static LevelProgress from(PlayerProgress profile) {
+            int level = profile.level();
+            return new LevelProgress(profile.experience(), level, profile.levelExperience(),
+                    level == 100 ? 0 : PlayerProgress.experienceForLevel(level));
+        }
+    }
+
     public int hintsUsed() { return battle == null ? hints : battle.hintsUsed(); }
     public void recordHint() { require(Phase.QUESTION); hints++; }
     public void selectAnswer(int answer) {
@@ -76,6 +97,17 @@ public final class GameSession {
         phase = questionIndex == entries.size() ? Phase.FINISHED : Phase.QUESTION;
     }
     public List<Person> getRewards() { return mode == Mode.BATTLE ? battle.rewards() : List.copyOf(earnedPersons); }
+
+    void recordNewCard(Person person) {
+        newlyAcquiredCards.add(new CardKey(person.getCategory(), person.getName(), difficulty));
+    }
+
+    public boolean isNewCard(Person person) {
+        return newlyAcquiredCards.contains(new CardKey(person.getCategory(), person.getName(), difficulty));
+    }
+
+    private record CardKey(String category, String name, Difficulty difficulty) { }
+
     private void require(Phase expected) {
         if (mode == Mode.BATTLE || phase != expected) throw new IllegalStateException("연습 단계가 올바르지 않습니다.");
     }
