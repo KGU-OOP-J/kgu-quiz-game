@@ -204,6 +204,17 @@ class AdventureFlowTest {
         CollectionFeature feature = new CollectionFeature(PersonManager.getInstance(), ImageManager.getInstance(), player, destination::set);
         CollectionGUIEvent event = new CollectionGUIEvent(feature);
         ImageManager.getInstance().register("ui/map", project.resolve("images/ui/map.png"));
+        ImageManager.getInstance().register("ui/map_ruin", project.resolve("images/ui/map_ruin.png"));
+        // 과학자 마을: 절반(10/20) 모으면 섬이 복구되고, 복구 모션은 계정마다 한 번
+        List<org.kgu.model.Person> scientists = feature.getPersons("과학자");
+        for (int i = 0; i < scientists.size() / 2 - 1; i++) save.record(scientists.get(i), org.kgu.application.Difficulty.values()[0]);
+        assertFalse(event.isVillageRestored("과학자"));
+        assertFalse(event.takeRestoreMotion("과학자"));
+        save.record(scientists.get(scientists.size() / 2 - 1), org.kgu.application.Difficulty.values()[0]);
+        assertTrue(event.isVillageRestored("과학자"));
+        assertFalse(event.isVillageRestored("한국사"));
+        assertTrue(event.takeRestoreMotion("과학자"));
+        assertFalse(event.takeRestoreMotion("과학자"));
         assertFalse(event.isVillageOpen("교수님"));
         assertFalse(game.categoryUnlocked("교수님"));
         assertFalse(event.takeUnlockMotion("교수님"));

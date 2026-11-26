@@ -27,10 +27,10 @@ final class CardDetailPanel extends JPanel {
     CardDetailPanel(CollectionGUIEvent event,CardArt art,Runnable back){
         this.event=event;this.art=art;setLayout(null);setOpaque(false);
         portrait.setOpaque(false);portrait.setBounds(74,50,248,364);add(portrait);
-        name.setBounds(344,60,360,45);name.setFont(UiStyle.FONT.deriveFont(Font.BOLD,26f));name.setForeground(UiStyle.NAVY);add(name);
-        category.setBounds(344,110,360,40);category.setFont(UiStyle.FONT.deriveFont(18f));add(category);
-        stages.setBounds(344,175,360,40);stages.setFont(UiStyle.FONT.deriveFont(Font.BOLD,22f));add(stages);
-        information.setBounds(344,235,360,175);information.setFont(UiStyle.FONT.deriveFont(16f));information.setEditable(false);
+        name.setBounds(344,60,360,45);name.setFont(UiStyle.FONT.deriveFont(Font.BOLD,26f));name.setForeground(GameTheme.PAPER);add(name);
+        category.setBounds(344,110,360,40);category.setFont(UiStyle.FONT.deriveFont(18f));category.setForeground(GameTheme.MUTED);add(category);
+        stages.setBounds(344,175,360,40);stages.setFont(UiStyle.FONT.deriveFont(Font.BOLD,22f));stages.setForeground(GameTheme.GOLD);add(stages);
+        information.setBounds(344,235,360,175);information.setFont(UiStyle.FONT.deriveFont(16f));information.setForeground(GameTheme.PAPER);information.setEditable(false);
         information.setLineWrap(true);information.setWrapStyleWord(true);information.setOpaque(false);add(information);
         previous.setBounds(10,205,36,48);next.setBounds(734,205,36,48);lower.setBounds(44,210,30,44);higher.setBounds(314,210,30,44);
         add(previous);add(next);add(lower);add(higher);
@@ -55,8 +55,8 @@ final class CardDetailPanel extends JPanel {
         lower.setVisible(index>0);higher.setVisible(index<ownedStages.size()-1);portrait.revalidate();repaint();
     }
     @Override protected void paintComponent(Graphics source){
-        Graphics2D g=(Graphics2D)source.create();UiStyle.prepare(g);g.scale(CollectionView.SX,CollectionView.SY);CardArt.panel(g,54,30,672,404,24,new Color(255,255,255,240));
-        CardArt.gradientRound(g,598,24,136,34,10,new Color(52,196,124),new Color(28,160,98));
-        g.setColor(Color.WHITE);g.setFont(UiStyle.FONT.deriveFont(Font.BOLD,15f));g.drawString("수집 완료",616,47);CardArt.drawCheck(g,694,35,14);g.dispose();
+        Graphics2D g=(Graphics2D)source.create();UiStyle.prepare(g);g.scale(CollectionView.SX,CollectionView.SY);GameTheme.paintSurface(g,54,30,672,404,12,false);
+        CardArt.gradientRound(g,598,24,136,34,10,GameTheme.TEAL.brighter(),GameTheme.TEAL.darker());
+        g.setColor(GameTheme.PAPER);g.setFont(UiStyle.FONT.deriveFont(Font.BOLD,15f));g.drawString("수집 완료",616,47);CardArt.drawCheck(g,694,35,14);g.dispose();
     }
 }

@@ -71,6 +71,20 @@ public final class CollectionGUIEvent {
         return true;
     }
 
+    /** 그 마을 인물을 절반 이상 모으면 폐허였던 섬이 원래 모습으로 돌아온다. */
+    public boolean isVillageRestored(String category) {
+        long total = getPersonCount(category);
+        return total > 0 && getCollectedCount(category) * 2 >= total;
+    }
+
+    /** 섬이 복구됐고 이 사용자가 복구 모션을 아직 안 봤으면, 봤다고 기록하고 true를 준다(잠금 해제 모션과 같은 기록 파일). */
+    public boolean takeRestoreMotion(String category) {
+        String key = "복구:" + category;
+        if (!isVillageRestored(category) || collectionFeature.isUnlockSeen(key)) return false;
+        collectionFeature.markUnlockSeen(key);
+        return true;
+    }
+
     public Optional<BufferedImage> image(String key) {
         return collectionFeature.image(key);
     }

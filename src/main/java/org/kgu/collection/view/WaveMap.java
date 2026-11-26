@@ -15,15 +15,22 @@ final class WaveMap {
     private final int[] out;
     private final int[] rowShift, colShift, shine;
 
-    WaveMap(Image image, int w, int h) {
+    // 폐허 지도(없으면 null). 마을을 복구하면 그 섬만, 교수님 마을이 열리면 전체가 원래 지도로 돌아온다.
+    private final int[] ruin;
+    private final int[] region;          // 픽셀이 속한 섬 번호(-1: 바다·광장)
+    private final float[] islandDist;    // 섬 가운데에서 떨어진 정도(섬 가장자리 쪽이 1)
+    private final float[] worldDist;     // 경기대 섬 가운데에서 떨어진 정도(지도 끝이 1)
+    private final BufferedImage[] ruinSprites = new BufferedImage[4];
+    private double[] lastReveal = {1, 1, 1, 1};
+    private double lastWorld = 1;
+
+    WaveMap(Image image, int w, int h) { this(image, null, w, h); }
+
+    WaveMap(Image image, Image ruinImage, int w, int h) {
         this.w = w;
         this.h = h;
-        BufferedImage base = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
-        Graphics2D g = base.createGraphics();
-        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-        g.drawImage(image, 0, 0, w, h, null);
-        g.dispose();
-        src = base.getRGB(0, 0, w, h, null, 0, w);
+        src = pixels(image, w, h);
+        ruin = ruinImage == null ? null : pixels(ruinImage, w, h);
         water = new boolean[src.length];
         for (int i = 0; i < src.length; i++) {
             int r = src[i] >> 16 & 255, gr = src[i] >> 8 & 255, b = src[i] & 255;
@@ -34,7 +41,37 @@ final class WaveMap {
         rowShift = new int[h];
         colShift = new int[w];
         shine = new int[w * 2 + h * 3];
+        region = new int[w * h];
+        islandDist = new float[w * h];
+        worldDist = new float[w * h];
         cutVillages();
+        if (ruin != null) measureDistances();
+    }
+
+    private static int[] pixels(Image image, int w, int h) {
+        BufferedImage base = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = base.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g.drawImage(image, 0, 0, w, h, null);
+        g.dispose();
+        return base.getRGB(0, 0, w, h, null, 0, w);
+    }
+
+    private void measureDistances() {
+        double ox = bounds[1].getCenterX(), oy = bounds[1].getCenterY();  // 빛은 경기대 섬에서 퍼진다
+        double far = 0;
+        for (int cx : new int[]{0, w}) for (int cy : new int[]{0, h}) far = Math.max(far, Math.hypot(cx - ox, cy - oy));
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                int i = y * w + x;
+                worldDist[i] = (float) (Math.hypot(x - ox, y - oy) / far);
+                int v = region[i];
+                if (v < 0) continue;
+                Rectangle b = bounds[v];
+                double rx = b.width / 2.0, ry = b.height / 2.0;
+                islandDist[i] = (float) Math.hypot((x - b.getCenterX()) / rx, (y - b.getCenterY()) / ry) / 1.42f;
+            }
+        }
     }
 
     // 마을 섬 = 섬을 감싼 타원 안의 바다 아닌 픽셀(780×560 기준, images/ui/map.png에 맞춘 값).
@@ -47,6 +84,11 @@ final class WaveMap {
 
     int villageAt(int x, int y) {
         if (x < 0 || y < 0 || x >= w || y >= h || water[y * w + x]) return -1;
+        return islandAt(x, y);
+    }
+
+    /** 바다 여부는 보지 않고 섬 타원만 본다. */
+    private int islandAt(int x, int y) {
         double fx = x * 780.0 / w, fy = y * 560.0 / h;
         for (int v = 0; v < ISLANDS.length; v++) {
             double dx = (fx - ISLANDS[v][0]) / ISLANDS[v][2], dy = (fy - ISLANDS[v][1]) / ISLANDS[v][3];
@@ -55,17 +97,41 @@ final class WaveMap {
         return -1;
     }
 
+    /** 지도 가장자리에서 이어진 파란 픽셀만 바다로 본다(가장자리부터 채워 나가기). */
+    private boolean[] ocean() {
+        boolean[] seen = new boolean[w * h];
+        java.util.ArrayDeque<Integer> queue = new java.util.ArrayDeque<>();
+        for (int x = 0; x < w; x++) { queue.add(x); queue.add((h - 1) * w + x); }
+        for (int y = 0; y < h; y++) { queue.add(y * w); queue.add(y * w + w - 1); }
+        while (!queue.isEmpty()) {
+            int i = queue.poll();
+            if (seen[i] || !water[i]) continue;
+            seen[i] = true;
+            int x = i % w, y = i / w;
+            if (x > 0) queue.add(i - 1);
+            if (x < w - 1) queue.add(i + 1);
+            if (y > 0) queue.add(i - w);
+            if (y < h - 1) queue.add(i + w);
+        }
+        return seen;
+    }
+
     private void cutVillages() {
-        BufferedImage[] full = new BufferedImage[4], dark = new BufferedImage[4];
+        BufferedImage[] full = new BufferedImage[4], dark = new BufferedImage[4], ruined = new BufferedImage[4];
         for (int v = 0; v < 4; v++) {
             full[v] = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
             dark[v] = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
+            ruined[v] = new BufferedImage(w, h, BufferedImage.TYPE_INT_ARGB);
         }
+        boolean[] ocean = ocean();
         for (int y = 0; y < h; y++) {
             for (int x = 0; x < w; x++) {
-                int v = villageAt(x, y);
+                // 유리 돔·수영장처럼 섬 안에 갇힌 파란 곳은 바다가 아니라 섬에 넣는다
+                int v = ocean[y * w + x] ? -1 : islandAt(x, y);
+                region[y * w + x] = v;
                 if (v < 0) continue;
                 full[v].setRGB(x, y, 0xFF000000 | src[y * w + x]);
+                if (ruin != null) ruined[v].setRGB(x, y, 0xFF000000 | ruin[y * w + x]);
                 dark[v].setRGB(x, y, 0x55000020);
                 bounds[v] = bounds[v] == null ? new Rectangle(x, y, 1, 1) : bounds[v].union(new Rectangle(x, y, 1, 1));
             }
@@ -74,6 +140,7 @@ final class WaveMap {
             Rectangle b = bounds[v];
             sprites[v] = full[v].getSubimage(b.x, b.y, b.width, b.height);
             shadows[v] = dark[v].getSubimage(b.x, b.y, b.width, b.height);
+            ruinSprites[v] = ruined[v].getSubimage(b.x, b.y, b.width, b.height);
         }
     }
 
@@ -86,7 +153,8 @@ final class WaveMap {
         int nx = b.x + b.width / 2 - nw / 2, ny = b.y + b.height / 2 - nh / 2;
         g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
         g.drawImage(shadows[v], nx, ny + (int) (10 * lift), nw, nh, null);
-        g.drawImage(sprites[v], nx, ny - (int) (6 * lift), nw, nh, null);
+        boolean ruined = ruin != null && lastReveal[v] < 0.5 && lastWorld < 0.5;
+        g.drawImage(ruined ? ruinSprites[v] : sprites[v], nx, ny - (int) (6 * lift), nw, nh, null);
     }
 
     /** 잠긴 마을 섬을 섬 모양대로 어둡게 덮는다. dim 0이면 그대로, 1이면 가장 어둡다. */
@@ -140,5 +208,52 @@ final class WaveMap {
             }
         }
         return frame;
+    }
+
+    /**
+     * 물결 지도 위에 폐허를 덮는다. 복구 중인 곳은 가운데에서 금빛 고리가 퍼지며 원래 지도가 드러난다.
+     *
+     * @param reveal 섬마다 0(폐허)~1(복구 끝)
+     * @param world 0(폐허)~1(지도 전체 복구 끝), 경기대 섬에서 퍼진다
+     */
+    BufferedImage frame(double t, double[] reveal, double world) {
+        frame(t);
+        lastReveal = reveal.clone();
+        lastWorld = world;
+        if (ruin == null || world >= 1) return frame;
+        for (int i = 0; i < out.length; i++) {
+            int v = region[i];
+            double island = v < 0 ? 0 : edge(reveal[v], islandDist[i]), all = edge(world, worldDist[i]);
+            double a = Math.max(island, all);
+            double light = Math.max(v < 0 ? 0 : ring(reveal[v], islandDist[i]), ring(world, worldDist[i]));
+            int o = out[i], r = ruin[i];
+            if (a <= 0 && light <= 0) { out[i] = r; continue; }
+            if (a >= 1 && light <= 0) continue;
+            int add = (int) (light * 150);
+            out[i] = blend(r >> 16 & 255, o >> 16 & 255, a, add) << 16
+                | blend(r >> 8 & 255, o >> 8 & 255, a, add * 4 / 5) << 8
+                | blend(r & 255, o & 255, a, add * 2 / 5);
+        }
+        return frame;
+    }
+
+    private static final double SOFT = 0.08;
+
+    /** 빛 고리 안쪽이면 1(복구됨), 바깥이면 0, 고리 가장자리는 부드럽게. */
+    private static double edge(double p, double d) {
+        if (p <= 0) return 0;
+        if (p >= 1) return 1;
+        return Math.min(1, Math.max(0, (p * (1 + SOFT) - d) / SOFT));
+    }
+
+    /** 퍼지는 빛 고리의 밝기. 끝에 다가갈수록 옅어진다. */
+    private static double ring(double p, double d) {
+        if (p <= 0 || p >= 1) return 0;
+        double k = (d - p * (1 + SOFT)) / 0.05;
+        return Math.exp(-k * k) * (1 - p * 0.6);
+    }
+
+    private static int blend(int ruined, int original, double a, int add) {
+        return Math.min(255, (int) (ruined + (original - ruined) * a) + add);
     }
 }
