@@ -3,11 +3,11 @@ package org.kgu.integration;
 import java.awt.GraphicsEnvironment;
 import java.util.List;
 import javax.swing.*;
-import org.kgu.battle.BattleEngine;
+import org.kgu.domain.battle.feature.BattleEngine;
 import org.kgu.integration.battle.BattleRepository;
 import org.kgu.integration.ui.navigation.GameNavigator;
-import org.kgu.ui.battle.BattleScreen;
-import org.kgu.ui.battle.BattleSetupScreen;
+import org.kgu.domain.battle.view.component.BattleScreen;
+import org.kgu.domain.battle.view.component.BattleSetupScreen;
 
 /** Manual fixture runner, excluded from the production JAR. */
 public final class IntegrationMain {

@@ -1,4 +1,6 @@
-package org.kgu.ui.battle;
+package org.kgu.domain.battle.view.component;
+
+import org.kgu.battle.UiTestActions;
 
 import static org.junit.jupiter.api.Assertions.*;
 import java.awt.*;
@@ -7,7 +9,7 @@ import java.nio.file.*;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import org.junit.jupiter.api.Test;
-import org.kgu.battle.*;
+import org.kgu.domain.battle.feature.*;
 
 class HitEffectsTest {
     private BattleEngine engine() {

@@ -1,19 +1,21 @@
-package org.kgu.game.feature;
+package org.kgu.domain.game.feature;
 
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
-import org.kgu.adventure.*;
-import org.kgu.application.*;
-import org.kgu.factory.*;
-import org.kgu.collection.feature.CollectionFeature;
-import org.kgu.collection.event.CollectionGUIEvent;
-import org.kgu.collection.view.CollectionView;
-import org.kgu.game.event.*;
-import org.kgu.game.view.*;
-import org.kgu.manager.*;
-import org.kgu.model.*;
-import org.kgu.progression.*;
-import org.kgu.window.*;
+import org.kgu.domain.adventure.view.*;
+import org.kgu.domain.adventure.feature.AdventureFeature;
+import org.kgu.core.application.*;
+import org.kgu.core.factory.*;
+import org.kgu.domain.collection.feature.CollectionFeature;
+import org.kgu.domain.collection.event.CollectionGUIEvent;
+import org.kgu.domain.collection.view.CollectionView;
+import org.kgu.domain.game.view.component.*;
+import org.kgu.domain.game.event.*;
+import org.kgu.domain.game.view.*;
+import org.kgu.core.manager.*;
+import org.kgu.core.model.*;
+import org.kgu.core.progression.*;
+import org.kgu.core.window.*;
 import javax.swing.*;
 import javax.imageio.ImageIO;
 import java.awt.*;
@@ -34,11 +36,11 @@ class AdventureFlowTest {
         PersonManager people = PersonManager.getInstance(); people.clear();
         ImageManager images = ImageManager.getInstance(); images.clear();
         for (String category : Application.CATEGORIES) {
-            CategoryFileFactory file = new CategoryFileFactory(project.resolve("data/" + category + ".txt"), category); file.load();
+            CategoryFileFactory file = new CategoryFileFactory("/questions/" + category + ".txt", category); file.load();
             for (PersonFactory person : file.create()) {
                 people.add(person);
-                for (int i = 1; i <= 3; i++) images.register("cards/" + person.create().getName() + "_" + i,
-                    project.resolve("images/cards/" + person.create().getName() + "_" + i + ".png"));
+                for (int i = 1; i <= 3; i++) images.registerResource("cards/" + person.create().getName() + "_" + i,
+                    "/images/" + person.create().getName() + "_" + i + ".png");
             }
         }
         save = new SaveFactory(temp.resolve("player.txt")); save.open();
@@ -94,7 +96,7 @@ class AdventureFlowTest {
         PlayerSession player = new PlayerSession("테스터", save);
         CollectionFeature feature = new CollectionFeature(PersonManager.getInstance(), ImageManager.getInstance(), player, destination::set);
         CollectionGUIEvent event = new CollectionGUIEvent(feature);
-        ImageManager.getInstance().register("ui/map", project.resolve("images/ui/map.png"));
+        ImageManager.getInstance().registerResource("ui/map", "/images/ui/map.png");
         assertFalse(event.isVillageOpen("교수님"));
         assertFalse(game.categoryUnlocked("교수님"));
         assertFalse(event.takeUnlockMotion("교수님"));
@@ -225,7 +227,7 @@ class AdventureFlowTest {
 
     @Test void tutorialButtonsPersistCompletionWithoutDuplicatingRewards() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
-            TutorialView view = new TutorialView(game); assertFalse(game.profile().flag("tutorial"));
+            TutorialView view = new TutorialView(new AdventureFeature(game)); assertFalse(game.profile().flag("tutorial"));
             find(view, "tutorialNext").doClick(); find(view, "tutorialDemo1").doClick();
             for (int i = 0; i < 5; i++) find(view, "tutorialNext").doClick();
             assertTrue(game.profile().flag("tutorial")); assertEquals(ViewId.MENU, destination.get());
@@ -238,7 +240,7 @@ class AdventureFlowTest {
     @Test void actualHubButtonsBuyClaimEquipAndStartChallenges() throws Exception {
         Person target = game.getCandidates("과학자").getFirst(); game.startBattle("과학자", Difficulty.LOW, target); completeBattle(); game.progress().completeTutorial();
         SwingUtilities.invokeAndWait(() -> {
-            AdventureView hub = new AdventureView(game); hub.refresh();
+            AdventureView hub = new AdventureView(new AdventureFeature(game)); hub.refresh();
             int coins = game.profile().coins(); find(hub, "buySHIELD").doClick(); assertEquals(coins - 50, game.profile().coins());
             find(hub, "claimFIRST_STEPS").doClick(); assertTrue(Achievement.FIRST_STEPS.claimed(game.profile()));
             find(hub, "equip" + target.getName()).doClick(); assertEquals(CardPower.key(target), game.profile().equipped());
@@ -274,8 +276,8 @@ class AdventureFlowTest {
     @Test void productionViewsRenderAndBattleControlsFinishAndSave() throws Exception {
         SwingUtilities.invokeAndWait(() -> {
             try {
-                AdventureView hub = new AdventureView(game); hub.refresh(); render(hub, "adventure-preview.png");
-                TutorialView tutorial = new TutorialView(game); render(tutorial, "tutorial-preview.png");
+                AdventureView hub = new AdventureView(new AdventureFeature(game)); hub.refresh(); render(hub, "adventure-preview.png");
+                TutorialView tutorial = new TutorialView(new AdventureFeature(game)); render(tutorial, "tutorial-preview.png");
                 game.startBattle("과학자", Difficulty.LOW, game.getCandidates("과학자").getFirst());
                 BattleGUIEvent event = new BattleGUIEvent(game);
                 BattlePanelDriver driver = new BattlePanelDriver(game.getSession().getBattle(), event, event::finish, event::returnToMenu);

@@ -1,25 +1,26 @@
 package org.kgu;
 
-import org.kgu.application.*;
-import org.kgu.collection.event.*;
-import org.kgu.collection.feature.CollectionFeature;
-import org.kgu.collection.view.*;
-import org.kgu.factory.*;
-import org.kgu.game.event.*;
-import org.kgu.game.feature.*;
-import org.kgu.game.view.*;
-import org.kgu.login.event.*;
-import org.kgu.login.feature.LoginFeature;
-import org.kgu.login.view.LoginView;
-import org.kgu.manager.*;
-import org.kgu.menu.event.*;
-import org.kgu.menu.feature.MenuFeature;
-import org.kgu.menu.view.MenuView;
-import org.kgu.model.*;
-import org.kgu.setting.event.*;
-import org.kgu.setting.feature.SettingFeature;
-import org.kgu.setting.view.SettingView;
-import org.kgu.window.*;
+import org.kgu.core.application.*;
+import org.kgu.domain.collection.event.*;
+import org.kgu.domain.collection.feature.CollectionFeature;
+import org.kgu.domain.collection.view.*;
+import org.kgu.domain.collection.view.component.*;
+import org.kgu.core.factory.*;
+import org.kgu.domain.game.event.*;
+import org.kgu.domain.game.feature.*;
+import org.kgu.domain.game.view.*;
+import org.kgu.domain.login.event.*;
+import org.kgu.domain.login.feature.LoginFeature;
+import org.kgu.domain.login.view.LoginView;
+import org.kgu.core.manager.*;
+import org.kgu.domain.menu.event.*;
+import org.kgu.domain.menu.feature.MenuFeature;
+import org.kgu.domain.menu.view.MenuView;
+import org.kgu.core.model.*;
+import org.kgu.domain.setting.event.*;
+import org.kgu.domain.setting.feature.SettingFeature;
+import org.kgu.domain.setting.view.SettingView;
+import org.kgu.core.window.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
@@ -59,7 +60,7 @@ public final class IntegrationChecks {
     private static void loadAndCheckFactories() throws Exception {
         String managerId = personManager.getId();
         for (String category : Application.CATEGORIES) {
-            CategoryFileFactory factory = new CategoryFileFactory(Path.of("data", category + ".txt"), category);
+            CategoryFileFactory factory = new CategoryFileFactory("/questions/" + category + ".txt", category);
             String id = factory.getId();
             factory.load();
             check(factory.create().size() == 20, "20 persons per category");
@@ -79,14 +80,14 @@ public final class IntegrationChecks {
                 check(personManager.get(person.getId()) == person, "shared PersonFactory reference");
                 for (int stage = 1; stage <= 3; stage++) {
                     String key = "cards/" + person.create().getName() + "_" + stage;
-                    Path path = Path.of("images", key + ".png");
-                    check(Files.isRegularFile(path), "every person stage has an image");
-                    imageManager.register(key, path);
+                    String path = "/images/" + key.substring("cards/".length()) + ".png";
+                    check(IntegrationChecks.class.getResource(path) != null, "every person stage has an image");
+                    imageManager.registerResource(key, path);
                 }
             }
-            imageManager.register("ui/" + category, Path.of("images/ui", category + ".png"));
+            imageManager.registerResource("ui/" + category, "/images/ui/" + category + ".png");
         }
-        imageManager.register("ui/전체", Path.of("images/ui/전체.png"));
+        imageManager.registerResource("ui/전체", "/images/ui/전체.png");
         imageManager.registerResource("battle/background", "/org/kgu/battle/campus_background.png");
         check(categoryManager.size() == 4 && personManager.size() == 80, "four category managers / 80 people");
         check(imageManager.size() == 246, "246 lazy image factories");
@@ -228,22 +229,22 @@ public final class IntegrationChecks {
         save.open();
         GameFeature game = new GameFeature(new PlayerSession("items", save), personManager, imageManager,
                 settingFactory, destination::set, new Random(21));
-        game.progress().buy(org.kgu.progression.ShopItem.TONIC);
+        game.progress().buy(org.kgu.core.progression.ShopItem.TONIC);
         game.startBattle("과학자", Difficulty.LOW, game.getCandidates("과학자").get(0));
         BattleEngine battle = game.getSession().getBattle();
         memory.failWrites = true;
         try {
-            expect(IOException.class, () -> game.useItem(org.kgu.progression.ShopItem.TONIC));
-            check(game.profile().inventory(org.kgu.progression.ShopItem.TONIC) == 1, "failed save keeps inventory");
+            expect(IOException.class, () -> game.useItem(org.kgu.core.progression.ShopItem.TONIC));
+            check(game.profile().inventory(org.kgu.core.progression.ShopItem.TONIC) == 1, "failed save keeps inventory");
             check(battle.itemUsed().isEmpty() && !battle.memoryVisible(), "failed save grants no item effect");
         } finally {
             memory.failWrites = false;
         }
-        game.useItem(org.kgu.progression.ShopItem.TONIC);
+        game.useItem(org.kgu.core.progression.ShopItem.TONIC);
         check(battle.memoryVisible(), "memory item applied after persistence");
         SaveFactory reloaded = new SaveFactory(save.getPath());
         reloaded.open();
-        check(reloaded.progress().snapshot().inventory(org.kgu.progression.ShopItem.TONIC) == 0,
+        check(reloaded.progress().snapshot().inventory(org.kgu.core.progression.ShopItem.TONIC) == 0,
                 "existing TONIC inventory key is consumed and reloads correctly");
     }
 

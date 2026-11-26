@@ -1,7 +1,9 @@
-package org.kgu.game.view;
+package org.kgu.domain.game.view;
 
-import org.kgu.game.event.BattleGUIEvent;
-import org.kgu.game.feature.BattleEngine;
+import org.kgu.domain.game.view.component.BattleFinishEffect;
+
+import org.kgu.domain.game.event.BattleGUIEvent;
+import org.kgu.domain.game.feature.BattleEngine;
 import javax.swing.Timer;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -23,10 +25,10 @@ public final class BattlePanelDriver {
     }
     public BattlePanel panel() { return panel; }
     public boolean running() { return timer.isRunning(); }
-    public boolean portraitAnimating() { return field("portrait", org.kgu.ui.battle.ImpactCard.class).isAnimating(); }
+    public boolean portraitAnimating() { return field("portrait", org.kgu.domain.battle.view.component.ImpactCard.class).isAnimating(); }
     public javax.swing.JProgressBar countdown() { return field("countdown", javax.swing.JProgressBar.class); }
     public boolean finishEffectRunning() { return field("finishEffect", BattleFinishEffect.class).isRunning(); }
-    public boolean finalEffectRunning() { return field("finalAttack", org.kgu.ui.battle.FinalAttackEffect.class).isRunning(); }
+    public boolean finalEffectRunning() { return field("finalAttack", org.kgu.domain.battle.view.component.FinalAttackEffect.class).isRunning(); }
     private <T> T field(String name, Class<T> type) {
         try {
             var field = BattlePanel.class.getDeclaredField(name);

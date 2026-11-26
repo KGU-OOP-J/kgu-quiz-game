@@ -1,6 +1,6 @@
 package org.kgu.integration.battle;
 
-import org.kgu.battle.*;
+import org.kgu.domain.battle.feature.*;
 
 import java.io.IOException;
 import java.nio.file.Files;

@@ -1,0 +1,282 @@
+package org.kgu.domain.collection.view;
+
+import org.kgu.domain.collection.view.component.*;
+import org.kgu.domain.collection.view.layout.CollectionLayout;
+
+import org.kgu.domain.collection.event.CollectionGUIEvent;
+import org.kgu.core.model.Person;
+import org.kgu.core.window.UiButton;
+import org.kgu.core.window.UiStyle;
+import org.kgu.core.window.View;
+import org.kgu.core.window.ViewId;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * 인물 도감 화면. 마을 지도 → 마을(분야)별 카드 목록 → 인물 상세 순서로 보여 준다.
+ */
+public final class CollectionView extends JPanel implements View {
+    // WaveMap.ISLANDS와 같은 순서(지도의 왼쪽 위, 오른쪽 위, 왼쪽 아래, 오른쪽 아래 섬)
+    private static final String[] VILLAGES = {"과학자", "교수님", "한국사", "아이돌"};
+    private static final int LOCKED = java.util.Arrays.asList(VILLAGES).indexOf(CollectionGUIEvent.LOCKED_VILLAGE);
+    private static final double UNLOCK_SECONDS = LockArt.DURATION;
+    private static final Point[] LABELS = {new Point(120, 200), new Point(480, 200), new Point(110, 470), new Point(480, 451)};
+    // 배치는 처음 만든 780x560 좌표로 하고, 로그인·메뉴·대전과 같은 1280x960 창에 맞게 한 번에 늘린다.
+
+    private final CollectionGUIEvent event;
+    private final CardArt art;
+    private final JPanel map = new JPanel(null) {
+        @Override
+        protected void paintComponent(Graphics source) {
+            Graphics2D g = (Graphics2D) source.create();
+            UiStyle.prepare(g);
+            for (int v = 0; v < scales.length; v++) {
+                scales[v] += ((v == hovered ? 1.12 : 1.0) - scales[v]) * 0.3;  // 부드럽게 커지고 줄어든다
+            }
+            double unlock = locked ? 0 : unlockStart < 0 ? 1 : Math.min(1, (System.nanoTime() - unlockStart) / 1e9 / UNLOCK_SECONDS);
+            art.paintMap(g, getWidth(), getHeight(), (System.nanoTime() - startNanos) / 1e9, scales, LOCKED, unlock, lockHint);
+            g.dispose();
+        }
+    };
+    private final long startNanos = System.nanoTime();
+    private final double[] scales = {1, 1, 1, 1};
+    private int hovered = -1;
+    private boolean locked;
+    private long unlockStart = -1;
+    private String lockHint = "";
+    // 지도가 화면에 보일 때만 바다를 다시 그린다(약 30fps)
+    private final Timer waves = new Timer(33, e -> {
+        if (map.isShowing()) map.repaint();
+        else ((Timer) e.getSource()).stop();
+    });
+    private final Map<Component, Rectangle> mapPositions = new LinkedHashMap<>();
+    private final Map<Component, Rectangle> listPositions = new LinkedHashMap<>();
+    private final Map<String, UiButton> villageButtons = new LinkedHashMap<>();
+    private final JPanel list = new JPanel(null);
+    private final CardSliderPanel slider;
+    private final CardDetailPanel detail;
+    private String selected = "";
+    private int collectedPersons;
+    private int totalPersons;
+    private int collectedStages;
+    public void showGateNotice(int solved) { showMap(); }
+    private java.util.function.Consumer<String> adventure = category -> { };
+    public void configureAdventure(java.util.function.Consumer<String> open) { adventure = open; }
+    public void stopAnimations() { waves.stop(); }
+    @Override public void removeNotify() { stopAnimations(); super.removeNotify(); }
+
+    /**
+     * @param event 마을 고르기, 인물 열기, 메인으로 가기를 처리하는 이벤트
+     */
+    public CollectionView(CollectionGUIEvent event) {
+        this.event = event;
+        art = new CardArt(event::image);
+        setLayout(null);
+
+        mapSection();
+        slider = new CardSliderPanel(event, art, person -> event.openPerson(this, person));
+        listSection();
+        detail = new CardDetailPanel(event, art, this::showList);
+        detailSection();
+        for (Component child : getComponents()) CollectionLayout.scale(child);
+        for (Component child : map.getComponents()) mapPositions.put(child, child.getBounds());
+        for (Component child : list.getComponents()) listPositions.put(child, child.getBounds());
+    }
+
+    @Override public void doLayout() {
+        for (Component page : getComponents()) page.setBounds(0, 0, getWidth(), getHeight());
+        CollectionLayout.place(mapPositions, getWidth(), getHeight(), CollectionLayout.WIDTH, CollectionLayout.HEIGHT);
+        CollectionLayout.place(listPositions, getWidth(), getHeight(), CollectionLayout.WIDTH, CollectionLayout.HEIGHT);
+    }
+
+    private void mapSection() {
+        map.setBounds(0, 0, 780, 560);
+        for (int i = 0; i < VILLAGES.length; i++) {
+            String category = VILLAGES[i];
+            UiButton button = CardArt.button(villageName(category) + " 마을", Color.WHITE, 16f, () -> event.selectCategory(this, category));
+            button.setBounds(LABELS[i].x, LABELS[i].y, 190, 44);
+            int village = i;
+            button.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    hovered = event.categoryAvailable(category) ? village : -1;
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    hovered = -1;
+                }
+            });
+            villageButtons.put(category, button);
+            map.add(button);
+        }
+        JButton mapMenu = CardArt.button("메인으로", Color.WHITE, 14f, event::returnToMenu);
+        mapMenu.setBounds(330, 516, 120, 36);
+        map.add(mapMenu);
+        JButton challengeMap = CardArt.button("도전 · 카드 장착", Color.WHITE, 14f, () -> adventure.accept(selected));
+        challengeMap.setBounds(510, 516, 190, 36); map.add(challengeMap);
+        // 이름표 말고 마을 섬 자체를 눌러도 들어간다(바다·가운데 광장은 안 눌림)
+        MouseAdapter villageMouse = new MouseAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                hovered = art.villageAt(e.getX(), e.getY(), map.getWidth(), map.getHeight());
+                if (hovered >= 0 && !event.categoryAvailable(VILLAGES[hovered])) hovered = -1;
+                map.setCursor(Cursor.getPredefinedCursor(hovered < 0 ? Cursor.DEFAULT_CURSOR : Cursor.HAND_CURSOR));
+            }
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                hovered = -1;
+            }
+
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int village = art.villageAt(e.getX(), e.getY(), map.getWidth(), map.getHeight());
+                if (village >= 0) {
+                    event.selectCategory(CollectionView.this, VILLAGES[village]);
+                }
+            }
+        };
+        map.addMouseListener(villageMouse);
+        map.addMouseMotionListener(villageMouse);
+        add(map);
+    }
+
+    private void listSection() {
+        list.setOpaque(false);
+        list.setBounds(0, 0, 780, 560);
+        list.setVisible(false);
+        add(list);
+        slider.setBounds(221, 106, 530, 396);
+        list.add(slider);
+        JButton toMap = CardArt.button("지도로", CardArt.BLUE, 16f, this::showMap);
+        toMap.setBounds(16, 92, 180, 46);
+        list.add(toMap);
+        JButton challenge = CardArt.button("마을 도전 · 장착", CardArt.BLUE, 16f, () -> adventure.accept(selected));
+        challenge.setBounds(16, 150, 180, 46); list.add(challenge);
+        JButton menu = CardArt.button("메인으로", Color.WHITE, 16f, event::returnToMenu);
+        menu.setBounds(16, 506, 180, 46);
+        list.add(menu);
+    }
+
+    private void detailSection() {
+        detail.setBounds(0, 0, 780, 560);
+        detail.setVisible(false);
+        add(detail);
+    }
+
+
+    /**
+     * 고른 마을의 카드 목록과 진행도, 지도 이름표의 수집 수를 새로 채운다. 보이는 페이지는 바꾸지 않는다.
+     *
+     * @param selected 고른 분야(마을) 이름
+     * @param persons 목록에 보여 줄 인물
+     * @param collectedPersons 그 분야에서 모은 인물 수
+     * @param totalPersons 그 분야의 전체 인물 수
+     * @param collectedStages 그 분야에서 모은 단계 카드 수
+     */
+    public void display(String selected, List<Person> persons, int collectedPersons, int totalPersons, int collectedStages) {
+        this.selected = selected;
+        this.collectedPersons = collectedPersons;
+        this.totalPersons = totalPersons;
+        this.collectedStages = collectedStages;
+        villageButtons.forEach((category, button) -> {
+            boolean available = event.categoryAvailable(category); button.setEnabled(available);
+            button.setText(available ? villageName(category) + " 마을 " + event.getCollectedCount(category) + "/" + event.getPersonCount(category) : "교수님 잠김 " + event.rescueProgress() + "/30");
+        });
+        slider.setPersons(persons);
+        repaint();
+    }
+
+    /** 마을 지도를 보여 주고 바다 물결을 움직인다. */
+    public void showMap() {
+        hovered = -1;
+        locked = !event.isVillageOpen(CollectionGUIEvent.LOCKED_VILLAGE);
+        // 열린 뒤 처음 지도를 볼 때 계정마다 한 번만 풀리는 모션을 튼다(본 기록은 세이브 옆 파일에 남는다)
+        if (event.takeUnlockMotion(CollectionGUIEvent.LOCKED_VILLAGE)) unlockStart = System.nanoTime();
+        lockHint = "다른 분야 문제 " + event.rescueProgress() + "/"
+            + org.kgu.core.progression.PlayerProgress.PROFESSOR_REQUIRED + " 정답이면 열려요";
+        java.util.Arrays.fill(scales, 1);
+        show(map);
+        waves.start();
+    }
+
+    /** 고른 마을의 카드 목록을 보여 준다. */
+    public void showList() {
+        show(list);
+    }
+
+    /**
+     * 인물 상세 화면을 보여 준다.
+     *
+     * @param person 보여 줄 인물
+     * @param owned 상세 화면에서 넘겨 볼 수 있는, 모은 인물 목록
+     */
+    public void showPerson(Person person, List<Person> owned) {
+        detail.display(person, owned);
+        show(detail);
+    }
+
+    /** 도감에서는 교수님 분야를 "경기대"로 부른다(분야 데이터 이름은 그대로). */
+    private static String villageName(String category) {
+        return CollectionGUIEvent.LOCKED_VILLAGE.equals(category) ? "경기대" : category;
+    }
+
+    private int openOrNone(int village) {
+        return village >= 0 && event.isVillageOpen(VILLAGES[village]) ? village : -1;
+    }
+
+    private void show(JPanel page) {
+        if (page != map) waves.stop();
+        map.setVisible(page == map);
+        list.setVisible(page == list);
+        detail.setVisible(page == detail);
+        repaint();
+    }
+
+    @Override
+    public ViewId getViewId() {
+        return ViewId.COLLECTION;
+    }
+
+    @Override
+    public JComponent getComponent() {
+        return this;
+    }
+
+    @Override
+    public Dimension getViewSize() {
+        return new Dimension(CollectionLayout.WIDTH, CollectionLayout.HEIGHT);
+    }
+
+    @Override
+    protected void paintComponent(Graphics source) {
+        Graphics2D g = (Graphics2D) source.create();
+        UiStyle.prepare(g);
+
+        art.paintBackground(g, getWidth(), getHeight());
+
+        if (list.isVisible()) {
+            g.scale(getWidth() / (double)UiStyle.WIDTH, getHeight() / (double)UiStyle.HEIGHT);
+            CardArt.gradientRound(g, 16, 22, 214, 54, 30, new Color(44, 80, 140), new Color(22, 46, 92));
+            g.setColor(Color.WHITE);
+            g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 26f));
+            UiStyle.center(g, villageName(selected) + " 마을", 123, 49);
+            CardArt.panel(g, 290, 18, 470, 62, 18, new Color(255, 255, 255, 235));
+            g.setColor(UiStyle.NAVY);
+            g.setFont(UiStyle.FONT.deriveFont(15f));
+            UiStyle.center(g, "수집한 인물 " + collectedPersons + " / " + totalPersons + " · 단계 카드 " + collectedStages + " / " + totalPersons * 3, 525, 43);
+            UiStyle.round(g, 320, 54, 410, 14, 14, new Color(222, 229, 240));
+            UiStyle.round(g, 320, 54, totalPersons == 0 ? 0 : 410 * collectedPersons / totalPersons, 14, 14, CardArt.BLUE);
+            CardArt.panel(g, 210, 90, 552, 432, 20, new Color(255, 255, 255, 200));
+        }
+
+        g.dispose();
+    }
+}

@@ -1,7 +1,7 @@
 package org.kgu.integration.battle;
 
 import java.util.Objects;
-import org.kgu.battle.BattleEngine;
+import org.kgu.domain.battle.feature.BattleEngine;
 import org.kgu.integration.collection.CardSave;
 
 /** Test adapter for the team's card store; production battle code does not depend on it. */

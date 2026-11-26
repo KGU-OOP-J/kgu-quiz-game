@@ -1,6 +1,6 @@
 package org.kgu;
 
-import org.kgu.application.Application;
+import org.kgu.core.application.Application;
 
 import javax.swing.*;
 import java.io.IOException;

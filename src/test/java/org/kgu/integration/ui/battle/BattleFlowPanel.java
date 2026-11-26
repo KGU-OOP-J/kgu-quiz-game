@@ -3,10 +3,10 @@ package org.kgu.integration.ui.battle;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import javax.swing.*;
-import org.kgu.battle.BattleEngine;
-import org.kgu.ui.battle.BattleSetupScreen;
-import org.kgu.ui.battle.BattleScreen;
-import org.kgu.ui.battle.BattleResultScreen;
+import org.kgu.domain.battle.feature.BattleEngine;
+import org.kgu.domain.battle.view.component.BattleSetupScreen;
+import org.kgu.domain.battle.view.component.BattleScreen;
+import org.kgu.domain.battle.view.component.BattleResultScreen;
 import org.kgu.integration.ui.navigation.GameNavigator;
 import org.kgu.integration.battle.BattleService;
 

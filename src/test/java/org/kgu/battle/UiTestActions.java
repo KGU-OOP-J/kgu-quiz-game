@@ -1,7 +1,7 @@
 package org.kgu.battle;
 
 import javax.swing.Timer;
-import org.kgu.ui.battle.BattleScreen;
+import org.kgu.domain.battle.view.component.BattleScreen;
 
 /** Advances the feedback timer deterministically; live timer behavior is tested separately. */
 public final class UiTestActions {

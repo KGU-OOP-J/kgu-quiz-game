@@ -1,5 +1,7 @@
 # 1인 퀴즈 전투 연결 계약
 
+팀 통합 데모의 계약이다. `runIntegration`은 `src/test/java/org/kgu/integration/IntegrationMain.java`에서 시작한다. 일반 게임의 화면과 시연 진입점은 [코드 탐색 가이드](ARCHITECTURE.md)에 있다.
+
 ## 진입과 종료
 
 ```java

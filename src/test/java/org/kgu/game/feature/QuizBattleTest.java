@@ -1,10 +1,10 @@
-package org.kgu.game.feature;
+package org.kgu.domain.game.feature;
 
 import org.junit.jupiter.api.Test;
-import org.kgu.application.Difficulty;
-import org.kgu.model.Person;
-import org.kgu.model.Quiz;
-import org.kgu.progression.*;
+import org.kgu.core.application.Difficulty;
+import org.kgu.core.model.Person;
+import org.kgu.core.model.Quiz;
+import org.kgu.core.progression.*;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
