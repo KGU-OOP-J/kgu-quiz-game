@@ -30,8 +30,12 @@ public record CardPower(String title, Kind kind, int strength, String personKey)
     }
     public static CardPower beginner() { return new CardPower("견습 탐험가 — 카드 획득 후 장착 가능", Kind.GUARD, 0, ""); }
     public String description() {
-        return kind == Kind.FOCUS
-            ? "전투 XP +" + strength * 5 + "% · 정답 피해와 성공 조건은 모든 카드가 같아요"
-            : "함께 승리하면 숙련도가 올라요 · 정답 피해와 성공 조건은 모든 카드가 같아요";
+        if (strength == 0) return "카드를 장착하면 지원 능력을 사용할 수 있어요";
+        return switch (kind) {
+            case ANALYSIS -> "답안 제출 전 오답 " + (strength >= 3 ? 2 : 1) + "개 제거" + (strength >= 2 ? "·인물 힌트" : "") + " · 전투당 1회";
+            case POWER -> "최고 3콤보 달성 시 코인 +" + Math.min(30, strength * 10) + "% · 자동";
+            case GUARD -> strength >= 2 ? "실패 위기 시 새로운 보충 문제 1회" + (strength >= 3 ? "·힌트" : "") + " · 전투당 1회" : "답안 제출 전 인물 힌트 · 전투당 1회";
+            case FOCUS -> "전투 XP +" + strength * 5 + "% · 자동";
+        };
     }
 }

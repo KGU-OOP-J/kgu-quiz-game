@@ -54,6 +54,6 @@ public final class MenuSetupLayout extends JPanel {
         return footer;
     }
     @Override protected void paintComponent(Graphics source) {
-        GameTheme.paintBackdrop(source, this, "menu", 0.18f);
+        GameTheme.paintBackdrop(source, this, "practice-setup", 0.18f);
     }
 }

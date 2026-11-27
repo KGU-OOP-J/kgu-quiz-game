@@ -182,13 +182,14 @@ public final class CollectionView extends JPanel implements View {
      * @param collectedStages 그 분야에서 모은 단계 카드 수
      */
     public void display(String selected, List<Person> persons, int collectedPersons, int totalPersons, int collectedStages) {
+
         this.selected = selected;
         this.collectedPersons = collectedPersons;
         this.totalPersons = totalPersons;
         this.collectedStages = collectedStages;
         villageButtons.forEach((category, button) -> {
             boolean available = event.categoryAvailable(category); button.setEnabled(available);
-            button.setText(available ? villageName(category) + " 마을 " + event.getCollectedCount(category) + "/" + event.getPersonCount(category) : "교수님 잠김 " + event.rescueProgress() + "/30");
+            button.setText(available ? villageName(category) + " 마을 " + event.getCollectedCount(category) + "/" + event.getPersonCount(category) + (event.newCount(category) > 0 ? " · NEW " + event.newCount(category) : "") : "교수님 잠김 " + event.rescueProgress() + "/30");
         });
         slider.setPersons(persons);
         repaint();
@@ -209,6 +210,7 @@ public final class CollectionView extends JPanel implements View {
 
     /** 고른 마을의 카드 목록을 보여 준다. */
     public void showList() {
+        event.refresh(this);
         show(list);
     }
 
@@ -261,6 +263,8 @@ public final class CollectionView extends JPanel implements View {
         UiStyle.prepare(g);
 
         art.paintBackground(g, getWidth(), getHeight());
+        org.kgu.core.window.GameResources.background("collection").ifPresent(image ->
+            org.kgu.core.window.GameTheme.cover(g, image, 0, 0, getWidth(), getHeight()));
 
         if (list.isVisible()) {
             g.scale(getWidth() / (double)UiStyle.WIDTH, getHeight() / (double)UiStyle.HEIGHT);

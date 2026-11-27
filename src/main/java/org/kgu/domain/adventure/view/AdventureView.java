@@ -13,6 +13,9 @@ import org.kgu.domain.adventure.event.AdventureGUIEvent;
 import org.kgu.core.model.Person;
 import org.kgu.core.progression.*;
 import org.kgu.core.window.*;
+import org.kgu.domain.collection.view.component.CardArt;
+import org.kgu.domain.collection.view.component.CardView;
+import org.kgu.domain.collection.view.component.CardTile;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -171,9 +174,9 @@ public final class AdventureView extends JPanel implements View {
         fields.add(GameTheme.label("획득 별 " + best + " / 3  ·  승리 · 정답률 80% · 아이템 미사용", 14, GameTheme.BLUE_TEXT), BorderLayout.SOUTH);
         challenge.add(fields, BorderLayout.CENTER);
         JPanel actions = GameTheme.clear(new GridLayout(1, category.equals("교수님") ? 1 : 3, 10, 0));
-        actions.add(button(category.equals("교수님") ? "이은정 교수님 구출 · 최종 5문제" : "인물 도전 · 5문제", "startChallenge", () -> feature.startChallenge(category, difficulty, target, false)));
+        actions.add(button(category.equals("교수님") ? "이은정 교수님 구출 · 최종 3페이즈" : "인물 도전 · 5문제", "startChallenge", () -> feature.startChallenge(category, difficulty, target, false)));
         if (!category.equals("교수님")) {
-            JButton boss = button("마을 보스 · 5문제", "startBoss", () -> feature.startChallenge(category, difficulty, candidates.getLast(), true));
+            JButton boss = button("마을 보스 · 2페이즈", "startBoss", () -> feature.startChallenge(category, difficulty, candidates.stream().filter(p -> p.getName().equals(org.kgu.domain.game.feature.BattlePhases.bossName(category))).findFirst().orElseThrow(), true));
             boss.setEnabled(feature.profile().bossUnlocked(category)); actions.add(boss);
             JButton practice = button("연습하기", "worldPractice", () -> feature.startPractice(category, difficulty));
             practice.putClientProperty("secondaryAction", true);
@@ -224,13 +227,23 @@ public final class AdventureView extends JPanel implements View {
     private void buildDeck() {
         deck.removeAll(); deck.add(info("지원 카드", "수집한 카드 한 장을 장착하세요. 인물 고유 버프와 단계, 숙련도가 전투에 적용됩니다."));
         List<Person> owned = feature.ownedCards();
-        if (owned.isEmpty()) deck.add(info("아직 동료가 없습니다", "다른 분야에서 연습 정답을 맞히거나 인물 도전에서 승리해 첫 카드를 획득하세요."));
+        if (owned.isEmpty()) deck.add(info("아직 동료가 없습니다", "인물 도전에서 승리해 첫 카드를 획득하세요. 연습에서는 카드나 성장 보상을 얻지 않습니다."));
         for (Person person : owned) {
             CardPower power = feature.cardPower(person); boolean equipped = feature.profile().equipped().equals(CardPower.key(person));
             JButton equip = button(equipped ? "함께하는 중" : "지원 카드 장착", "equip" + person.getName(), () -> { feature.equip(person); notice.setText(power.title() + " 장착 완료"); refresh(); }); equip.setEnabled(!equipped);
-            JPanel row = card(power.title(), power.description() + " · 숙련도 " + feature.profile().mastery(CardPower.key(person)) + " · 강화 " + feature.profile().masteryLevel(CardPower.key(person)) + "/5", equip);
+            JPanel row = card(power.title() + (feature.profile().keys("card.new." + CardPower.key(person) + "|").stream().anyMatch(feature.profile()::flag) ? " · NEW" : ""), power.description() + " · 숙련도 " + feature.profile().mastery(CardPower.key(person)) + " · 강화 " + feature.profile().masteryLevel(CardPower.key(person)) + "/5", equip);
             JPanel insignia = GameTheme.clear(new BorderLayout(8, 0));
-            feature.image("cards/" + person.getName() + "_1").ifPresent(image -> insignia.add(new JLabel(new ImageIcon(image.getScaledInstance(63, 84, Image.SCALE_SMOOTH))), BorderLayout.CENTER));
+            JPanel preview = GameTheme.clear(new BorderLayout(0, 4));
+            CardTile tile = new CardTile(new CardView(person, feature.cardStage(person), new CardArt(feature::image)), () -> false, equipped);
+            tile.setBadgesVisible(false); tile.setPreferredSize(new Dimension(70, 84));
+            tile.setEnabled(!equipped); tile.setToolTipText(person.getName() + " · " + power.description());
+            tile.getAccessibleContext().setAccessibleName(person.getName() + " 지원 카드 장착");
+            tile.addActionListener(e -> equip.doClick()); preview.add(tile, BorderLayout.CENTER);
+            JProgressBar mastery = new JProgressBar(0, 15);
+            mastery.setValue(Math.min(15, feature.profile().mastery(CardPower.key(person))));
+            mastery.setToolTipText("숙련도 강화 " + feature.profile().masteryLevel(CardPower.key(person)) + "/5");
+            mastery.setPreferredSize(new Dimension(70, 7)); preview.add(mastery, BorderLayout.SOUTH);
+            insignia.add(preview, BorderLayout.CENTER);
             insignia.add(new Sigil("buff-" + power.kind().name().toLowerCase(Locale.ROOT), 3), BorderLayout.EAST); row.add(insignia, BorderLayout.WEST); deck.add(row);
         }
         deck.add(Box.createVerticalGlue());
@@ -289,6 +302,6 @@ public final class AdventureView extends JPanel implements View {
     @Override public JComponent getComponent() { return this; }
     @Override public Dimension getViewSize() { return new Dimension(1280, 960); }
     @Override protected void paintComponent(Graphics source) {
-        GameTheme.paintBackdrop(source, this, activeTab.equals("shop") ? "shop" : activeTab.equals("world") ? "menu" : "guild", 0.4f);
+        GameTheme.paintBackdrop(source, this, activeTab.equals("shop") ? "shop" : activeTab.equals("world") ? "adventure" : "guild", 0.4f);
     }
 }

@@ -35,6 +35,12 @@ public final class PlayerProgress {
         return level() == 100 ? 0 : experience() - spent;
     }
     public int mastery(String personKey) { return number("mastery." + personKey); }
+    public static String cardKey(String category, String name, int stage) { return category + "|" + name + "|" + stage; }
+    public boolean isNewCard(String category, String name, int stage) { return flag("card.new." + cardKey(category, name, stage)); }
+    public int newCardCount(String category) {
+        String prefix = "card.new." + (category.isBlank() ? "" : category + "|");
+        return (int)keys(prefix).stream().filter(this::flag).count();
+    }
     public int masteryLevel(String personKey) { return Math.min(5, mastery(personKey) / 3); }
     public int cleared(String category) {
         return (int) keys("stage.normal." + category + "|").stream().filter(k -> number(k) > 0)

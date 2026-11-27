@@ -62,7 +62,13 @@ public final class MenuView extends JPanel implements View {
     public void setPlayerId(String id) { welcome.setText(id + "님, 환영합니다."); }
     public void showHome() { layout.show(this, "home"); SwingUtilities.invokeLater(() -> { if (home.isVisible()) for (int i = 0; i < menuCards.size(); i++) menuCards.get(i).appear(i * 80); }); }
     public void showSetup() { layout.show(this, "setup"); updateMode(); }
-    public void updateMode() { boolean battle = getMode() == GameSession.Mode.BATTLE; person.setVisible(battle); personLabel.setVisible(battle); }
+    public void updateMode() {
+        boolean battle = getMode() == GameSession.Mode.BATTLE;
+        person.setVisible(battle); personLabel.setVisible(battle);
+        if (start.isEnabled() && !getCategory().equals("교수님")) gate.setText(getMode() == GameSession.Mode.PRACTICE
+            ? "연습은 보상과 성장에 반영되지 않습니다. 카드는 배틀 승리로만 획득합니다."
+            : "분야와 난이도, 플레이 방식을 선택하세요.");
+    }
     public void setPersons(List<Person> people) { person.setModel(new DefaultComboBoxModel<>(people.toArray(Person[]::new))); }
     public void setCategoryAccess(boolean available, int solved) {
         boolean professor = getCategory().equals("교수님"); mode.setEnabled(!professor);
@@ -79,6 +85,7 @@ public final class MenuView extends JPanel implements View {
         progress.get(1).setText(p.levelExperience() + " / " + PlayerProgress.experienceForLevel(p.level()));
         progress.get(2).setText(Integer.toString(p.coins()));
         progress.get(3).setText(Integer.toString(p.totalStars()));
+        collection.setText("카드 도감" + (p.newCardCount("") > 0 ? " · NEW " + p.newCardCount("") : ""));
         goal.setText(nextGoal);
     }
     public String getCategory() { return (String)category.getSelectedItem(); }

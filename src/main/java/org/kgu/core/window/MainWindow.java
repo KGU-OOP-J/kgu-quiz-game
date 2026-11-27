@@ -21,12 +21,17 @@ public final class MainWindow {
     private boolean closed;
     private Timer transition;
     private float transitionAlpha;
+    private java.awt.image.BufferedImage previousFrame;
     private ViewId queuedView;
     private final KeyEventDispatcher transitionInput = this::blockTransitionInput;
     private final JComponent curtain = new JComponent() {
         @Override protected void paintComponent(Graphics graphics) {
             Graphics2D g = (Graphics2D)graphics.create();
-            g.setColor(new Color(0f, 0f, 0f, transitionAlpha)); g.fillRect(0, 0, getWidth(), getHeight()); g.dispose();
+            if (previousFrame != null) {
+                g.setComposite(AlphaComposite.SrcOver.derive(transitionAlpha));
+                g.drawImage(previousFrame, 0, 0, getWidth(), getHeight(), null);
+            }
+            g.dispose();
         }
     };
 
@@ -90,29 +95,34 @@ public final class MainWindow {
         requireEdt();
         if (closed) throw new IllegalStateException("종료된 창입니다.");
         if (transition != null) { queuedView = viewId; return; }
-        if (current.isPresent() && current.get() != viewId && (viewId == ViewId.DIALOGUE || current.get() == ViewId.DIALOGUE)) {
+        if (current.isPresent() && current.get() != viewId) {
             fadeTo(viewId); return;
         }
         showNow(viewId);
     }
 
     private void fadeTo(ViewId viewId) {
-        long start = System.nanoTime(); boolean[] switched = {false};
-        transitionAlpha = 0; curtain.setVisible(true);
+        Container content = frame.getContentPane();
+        if (content.getWidth() <= 0 || content.getHeight() <= 0) { showNow(viewId); return; }
+        previousFrame = new java.awt.image.BufferedImage(content.getWidth(), content.getHeight(), java.awt.image.BufferedImage.TYPE_INT_RGB);
+        Graphics2D capture = previousFrame.createGraphics(); content.printAll(capture); capture.dispose();
+        long start = System.nanoTime();
+        transitionAlpha = 1;
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(transitionInput);
         transition = new Timer(16, event -> {
-            double elapsed = (System.nanoTime() - start) / 1_000_000_000.0;
-            if (elapsed >= 0.35 && !switched[0]) { switched[0] = true; showNow(viewId); }
-            transitionAlpha = (float)Math.max(0, Math.min(1, elapsed < 0.35 ? elapsed / 0.35 : 1 - (elapsed - 0.35) / 0.45));
-            curtain.repaint();
-            if (elapsed >= 0.8) {
+            double progress = Math.min(1, (System.nanoTime() - start) / 300_000_000.0);
+            transitionAlpha = (float)(1 - progress); curtain.repaint();
+            if (progress >= 1) {
                 stopTransition();
                 views.get(viewId).getComponent().requestFocusInWindow();
                 ViewId next = queuedView; queuedView = null;
                 if (next != null && next != current.orElse(null)) show(next);
             }
         });
-        transition.start();
+        try { showNow(viewId); }
+        catch (RuntimeException e) { stopTransition(); throw e; }
+        curtain.setVisible(true); transition.start();
+        GameResources.play(GameResources.Sound.UI_TRANSITION);
     }
 
     private boolean blockTransitionInput(KeyEvent event) {
@@ -123,7 +133,7 @@ public final class MainWindow {
     private void stopTransition() {
         if (transition != null) transition.stop(); transition = null;
         KeyboardFocusManager.getCurrentKeyboardFocusManager().removeKeyEventDispatcher(transitionInput);
-        curtain.setVisible(false); transitionAlpha = 0;
+        curtain.setVisible(false); transitionAlpha = 0; previousFrame = null;
     }
 
     private void showNow(ViewId viewId) {

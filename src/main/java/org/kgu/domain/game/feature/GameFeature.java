@@ -25,6 +25,7 @@ public final class GameFeature {
     private final Random random;
     private GameSession gameSession;
     private Person rescuePerson;
+    private boolean challengeMapRequested;
     public GameFeature(PlayerSession playerSession, PersonManager personManager, ImageManager imageManager,
                        SettingFactory settingFactory, Consumer<ViewId> navigate) {
         this(playerSession, personManager, imageManager, settingFactory, navigate, new Random());
@@ -52,9 +53,9 @@ public final class GameFeature {
             .filter(p -> playerSession.saveFactory().create().isCollected(p.getCategory(), p.getName())).toList();
     }
     public CardPower cardPower(Person person) {
-        int stage = playerSession.saveFactory().create().getStages(person.getCategory(), person.getName()).stream().mapToInt(Integer::intValue).max().orElse(0);
-        return CardPower.of(person, stage, profile().mastery(CardPower.key(person)));
+        return CardPower.of(person, cardStage(person), profile().mastery(CardPower.key(person)));
     }
+    public int cardStage(Person person) { return playerSession.saveFactory().create().getStages(person.getCategory(), person.getName()).stream().mapToInt(Integer::intValue).max().orElse(0); }
     public Optional<Person> equippedCard() { return ownedCards().stream().filter(p -> CardPower.key(p).equals(profile().equipped())).findFirst(); }
     public CardPower equippedPower() { return equippedCard().map(this::cardPower).orElseGet(CardPower::beginner); }
     public void equip(Person person) throws IOException {
@@ -84,14 +85,25 @@ public final class GameFeature {
         if (category.equals("교수님")) boss = true;
         if (boss && !profile().bossUnlocked(category)) throw new IllegalArgumentException("이 마을의 서로 다른 인물 3명에게 승리하면 보스가 열립니다.");
 
-        List<QuestionBank.Entry> pool = bank(category).stream().filter(e -> e.difficulty() == difficulty && e.person() == target).toList();
-        List<QuestionBank.Entry> entries = QuestionBank.choose(pool, BattleEngine.QUESTION_COUNT, profile(), random, false);
-        if (entries.size() != BattleEngine.QUESTION_COUNT) {
-            throw new IllegalArgumentException("선택한 인물과 난이도에 서로 다른 문제 5개가 필요합니다.");
+        if (boss && !target.getName().equals(BattlePhases.bossName(category))) {
+            throw new IllegalArgumentException("마을 보스는 " + BattlePhases.bossName(category) + "입니다.");
         }
+        List<QuestionBank.Entry> all = bank(category);
+        List<QuestionBank.Entry> entries = new ArrayList<>();
+        int phases = BattlePhases.forBattle(target, boss).size();
+        for (int i = 0; i < phases; i++) {
+            Difficulty phaseDifficulty = phases == 3 ? Difficulty.values()[i]
+                : Difficulty.values()[(difficulty.ordinal() + i) % Difficulty.values().length];
+            List<QuestionBank.Entry> pool = all.stream().filter(e -> e.difficulty() == phaseDifficulty && e.person() == target).toList();
+            List<QuestionBank.Entry> chosen = QuestionBank.choose(pool, BattleEngine.QUESTION_COUNT, profile(), random, false);
+            if (chosen.size() != BattleEngine.QUESTION_COUNT) throw new IllegalArgumentException("페이즈마다 서로 다른 문제 5개가 필요합니다.");
+            entries.addAll(chosen);
+        }
+        Set<String> used = new HashSet<>(entries.stream().map(QuestionBank.Entry::id).toList());
+        var reserve = QuestionBank.choose(all.stream().filter(e -> e.difficulty() == difficulty && !used.contains(e.id())).toList(), 1, profile(), random, false);
         BattleEngine battle = new BattleEngine(target, entries.stream().map(QuestionBank.Entry::quiz).toList(),
-            equippedPower(), boss, random);
-        gameSession = GameSession.battle(category, difficulty, entries, battle); navigate.accept(ViewId.QUESTION);
+            equippedPower(), boss, random, reserve.isEmpty() ? null : reserve.getFirst().quiz());
+        gameSession = GameSession.battle(category, phases == 3 ? Difficulty.HIGH : difficulty, entries, battle); navigate.accept(ViewId.QUESTION);
     }
     public GameSession getSession() {
         if (gameSession == null) throw new IllegalStateException("게임을 먼저 시작하세요.");
@@ -99,11 +111,16 @@ public final class GameFeature {
     }
     public void selectAnswer(int answer) { getSession().selectAnswer(answer); }
     private void recordAnswer(boolean correct) {
-        try { progress().answer(getSession().currentEntry().id(), getSession().currentEntry().person().getCategory(), correct); }
+        try {
+            GameSession session = getSession();
+            if (session.getMode() == GameSession.Mode.PRACTICE) progress().practiceAnswer(session.currentEntry().id(), correct);
+            else progress().answer(session.currentEntry().id(), session.currentEntry().person().getCategory(), correct);
+        }
         catch (IOException e) { throw new UncheckedIOException("답안 기록을 저장하지 못했습니다. 다시 제출하세요.", e); }
     }
     public boolean submitAnswer() {
         GameSession s = getSession();
+        if (s.getMode() == GameSession.Mode.BATTLE) throw new IllegalStateException("배틀 답안은 배틀 진행 경로에서 제출하세요.");
         if (s.getPhase() != GameSession.Phase.QUESTION || s.getSelectedAnswer() < 1) throw new IllegalStateException("정답을 먼저 선택하세요.");
         boolean correct = s.getSelectedAnswer() == s.getCurrentQuiz().getAnswer(); recordAnswer(correct);
         return s.submitPractice();
@@ -150,7 +167,9 @@ public final class GameFeature {
     public void finishDialogue() { rescuePerson = null; navigate.accept(ViewId.RESULT); }
     /** Card persistence and profile settlement are independently idempotent, so retry is safe. */
     public List<Person> saveRewards() throws IOException {
-        GameSession s = getSession(); List<Person> added = new ArrayList<>();
+        GameSession s = getSession();
+        if (s.getMode() == GameSession.Mode.PRACTICE) return List.of();
+        List<Person> added = new ArrayList<>();
         for (Person person : s.getRewards()) {
             if (playerSession.saveFactory().record(person, s.getDifficulty())) {
                 s.recordNewCard(person);
@@ -162,15 +181,21 @@ public final class GameFeature {
             boolean battle = s.getMode() == GameSession.Mode.BATTLE;
             boolean win = battle && s.getBattle().result() == BattleEngine.Result.WIN;
             boolean boss = battle && s.getBattle().boss();
-            int xp = s.getCorrectCount() * (battle ? 12 : s.getMode() == GameSession.Mode.REVIEW ? 6 : 8) + (win ? boss ? 120 : 60 : 0);
+            int xp = s.getCorrectCount() * (battle ? 12 : 6) + (win ? boss ? 120 : 60 : 0);
             if (battle && s.getBattle().power().kind() == CardPower.Kind.FOCUS) xp += xp * s.getBattle().power().strength() * 5 / 100;
             int coins = s.getCorrectCount() * (battle ? 6 : 4) + (win ? boss ? 100 : 40 : 0);
             String stage = battle ? (boss ? "boss." : "normal.") + s.getCategory() + "|" + s.getBattle().computer().getName() + "|" + s.getDifficulty().getLabel() : "";
+            int difficultyBonus = s.getDifficulty().getStage();
+            xp += xp * (difficultyBonus - 1) / 4;
+            coins += coins * (difficultyBonus - 1) / 4;
+            if (win && profile().number("stage." + stage) == 0) { xp += boss ? 120 : 30; coins += boss ? 80 : 20; }
+            if (battle && s.getBattle().power().kind() == CardPower.Kind.POWER && s.getBattle().bestCombo() >= 3)
+                coins += coins * Math.min(30, s.getBattle().power().strength() * 10) / 100;
             List<String> mastery = new ArrayList<>(s.getRewards().stream().map(CardPower::key).toList());
             if (win && !s.getBattle().power().personKey().isBlank()) mastery.add(s.getBattle().power().personKey());
             PlayerProgress before = profile();
             progress().settle(new ProgressStore.Reward(s.id(), xp, coins, battle, win, stage,
-                battle ? s.getBattle().stars() : 0, battle ? s.getBattle().bestCombo() : 0,
+                battle ? s.getBattle().stars() : 0, battle ? s.getBattle().bestCombo() : s.bestCombo(),
                 win && s.getCorrectCount() == s.getAnsweredCount() && s.hintsUsed() == 0,
                 mastery, playerSession.saveFactory().create().getCollectedCount()));
             PlayerProgress after = profile();
@@ -197,7 +222,30 @@ public final class GameFeature {
     public Optional<BufferedImage> image(String key) { return imageManager.findImage(key); }
     public void returnToMenu() { navigate.accept(ViewId.MENU); }
     public void openCollection() { navigate.accept(ViewId.COLLECTION); }
-    public void openAdventure() { navigate.accept(ViewId.ADVENTURE); }
+    public void openAdventure() { challengeMapRequested = true; navigate.accept(ViewId.ADVENTURE); }
+    public boolean takeChallengeMapRequest() { boolean requested = challengeMapRequested; challengeMapRequested = false; return requested; }
+    public String nextActionLabel() {
+        GameSession session = getSession();
+        if (session.getMode() != GameSession.Mode.BATTLE) return session.getMode() == GameSession.Mode.REVIEW ? "다음 도전" : "다시 연습";
+        if (session.getBattle().result() == BattleEngine.Result.LOSE) return "같은 도전 재시도";
+        if (session.getCategory().equals("교수님")) return "엔딩 진행";
+        if (!session.getBattle().boss() && profile().bossUnlocked(session.getCategory())) return "마을 보스 도전";
+        return session.getBattle().boss() ? "다음 목표 확인" : "다음 도전";
+    }
+    public void nextAction() {
+        GameSession session = getSession();
+        if (session.getMode() == GameSession.Mode.PRACTICE) { startPractice(session.getCategory(), session.getDifficulty()); return; }
+        if (session.getMode() == GameSession.Mode.REVIEW) { openAdventure(); return; }
+        if (session.getBattle().result() == BattleEngine.Result.LOSE) {
+            startChallenge(session.getCategory(), session.getDifficulty(), session.getBattle().computer(), session.getBattle().boss()); return;
+        }
+        if (session.getCategory().equals("교수님")) { navigate.accept(ViewId.ENDING); return; }
+        if (!session.getBattle().boss() && profile().bossUnlocked(session.getCategory())) {
+            Person boss = getCandidates(session.getCategory()).stream().filter(p -> p.getName().equals(BattlePhases.bossName(session.getCategory()))).findFirst().orElseThrow();
+            startChallenge(session.getCategory(), session.getDifficulty(), boss, true); return;
+        }
+        openAdventure();
+    }
     private List<PersonFactory> factories(String category) { return personManager.getAll().stream().filter(p -> p.getCategory().equals(category)).toList(); }
     private List<QuestionBank.Entry> bank(String category) { return QuestionBank.all(factories(category)); }
 }

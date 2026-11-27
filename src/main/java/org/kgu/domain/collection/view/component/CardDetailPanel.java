@@ -54,7 +54,9 @@ public final class CardDetailPanel extends JPanel {
     private void showStage(int index){
         stageIndex=index;int stage=ownedStages.get(index);Person person=persons.get(personIndex);
         portrait.removeAll();CardView card=new CardView(person,stage,art);card.setGlow(true);portrait.add(card,BorderLayout.CENTER);
-        stages.setText("공격력 20     "+"카드 단계 " + stage + " / 3");
+        boolean isNew = event.isNew(person, stage);
+        stages.setText((isNew ? "NEW · " : "") + "카드 단계 " + stage + " / 3" + event.readCard(person, stage));
+        information.setText(event.powerDescription(person, stage) + "\n\n" + person.getAchievements().stream().map(s -> "• " + s).collect(Collectors.joining("\n")));
         lower.setVisible(index>0);higher.setVisible(index<ownedStages.size()-1);portrait.revalidate();repaint();
     }
     @Override public void doLayout() {

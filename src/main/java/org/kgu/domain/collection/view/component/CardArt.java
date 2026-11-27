@@ -28,6 +28,7 @@ public final class CardArt {
 
     public static UiButton button(String text, Color color, float fontSize, Runnable action) {
         UiButton button = new UiButton(text, color);
+        button.putClientProperty("secondaryAction", color.equals(Color.WHITE));
         button.setFont(UiStyle.FONT.deriveFont(Font.BOLD, fontSize));
         button.setForeground(color.equals(Color.WHITE) ? UiStyle.NAVY : Color.WHITE);
         button.addActionListener(e -> action.run());
@@ -260,13 +261,14 @@ public final class CardArt {
         }
         float s = w / 100f;
         int arc = Math.round(14 * s), pad = Math.round(4 * s);
+        Color stageLight = stage == 3 ? new Color(224, 178, 68) : stage == 2 ? new Color(60, 150, 255) : new Color(174, 191, 207);
         if (glow) {
             for (int i = 6; i >= 1; i--) {
-                g.setColor(new Color(60, 150, 255, 24));
+                g.setColor(new Color(stageLight.getRed(), stageLight.getGreen(), stageLight.getBlue(), 24));
                 g.fillRoundRect(x - i, y - i, w + i * 2, h + i * 2, arc + i * 2, arc + i * 2);
             }
         }
-        g.setPaint((glow ? GradientTokens.CARD_BLUE : GradientTokens.SELECTED).paint(y, h));
+        g.setPaint((stage == 3 ? GradientTokens.CARD_GOLD : stage == 2 ? GradientTokens.CARD_BLUE : GradientTokens.NEUTRAL).paint(y, h));
         g.fillRoundRect(x, y, w, h, arc, arc);
 
         Shape inner = new RoundRectangle2D.Float(x + pad, y + pad, w - pad * 2, h - pad * 2, arc - pad, arc - pad);

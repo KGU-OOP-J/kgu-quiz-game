@@ -87,6 +87,7 @@ public class Application {
             expectedCount = count;
         }
         settingFactory.open();
+        org.kgu.core.window.GameResources.configureSound(() -> settingFactory.create().isSoundEnabled());
         for (CategoryFileFactory categoryFactory : categoryManager.getAll()) {
             for (PersonFactory personFactory : categoryFactory.create()) {
                 personManager.add(personFactory);
@@ -96,6 +97,16 @@ public class Application {
                 }
             }
         }
+        try { imageManager.getAll().forEach(org.kgu.core.factory.ImageFileFactory::create); }
+        catch (java.io.UncheckedIOException e) { throw e.getCause(); }
+        for (PersonFactory person : personManager.getAll())
+            org.kgu.core.window.GameResources.preloadImage("/org/kgu/art/portrait-" + person.create().getName() + ".png");
+        for (String village : List.of("science", "history", "idol", "professor"))
+            org.kgu.core.window.GameResources.preloadImage("/org/kgu/art/village-" + village + ".png");
+        for (org.kgu.core.progression.CardPower.Kind kind : org.kgu.core.progression.CardPower.Kind.values())
+            org.kgu.core.window.GameResources.preloadImage("/org/kgu/art/buff-" + kind.name().toLowerCase(java.util.Locale.ROOT) + ".png");
+        for (String screen : List.of("login", "prologue", "study", "menu", "shop", "guild", "tutorial", "settings"))
+            org.kgu.core.window.GameResources.preloadImage(org.kgu.core.window.GameResources.backgroundPath(screen));
         prologue = new org.kgu.domain.story.feature.PrologueFeature(() -> mainWindow.show(ViewId.LOGIN));
     }
 
@@ -126,13 +137,23 @@ public class Application {
         org.kgu.domain.story.event.DialogueGUIEvent dialogueEvent = new org.kgu.domain.story.event.DialogueGUIEvent(dialogueFeature, gameFeature::image);
         org.kgu.domain.story.view.DialogueView dialogueView = new org.kgu.domain.story.view.DialogueView(dialogueEvent);
         window.register(dialogueView, new org.kgu.domain.story.event.DialogueLifecycleEvent(dialogueView, dialogueEvent));
+        var endingEvent = new org.kgu.domain.story.event.EndingGUIEvent(new org.kgu.domain.story.feature.EndingFeature(gameFeature));
+        var endingView = new org.kgu.domain.story.view.EndingView(endingEvent);
+        window.register(endingView, new org.kgu.core.window.LifecycleEvent() {
+            @Override public void onEnter() { endingEvent.display(endingView); }
+        });
         MenuFeature menuFeature = new MenuFeature(gameFeature, navigate);
         CollectionFeature collectionFeature = new CollectionFeature(personManager, imageManager, playerSession, navigate);
         SettingFeature settingFeature = new SettingFeature(settings, navigate);
 
         var adventureFeature = new AdventureFeature(gameFeature);
         org.kgu.domain.adventure.view.AdventureView adventure = new org.kgu.domain.adventure.view.AdventureView(adventureFeature);
-        window.register(adventure, new org.kgu.core.window.LifecycleEvent() { @Override public void onEnter() { adventure.refresh(); } });
+        window.register(adventure, new org.kgu.core.window.LifecycleEvent() {
+            @Override public void onEnter() {
+                if (adventureFeature.takeChallengeMapRequest()) adventure.selectTab("world");
+                adventure.refresh();
+            }
+        });
         org.kgu.domain.adventure.view.TutorialView tutorial = new org.kgu.domain.adventure.view.TutorialView(adventureFeature);
         window.register(tutorial, new org.kgu.core.window.LifecycleEvent() { @Override public void onEnter() { tutorial.reset(); } });
         MenuView menuView = new MenuView();
@@ -189,6 +210,7 @@ public class Application {
         new ShowcaseFeature(views.game(), save, QuestionBank.all(personManager.getAll()), window::show, views.adventure()::selectTab,
             views.question()::playShowcaseAnswers).open(scene);
     }
+    public void startShowcase(ShowcaseScene scene) throws IOException { closeShowcase(); launchShowcase(scene); }
 
     private void closeShowcase() {
         if (showcaseWindow == null) return;
@@ -203,5 +225,6 @@ public class Application {
     public void shutdown() {
         closeShowcase();
         mainWindow.close();
+        org.kgu.core.window.GameResources.stopSounds();
     }
 }

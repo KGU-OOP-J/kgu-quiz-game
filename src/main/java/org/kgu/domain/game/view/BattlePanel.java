@@ -27,7 +27,7 @@ public final class BattlePanel extends JPanel {
     private static final Color INK = ComponentPainter.TEXT;
     private static final Color MUTED = ComponentPainter.MUTED;
     private final JLabel[] milestones = new JLabel[5];
-    private final Boolean[] answers = new Boolean[5];
+    private final Boolean[] answers;
     private final JLabel objective = label("", 20);
     private final JLabel questionTag = label("", 15);
     private final JProgressBar countdown = new BattleProgressBar(1000, GradientTokens.PROGRESS);
@@ -51,6 +51,8 @@ public final class BattlePanel extends JPanel {
     private final FinalAttackEffect finalAttack = new FinalAttackEffect();
     private final BattleAttackEffect attackEffect;
     private final BattleFinishEffect finishEffect = new BattleFinishEffect();
+    private final BossPhaseEffect phaseEffect = new BossPhaseEffect();
+    private final JButton support = button("카드 지원", "cardSupport");
     private boolean finishingHit;
     private final Timer animation;
     private final BattleLayout battleLayout = new BattleLayout();
@@ -77,6 +79,7 @@ public final class BattlePanel extends JPanel {
     // A clock is injected in UI tests to verify animation order without sleeps.
     BattlePanel(BattleEngine engine, BattleGUIEvent event, Runnable onFinish, Runnable onMenu, LongSupplier clock) {
         this.engine = engine;
+        answers = new Boolean[engine.questionCount()];
         this.event = event;
         this.onFinish = onFinish;
         this.clock = clock;
@@ -96,6 +99,18 @@ public final class BattlePanel extends JPanel {
         buildArena();
         buildQuestions();
         buildItems();
+        support.addActionListener(e -> command(() -> {
+            engine.useSupport();
+            org.kgu.core.window.GameResources.play(org.kgu.core.window.GameResources.Sound.HINT);
+            memory.setText(engine.supportFeedback());
+        }));
+        addAt(support, 46, 445, 266, 42, 14);
+        bind("support", KeyStroke.getKeyStroke("S"), () -> { if (support.isEnabled()) support.doClick(); });
+        bind("skipPhase", KeyStroke.getKeyStroke("ESCAPE"), () -> {
+            if (phaseEffect.running()) { phaseEffect.skip(); animation.stop(); refresh(); }
+            else if (ending) finishOnce();
+        });
+        if (engine.boss()) { phaseEffect.start(engine, event.portrait(engine.computer()), clock.getAsLong()); animation.start(); }
         refresh();
     }
 
@@ -117,6 +132,7 @@ public final class BattlePanel extends JPanel {
                 onMenu.run();
             } else if (running && !closed) {
                 long pause = clock.getAsLong() - before;
+                phaseEffect.pause(pause);
                 effectStarted += pause;
                 // Effect clocks use elapsed visual time, so they pause together below.
                 pausedNanos += pause;
@@ -129,7 +145,8 @@ public final class BattlePanel extends JPanel {
         target.setHorizontalAlignment(SwingConstants.CENTER);
         addAt(target, 380, 84, 520, 37, 24);
         targetHp.setName("targetHp");
-        targetHp.setValue(BattleEngine.MAX_HP);
+        targetHp.setMaximum(engine.maxComputerHp());
+        targetHp.setValue(engine.maxComputerHp());
         targetHp.setForeground(BLUE);
         targetHp.setBackground(new Color(34, 53, 76));
         targetHp.setBorder(BorderFactory.createEmptyBorder());
@@ -150,16 +167,16 @@ public final class BattlePanel extends JPanel {
             milestones[i] = step;
             addAt(step, 46 + i * 51, 212, 43, 38, 18);
         }
-        JLabel guide = label("정답 3개로 승리 · 역전 불가 시 패배", 14);
+        JLabel guide = label("페이즈 목표 달성 · 역전 불가 시 패배", 14);
         guide.setForeground(MUTED);
         addAt(guide, 46, 263, 280, 28, 14);
-        JLabel memoryTitle = label("인물 정보", 18);
+        JLabel memoryTitle = label(engine.power().strength() == 0 ? "인물 정보" : engine.power().title(), 16);
         memoryTitle.setForeground(INK);
         addAt(memoryTitle, 46, 326, 270, 28, 18);
         memory.setName("memoryInfo");
         memory.setText("상대의 정보를 확인하세요.\n정보 물약으로 인물 정보를 열 수 있어요.");
         memory.setForeground(MUTED);
-        addAt(GameTheme.scroll(memory), 46, 368, 266, 110, 16);
+        addAt(GameTheme.scroll(memory), 46, 368, 266, 68, 16);
         hitText.setName("hitFeedback");
         hitText.setHorizontalAlignment(SwingConstants.CENTER);
         addAt(hitText, 350, 478, 580, 37, 23);
@@ -208,7 +225,7 @@ public final class BattlePanel extends JPanel {
         JLabel note = label("한 번의 도움, 끝까지 내 힘으로", 16);
         note.setForeground(ComponentPainter.MUTED);
         addAt(note, 950, 116, 280, 30, 16);
-        String[] notes = {"헷갈리는 오답 보기 1개 제거", "마지막에 첫 오답 한 번 재도전", "이번 전투에서 인물 정보 열람"};
+        String[] notes = {"헷갈리는 오답 보기 1개 제거", "페이즈 종료 시 첫 오답 재도전", "이번 전투에서 인물 정보 열람"};
         int index = 0;
         for (ShopItem item : ShopItem.values()) {
             JButton button = button(item.label(), "item" + item.name());
@@ -227,7 +244,7 @@ public final class BattlePanel extends JPanel {
     @FunctionalInterface private interface Command { void run() throws Exception; }
 
     private void command(Command command) {
-        if (closed || ending || engine.phase() != BattleEngine.Phase.QUESTION) return;
+        if (closed || ending || phaseEffect.running() || engine.phase() != BattleEngine.Phase.QUESTION) return;
         try {
             command.run();
             refresh();
@@ -246,6 +263,8 @@ public final class BattlePanel extends JPanel {
             BattleEngine.TurnFeedback result = engine.feedback();
             if (!engine.isRetry()) answers[engine.currentQuestionIndex()] = result.correct();
             if (result.correct()) {
+                if (engine.bestCombo() >= 3) org.kgu.core.window.GameResources.play(org.kgu.core.window.GameResources.Sound.COMBO);
+                if (result.damage() > 0 && engine.computerHp() == 0) org.kgu.core.window.GameResources.play(org.kgu.core.window.GameResources.Sound.HEAVY_ATTACK);
                 attackEffect.start(effectStarted);
                 portrait.startHit(result.damage(), false, effectStarted);
             }
@@ -258,6 +277,14 @@ public final class BattlePanel extends JPanel {
     private void animate() {
         if (closed) return;
         long now = clock.getAsLong();
+        if (phaseEffect.running()) {
+            phaseEffect.update(now);
+            double delta = (engine.maxComputerHp() - targetHp.getValue()) * .22;
+            targetHp.setValue(targetHp.getValue() + (int)Math.ceil(delta));
+            updateHpText(); repaint();
+            if (!phaseEffect.running()) { animation.stop(); refresh(); if (showcaseAnswer != null && !closed) playAnswer(showcaseAnswer); }
+            return;
+        }
         long visualNow = now - pausedNanos;
         double elapsed = (now - effectStarted) / 1_000_000_000.0;
         portrait.updateHit(visualNow);
@@ -281,8 +308,12 @@ public final class BattlePanel extends JPanel {
             }
             if (!finishEffect.isRunning()) finishOnce();
         } else if (elapsed >= (engine.feedback().correct() ? 2.2 : 3.2) && !portrait.isAnimating()) {
+            int previousStage = engine.stageNumber();
+            String previousBackground = engine.stage().background();
             event.advance();
             if (engine.phase() == BattleEngine.Phase.FINISHED) {
+                org.kgu.core.window.GameResources.play(engine.result() == BattleEngine.Result.WIN ? org.kgu.core.window.GameResources.Sound.VICTORY : org.kgu.core.window.GameResources.Sound.DEFEAT);
+                org.kgu.core.window.GameResources.play(org.kgu.core.window.GameResources.Sound.FINISHER);
                 ending = true;
                 effectStarted = now;
                 pausedNanos = 0;
@@ -290,9 +321,14 @@ public final class BattlePanel extends JPanel {
                 if (engine.result() == BattleEngine.Result.LOSE && isProfessor()) finalAttack.start(now);
                 refresh();
             } else {
+                if (engine.stageNumber() != previousStage) {
+                    targetHp.setMaximum(engine.maxComputerHp()); targetHp.setValue(0);
+                    phaseEffect.start(engine, event.portrait(engine.computer()), now, previousBackground);
+                    refresh(); return;
+                }
                 animation.stop();
                 refresh();
-                if (showcaseAnswer != null) playAnswer(showcaseAnswer);
+                if (showcaseAnswer != null && !closed) playAnswer(showcaseAnswer);
             }
         }
     }
@@ -304,17 +340,23 @@ public final class BattlePanel extends JPanel {
     }
 
     public void refresh() {
-        boolean asking = !closed && !ending && engine.phase() == BattleEngine.Phase.QUESTION;
-        progress.setText(ending ? "전투 종료 · 응답 " + engine.answeredCount() + " / 5" : engine.isRetry() ? "보호 부적 · 오답 재도전"
-                : "문제 " + Math.min(engine.turn() + 1, 5) + " / 5  ·  정답 " + engine.correctCount());
-        objective.setText(engine.successCount() >= 3 ? "승리 조건 달성!" : "정답  " + engine.successCount() + " / 3");
-        objective.setForeground(engine.successCount() >= 3 ? GREEN : INK);
-        questionTag.setText(engine.isRetry() ? "RETRY  /  추가 도전" : "QUESTION 0" + (engine.currentQuestionIndex() + 1) + "  /  배틀 퀴즈");
-        countdown.setVisible(!asking && !ending);
+        boolean asking = !closed && !ending && !phaseEffect.running() && engine.phase() == BattleEngine.Phase.QUESTION;
+        progress.setText("페이즈 " + engine.stageNumber() + "/" + engine.stageCount() + " · "
+            + (engine.isRetry() ? "보충 문제" : "문제 " + Math.min(engine.stageTurn() + 1, 5) + "/5"));
+        objective.setText("정답 " + engine.successCount() + " / " + engine.requiredCorrect());
+        objective.setForeground(engine.successCount() >= engine.requiredCorrect() ? GREEN : INK);
+        support.setEnabled(asking && engine.supportAvailable());
+        boolean passiveSupport = engine.power().kind() == org.kgu.core.progression.CardPower.Kind.POWER || engine.power().kind() == org.kgu.core.progression.CardPower.Kind.FOCUS;
+        support.setText(engine.power().strength() == 0 ? "지원 카드 미장착" : engine.power().kind().label() + " 지원 · "
+            + (passiveSupport ? "자동 적용" : engine.supportAvailable() ? "사용 가능 (S)" : "사용 완료"));
+        support.setToolTipText(engine.supportStatus());
+        questionTag.setText(engine.isRetry() ? engine.isSupportRetry() ? "수호 지원 / 새로운 보충 문제" : "보호 부적 / 오답 재도전"
+            : "QUESTION 0" + (engine.currentQuestionIndex() + 1) + "  /  배틀 퀴즈");
+        countdown.setVisible(!asking && !ending && !phaseEffect.running());
         for (int i = 0; i < milestones.length; i++) {
-            Boolean result = answers[i];
+            Boolean result = answers[(engine.stageNumber() - 1) * 5 + i];
             milestones[i].setText(result == null ? Integer.toString(i + 1) : result ? "O" : "X");
-            milestones[i].setBackground(result == null ? (!ending && i == engine.turn() ? new Color(0xCFE5FF) : GameTheme.PAGE)
+            milestones[i].setBackground(result == null ? (!ending && i == engine.stageTurn() ? new Color(0xCFE5FF) : GameTheme.PAGE)
                     : result ? new Color(0xDDF8E8) : new Color(0xFFE7E4));
             milestones[i].getAccessibleContext().setAccessibleName((i + 1) + "번 문제 " + (result == null ? "미응답" : result ? "정답" : "오답"));
         }
@@ -323,12 +365,12 @@ public final class BattlePanel extends JPanel {
         for (int i = 0; i < choices.length; i++) {
             JButton choice = choices[i];
             boolean removed = engine.eliminated().contains(i);
-            String state = !asking && i == engine.current().getAnswer() - 1 ? "정답 · "
+            String state = !phaseEffect.running() && !asking && i == engine.current().getAnswer() - 1 ? "정답 · "
                     : !asking && engine.selected() == i ? "내 답 · " : "";
             choice.setText(state + (i + 1) + ". " + (removed ? "제외된 보기" : engine.current().getChoices().get(i)));
             choice.setEnabled(asking && !removed);
             choice.putClientProperty("selected", engine.selected() == i);
-            choice.putClientProperty("correct", !asking && i == engine.current().getAnswer() - 1);
+            choice.putClientProperty("correct", !phaseEffect.running() && !asking && i == engine.current().getAnswer() - 1);
             choice.putClientProperty("wrong", !asking && engine.selected() == i && i != engine.current().getAnswer() - 1);
             choice.getAccessibleContext().setAccessibleName((i + 1) + "번 " + (removed ? "제외된 보기" : engine.current().getChoices().get(i)));
             choice.repaint();
@@ -349,25 +391,28 @@ public final class BattlePanel extends JPanel {
         submit.setText(ending ? "결과 확인 중" : asking ? engine.selected() < 0 ? "보기를 선택하세요" : (engine.selected() + 1) + "번 답안 제출  →" : "다음 문제로…");
         if (ending) {
             hitText.setText("");
-            feedback.setText("응답 " + engine.answeredCount() + "/5 · 정답 " + engine.correctCount() + " · 재도전 보충 " + engine.retryCorrectCount());
+            feedback.setText("응답 " + engine.answeredCount() + "/" + engine.questionCount() + " · 정답 " + engine.correctCount() + " · 재도전 보충 " + engine.retryCorrectCount());
+        } else if (phaseEffect.running()) {
+            feedback.setText(engine.stage().dialogue());
+            hitText.setText(engine.stage().title());
         } else if (asking) {
-            hitText.setText(engine.successCount() >= 3 ? "승리 조건 달성 · 마지막까지 공격!" : "답을 골라 공격하세요");
+            hitText.setText(engine.successCount() >= engine.requiredCorrect() ? "승리 조건 달성 · 마지막까지 공격!" : "답을 골라 공격하세요");
             hitText.setForeground(GameTheme.BLUE_TEXT);
-            feedback.setText(engine.isRetry() ? "보기를 다시 섞었어요. 재도전 정답은 성공 조건만 보충하며 최초 정답률·경험치에는 더하지 않습니다."
+            feedback.setText(engine.isRetry() ? (engine.isSupportRetry() ? "아직 풀지 않은 새로운 보충 문제입니다. " : "보기를 다시 섞었어요. ") + "보충 정답은 성공 조건만 보충하며 최초 정답률·경험치에는 더하지 않습니다."
                     : "보기 1~4 또는 클릭으로 선택 · Enter로 제출\n정답과 설명을 확인한 뒤 자동으로 다음 문제로 넘어갑니다.");
         } else {
             boolean correct = engine.feedback().correct();
             hitText.setText(correct ? engine.isRetry() ? "복습 성공!" : "정답! 공격 성공" : "오답 · 정답을 확인하세요");
             hitText.setForeground(correct ? ComponentPainter.CORRECT : ComponentPainter.INCORRECT);
             feedback.setText(engine.feedback().explanation() + "\n" + (engine.isRetry() ? "최초 정답률과 별 평가에는 추가하지 않습니다."
-                    : "최초 정답 " + engine.correctCount() + "/5 · 성공까지 " + Math.max(0, 3 - engine.successCount()) + "개"));
+                    : "최초 정답 " + engine.correctCount() + "/" + engine.questionCount() + " · 성공까지 " + Math.max(0, engine.requiredCorrect() - engine.successCount()) + "개"));
         }
         updateHpText();
         repaint();
     }
 
     private void updateHpText() {
-        hpText.setText(targetHp.getValue() == 0 ? ending ? "HP 0 / 60" : "HP 0 · 마지막 문제 후 마무리" : "HP " + targetHp.getValue() + " / 60");
+        hpText.setText("HP " + targetHp.getValue() + " / " + engine.maxComputerHp());
     }
 
     private boolean isProfessor() { return "교수님".equals(engine.computer().getCategory()); }
@@ -376,6 +421,7 @@ public final class BattlePanel extends JPanel {
         closed = true;
         animation.stop();
         submit.setEnabled(false);
+        support.setEnabled(false);
         for (JButton choice : choices) choice.setEnabled(false);
         items.values().forEach(button -> button.setEnabled(false));
     }
@@ -386,7 +432,7 @@ public final class BattlePanel extends JPanel {
         Graphics2D g = (Graphics2D) graphics.create();
         double elapsed = (clock.getAsLong() - effectStarted) / 1_000_000_000.0;
         boolean wrong = !closed && !ending && engine.phase() == BattleEngine.Phase.FEEDBACK && !engine.feedback().correct();
-        int shake = finalAttack.isRunning() ? finalAttack.shakeOffset() : finishEffect.isRunning() ? finishEffect.shakeOffset() : portrait.shakeOffset();
+        int shake = phaseEffect.running() ? phaseEffect.shake() : finalAttack.isRunning() ? finalAttack.shakeOffset() : finishEffect.isRunning() ? finishEffect.shakeOffset() : portrait.shakeOffset();
         if (wrong && elapsed < 0.45) shake = (int) (Math.sin(elapsed * 85) * 7 * (1 - elapsed / 0.45));
         g.translate(shake, -shake / 2);
         super.paint(g);
@@ -397,6 +443,7 @@ public final class BattlePanel extends JPanel {
         if (!ending) attackEffect.paint(g, getWidth(), getHeight());
         finishEffect.paint(g, getWidth(), getHeight());
         finalAttack.paint(g, getWidth(), getHeight());
+        phaseEffect.paint(g, getWidth(), getHeight());
         g.dispose();
     }
 
@@ -404,7 +451,10 @@ public final class BattlePanel extends JPanel {
         super.paintComponent(source);
         Graphics2D g = (Graphics2D) source.create();
         UiStyle.prepare(g);
-        BattleLayout.paintStage(g, getWidth(), getHeight());
+        if (phaseEffect.running()) {
+            phaseEffect.paintBackground(g, getWidth(), getHeight());
+            BattleLayout.paintPanels(g, getWidth(), getHeight());
+        } else BattleLayout.paintStage(g, getWidth(), getHeight(), engine.stage().background());
         g.dispose();
     }
 

@@ -10,5 +10,6 @@ public enum ViewId {
     ADVENTURE,
     TUTORIAL,
     PROLOGUE,
-    DIALOGUE
+    DIALOGUE,
+    ENDING
 }

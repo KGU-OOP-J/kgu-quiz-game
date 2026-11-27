@@ -23,6 +23,7 @@ public final class AdventureFeature {
     public boolean categoryUnlocked(String category) { return game.categoryUnlocked(category); }
     public List<Person> ownedCards() { return game.ownedCards(); }
     public CardPower cardPower(Person person) { return game.cardPower(person); }
+    public int cardStage(Person person) { return game.cardStage(person); }
     public Optional<BufferedImage> image(String key) { return game.image(key); }
 
     public void buy(ShopItem item) throws IOException { game.progress().buy(item); }
@@ -34,6 +35,7 @@ public final class AdventureFeature {
     public void startPractice(String category, Difficulty difficulty) { game.startPractice(category, difficulty); }
     public void startReview() { game.startReview(); }
     public void returnToMenu() { game.returnToMenu(); }
+    public boolean takeChallengeMapRequest() { return game.takeChallengeMapRequest(); }
 
     public void completeTutorial() throws IOException {
         game.progress().completeTutorial();

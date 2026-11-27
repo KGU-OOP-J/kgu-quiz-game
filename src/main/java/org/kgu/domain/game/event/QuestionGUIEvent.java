@@ -31,7 +31,8 @@ public final class QuestionGUIEvent {
 
     public void showHint(QuestionView view) {
         getSession().recordHint();
-        JOptionPane.showMessageDialog(view, String.join("\n", getSession().getCurrentPerson().getInformation()), "힌트", JOptionPane.INFORMATION_MESSAGE);
+        view.showHint(String.join("\n", getSession().getCurrentPerson().getInformation()));
+        org.kgu.core.window.GameResources.play(org.kgu.core.window.GameResources.Sound.HINT);
     }
 
     public void submit(QuestionView view) {
@@ -40,14 +41,14 @@ public final class QuestionGUIEvent {
             return;
         }
         try {
+            boolean previouslyUnlocked = gameFeature.profile().professorUnlocked();
             boolean correct = gameFeature.submitAnswer();
-            if (gameFeature.isSoundEnabled()) Toolkit.getDefaultToolkit().beep();
+            if (!previouslyUnlocked && gameFeature.profile().professorUnlocked()) org.kgu.core.window.GameResources.play(org.kgu.core.window.GameResources.Sound.UNLOCK);
+            org.kgu.core.window.GameResources.play(correct ? org.kgu.core.window.GameResources.Sound.CORRECT : org.kgu.core.window.GameResources.Sound.WRONG);
+            if (correct && java.util.Set.of(3, 5, 10).contains(getSession().combo())) org.kgu.core.window.GameResources.play(org.kgu.core.window.GameResources.Sound.COMBO);
             view.showPractice(correct);
-            if (correct) gameFeature.saveRewards();
         } catch (java.io.UncheckedIOException e) {
             JOptionPane.showMessageDialog(view, e.getMessage(), "답안 기록 실패", JOptionPane.ERROR_MESSAGE);
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(view, "정답은 반영됐지만 보상 저장에 실패했습니다. 결과 화면에서 재시도할 수 있습니다.\n" + e.getMessage(), "보상 저장 실패", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -65,6 +66,8 @@ public final class QuestionGUIEvent {
         int answer = JOptionPane.showOptionDialog(view, message, "연습 종료", JOptionPane.DEFAULT_OPTION,
             JOptionPane.PLAIN_MESSAGE, null, options, options[0]);
         if (answer == 1) {
+            org.kgu.core.window.GameResources.play(org.kgu.core.window.GameResources.Sound.UI_CANCEL);
+            if (getSession().getMode() == GameSession.Mode.PRACTICE) { gameFeature.returnToMenu(); return; }
             try {
                 gameFeature.saveRewards();
                 gameFeature.returnToMenu();

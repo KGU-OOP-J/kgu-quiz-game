@@ -44,7 +44,6 @@ public final class ResultView extends JPanel implements View {
 
     private final ResultGUIEvent event;
     private final CardArt art;
-    private final Image background = new ImageIcon(ResultView.class.getResource("/org/kgu/result/result_background.png")).getImage();
     private final JLabel title = new JLabel("게임 결과", SwingConstants.CENTER);
     private final JLabel verdict = new JLabel("", SwingConstants.CENTER);
     private final JLabel score = new JLabel("", SwingConstants.CENTER);
@@ -69,11 +68,16 @@ public final class ResultView extends JPanel implements View {
     private final JButton retry = new UiButton("보상 저장 재시도", new Color(239, 151, 43));
     private final VictoryHeader victoryHeader = new VictoryHeader(title, verdict, score);
     private final JPanel rewardPanels = new JPanel(new GridLayout(1, 2, 24, 0));
+    private final org.kgu.domain.game.view.component.PracticeResultPanel practiceResult = new org.kgu.domain.game.view.component.PracticeResultPanel();
+    private JButton collectionAction;
     private final JPanel actions = new JPanel(new GridLayout(1, 3, 10, 0));
     private final ResultSection cardSection = new ResultSection("획득한 보상 카드");
     private final ResultSection xpSection = new ResultSection("경험치");
     private final ResultSection coinSection = new ResultSection("획득 코인");
     private boolean showingBattle = true;
+    private final JButton nextAction = new UiButton("다음 도전", new Color(0x275898));
+    private Runnable nextCommand = () -> { };
+    public void configureNext(String label, Runnable command) { nextAction.setText(label); nextCommand = command; }
 
     public ResultView(ResultGUIEvent event) {
         this.event = event;
@@ -90,6 +94,7 @@ public final class ResultView extends JPanel implements View {
         coinSection();
 
         rewardContainer();
+        practiceResult.setVisible(false); add(practiceResult);
 
         actionSection();
     }
@@ -163,8 +168,12 @@ public final class ResultView extends JPanel implements View {
         add(status);
         actions.setOpaque(false);
         actions.add(action("메인으로", new Color(14, 134, 222), event::returnToMenu));
-        actions.add(action("도감 확인", new Color(15, 165, 102), event::openCollection));
-        actions.add(action("다음 도전 · 상점", new Color(137, 78, 191), event::openAdventure));
+        collectionAction = action("도감 확인", new Color(15, 165, 102), event::openCollection);
+        actions.add(collectionAction);
+        nextAction.addActionListener(e -> nextCommand.run());
+        actions.add(nextAction);
+        actions.setLayout(new GridLayout(1, 4, 10, 0));
+        actions.add(action("오답 복습", new Color(0x275898), event::startReview));
         add(actions);
         retry.setForeground(Color.WHITE);
         retry.addActionListener(e -> event.refresh(this));
@@ -174,6 +183,7 @@ public final class ResultView extends JPanel implements View {
 
     private JButton action(String text, Color color, Runnable callback) {
         JButton button = new UiButton(text, color);
+        button.putClientProperty("secondaryAction", true);
         button.setForeground(Color.WHITE);
         button.addActionListener(e -> callback.run());
         return button;
@@ -211,6 +221,7 @@ public final class ResultView extends JPanel implements View {
         victoryHeader.setBounds(bounds.header());
         hp.setBounds(bounds.hp());
         rewardPanels.setBounds(bounds.rewards());
+        practiceResult.setBounds(bounds.rewards());
         status.setBounds(bounds.status());
         retry.setBounds(bounds.retry());
         actions.setBounds(bounds.actions());
@@ -228,6 +239,10 @@ public final class ResultView extends JPanel implements View {
     public void display(ResultPresentation result) {
         hp.removeAll();
         showingBattle = result.battle().isPresent();
+        practiceResult.setVisible(result.practice());
+        rewardPanels.setVisible(!result.practice());
+        collectionAction.setVisible(!result.practice());
+        actions.setLayout(new GridLayout(1, result.practice() ? 3 : 4, 10, 0));
         var battle = result.battle().orElse(null);
         if (battle != null) {
             boolean victory = battle.victory();
@@ -252,11 +267,15 @@ public final class ResultView extends JPanel implements View {
         if (result.cardRewards().isEmpty()) rewards.add(new EmptyRewardCard());
         emptyRewardMessage.setText(result.saveFailed() ? "저장된 보상이 없습니다." : "획득한 보상이 없습니다.");
         emptyRewardMessage.setVisible(result.cardRewards().isEmpty());
-        showSettlement(result);
-        showCoins(result);
+        if (result.practice()) {
+            finishXpAnimation(); finishCoinFade();
+        } else {
+            showSettlement(result);
+            showCoins(result);
+        }
         status.setText("<html><div style='text-align:center'>" + result.statusMessage() + "</div></html>");
         status.setForeground(result.saveFailed() ? new Color(180, 30, 30) : new Color(20, 35, 60));
-        retry.setVisible(result.saveFailed());
+        retry.setVisible(!result.practice() && result.saveFailed());
         victoryHeader.showEffect(result.sessionId(), battle == null ? HeaderEffect.NONE
                 : battle.victory() ? HeaderEffect.VICTORY : HeaderEffect.DEFEAT);
         revalidate();
@@ -281,6 +300,8 @@ public final class ResultView extends JPanel implements View {
             return;
         }
         long now = System.nanoTime();
+        org.kgu.core.window.GameResources.play(org.kgu.core.window.GameResources.Sound.XP);
+        if (reward.after().level() > reward.before().level()) org.kgu.core.window.GameResources.play(org.kgu.core.window.GameResources.Sound.LEVEL_UP);
         xpAnimation = new XpAnimation(result.sessionId(), reward, now);
         animateXp(now);
         xpTimer.start();
@@ -298,6 +319,7 @@ public final class ResultView extends JPanel implements View {
         if (!result.saveFailed() && coins > 0 && result.sessionId().equals(coinFadeSessionId)) return;
         finishCoinFade();
         if (result.saveFailed() || coins <= 0 || !animatedCoinSessions.add(result.sessionId())) return;
+        org.kgu.core.window.GameResources.play(org.kgu.core.window.GameResources.Sound.COIN);
         coinFadeSessionId = result.sessionId();
         coinFadeStartedAt = System.nanoTime();
         coinContent.setFadeOpacity(0);
@@ -744,7 +766,7 @@ public final class ResultView extends JPanel implements View {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        org.kgu.core.window.GameTheme.asset("scene-result").ifPresentOrElse(image -> org.kgu.core.window.GameTheme.cover((Graphics2D)g, image, 0, 0, getWidth(), getHeight()), () -> g.drawImage(background, 0, 0, getWidth(), getHeight(), this));
+        org.kgu.core.window.GameTheme.paintBackdrop(g, this, "result", 0f);
     }
     private static final class GlossyHpBar extends JPanel {
         private final int MAX_HP;

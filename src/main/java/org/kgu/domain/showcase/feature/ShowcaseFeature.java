@@ -48,6 +48,8 @@ public final class ShowcaseFeature {
             case PRACTICE -> game.startPractice("과학자", Difficulty.LOW);
             case BATTLE, HIT, MISS, VICTORY, DEFEAT, RESCUE -> openBattle(scene);
             case RESULT -> openResult();
+            case BOSS -> openBoss();
+            case ENDING -> openEnding();
         }
     }
 
@@ -99,5 +101,24 @@ public final class ShowcaseFeature {
         }
         game.getSession().markDialoguePlayed();
         show.accept(ViewId.RESULT);
+    }
+    private void openBoss() throws IOException {
+        String category = "과학자";
+        var candidates = game.getChallengeCandidates(category);
+        for (int i = 0; i < 3; i++) game.progress().settle(new org.kgu.core.progression.ProgressStore.Reward(
+            "showcase-unlock-" + i, 0, 0, true, true,
+            "normal." + category + "|" + candidates.get(i).getName() + "|하", 1, 0, false, List.of(), 0));
+        var boss = candidates.stream().filter(p -> p.getName().equals(org.kgu.domain.game.feature.BattlePhases.bossName(category))).findFirst().orElseThrow();
+        game.startChallenge(category, Difficulty.LOW, boss, true);
+    }
+    private void openEnding() throws IOException {
+        for (var entry : questions.stream().filter(e -> e.person().getCategory().equals("과학자")).limit(PlayerProgress.PROFESSOR_REQUIRED).toList())
+            game.progress().answer(entry.id(), entry.person().getCategory(), true);
+        game.startBattle("교수님", Difficulty.HIGH, game.getChallengeCandidates("교수님").getFirst());
+        BattleEngine battle = game.getSession().getBattle();
+        while (battle.phase() == BattleEngine.Phase.QUESTION) {
+            game.selectBattleAnswer(battle.current().getAnswer() - 1); game.submitBattleAnswer(); game.advanceBattle();
+        }
+        game.getSession().markDialoguePlayed(); game.saveRewards(); show.accept(ViewId.ENDING);
     }
 }

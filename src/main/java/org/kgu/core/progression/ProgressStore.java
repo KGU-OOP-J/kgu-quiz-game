@@ -53,6 +53,24 @@ public final class ProgressStore {
         if (snapshot().number("collected") != count) update(p -> p.number("collected", count));
     }
     public void completeTutorial() throws IOException { update(p -> p.flag("tutorial", true)); }
+    public void acquireCard(String category, String name, int stage) throws IOException {
+        if (stage < 1 || stage > 3) throw new IllegalArgumentException("카드 단계는 1~3입니다.");
+        String key = PlayerProgress.cardKey(category, name, stage);
+        if (snapshot().flag("card.owned." + key)) return;
+        update(p -> {
+            if (p.flag("card.owned." + key)) return;
+            p.flag("card.owned." + key, true);
+            p.flag("card.new." + key, true);
+        });
+    }
+    public void readCard(String category, String name, int stage) throws IOException {
+        if (!snapshot().isNewCard(category, name, stage)) return;
+        update(p -> p.flag("card.new." + PlayerProgress.cardKey(category, name, stage), false));
+    }
+    public void recordEnding() throws IOException {
+        if (snapshot().flag("ending.seen")) return;
+        update(p -> { p.flag("ending.seen", true); if (p.text("ending.firstClear").isBlank()) p.text("ending.firstClear", java.time.Instant.now().toString()); });
+    }
     public void equip(String personKey) throws IOException { update(p -> p.text("equipped", personKey)); }
     public void buy(ShopItem item) throws IOException {
         Objects.requireNonNull(item);
@@ -77,11 +95,18 @@ public final class ProgressStore {
     }
     public void answer(String questionId, boolean correct) throws IOException { answer(questionId, "", correct); }
     public void answer(String questionId, String category, boolean correct) throws IOException {
+        recordAnswer(questionId, category, correct, true);
+    }
+    public void practiceAnswer(String questionId, boolean correct) throws IOException {
+        recordAnswer(questionId, "", correct, false);
+    }
+    private void recordAnswer(String questionId, String category, boolean correct, boolean growthEnabled) throws IOException {
         update(p -> {
-            p.add("attempts", 1);
+            if (growthEnabled) p.add("attempts", 1);
             if (correct) {
-                p.add("correct", 1); p.values.remove("wrong." + questionId);
-                if (Set.of("과학자", "한국사", "아이돌").contains(category)) p.flag("solved.external." + questionId, true);
+                if (growthEnabled) p.add("correct", 1);
+                p.values.remove("wrong." + questionId);
+                if (growthEnabled && Set.of("과학자", "한국사", "아이돌").contains(category)) p.flag("solved.external." + questionId, true);
             }
             else p.flag("wrong." + questionId, true);
             LinkedList<String> recent = new LinkedList<>(p.recentQuestions());
@@ -107,6 +132,8 @@ public final class ProgressStore {
             if (reward.win() && !reward.stageKey().isBlank()) {
                 p.number("stage." + reward.stageKey(), Math.max(p.number("stage." + reward.stageKey()), reward.stars()));
             }
+            if (reward.win() && reward.stageKey().startsWith("boss.교수님|이은정|") && p.text("ending.firstClear").isBlank())
+                p.text("ending.firstClear", java.time.Instant.now().toString());
             reward.masteryKeys().stream().distinct().forEach(k -> p.add("mastery." + k, 1));
             p.flag("settled." + reward.sessionId(), true);
         });

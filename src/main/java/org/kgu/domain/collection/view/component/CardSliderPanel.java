@@ -29,9 +29,7 @@ public final class CardSliderPanel extends JPanel {
         for(int i=0;i<10&&page*10+i<persons.size();i++){
             Person person=persons.get(page*10+i);int stage=event.getHighestStage(person);
             CardView card=new CardView(person,stage,art);
-            JButton tile=new JButton(){
-                @Override protected void paintComponent(Graphics g){card.setGlow(getModel().isRollover()||hasFocus());card.setSize(getSize());card.paint(g);}
-            };
+            JButton tile = new CardTile(card, () -> event.getStages(person).stream().anyMatch(value -> event.isNew(person, value)), event.equipped(person));
             tile.setContentAreaFilled(false);tile.setBorderPainted(false);
             tile.setEnabled(stage>0);tile.setRolloverEnabled(true);tile.setToolTipText(person.getName()+(stage==0?" (잠김)":""));
             tile.getAccessibleContext().setAccessibleName(tile.getToolTipText());

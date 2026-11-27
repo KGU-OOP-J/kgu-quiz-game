@@ -32,9 +32,12 @@ public final class BattleGUIEvent {
     }
 
     public void submit() {
+        boolean previouslyUnlocked = gameFeature.profile().professorUnlocked();
         gameFeature.submitBattleAnswer();
-        if (gameFeature.isSoundEnabled())
-            Toolkit.getDefaultToolkit().beep();
+        if (!previouslyUnlocked && gameFeature.profile().professorUnlocked()) org.kgu.core.window.GameResources.play(org.kgu.core.window.GameResources.Sound.UNLOCK);
+        org.kgu.core.window.GameResources.play(getBattle().feedback().correct()
+            ? org.kgu.core.window.GameResources.Sound.CORRECT : org.kgu.core.window.GameResources.Sound.WRONG);
+        if (getBattle().feedback().correct()) org.kgu.core.window.GameResources.play(org.kgu.core.window.GameResources.Sound.ATTACK);
     }
 
     public void advance() {

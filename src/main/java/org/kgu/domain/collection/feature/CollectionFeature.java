@@ -91,6 +91,15 @@ public final class CollectionFeature {
     public List<Integer> getStages(Person person) {
         return playerSession.saveFactory().create().getStages(person.getCategory(), person.getName());
     }
+    public boolean isNew(Person person, int stage) { return playerSession.saveFactory().progress().snapshot().isNewCard(person.getCategory(), person.getName(), stage); }
+    public int newCount(String category) { return playerSession.saveFactory().progress().snapshot().newCardCount(category.equals(ALL) ? "" : category); }
+    public boolean equipped(Person person) { return playerSession.saveFactory().progress().snapshot().equipped().equals(org.kgu.core.progression.CardPower.key(person)); }
+    public String powerDescription(Person person, int stage) {
+        var profile = playerSession.saveFactory().progress().snapshot();
+        return org.kgu.core.progression.CardPower.of(person, stage, profile.mastery(org.kgu.core.progression.CardPower.key(person))).description()
+            + " · 숙련도 " + profile.mastery(org.kgu.core.progression.CardPower.key(person));
+    }
+    public void readCard(Person person, int stage) throws IOException { playerSession.saveFactory().progress().readCard(person.getCategory(), person.getName(), stage); }
 
     public int getHighestStage(Person person) {
         List<Integer> stages = getStages(person);

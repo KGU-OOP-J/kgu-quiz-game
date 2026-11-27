@@ -38,6 +38,14 @@ public final class CollectionGUIEvent {
 
     public boolean categoryAvailable(String category) { return collectionFeature.categoryAvailable(category); }
     public int rescueProgress() { return collectionFeature.rescueProgress(); }
+    public boolean isNew(Person person, int stage) { return collectionFeature.isNew(person, stage); }
+    public int newCount(String category) { return collectionFeature.newCount(category); }
+    public boolean equipped(Person person) { return collectionFeature.equipped(person); }
+    public String powerDescription(Person person, int stage) { return collectionFeature.powerDescription(person, stage); }
+    public String readCard(Person person, int stage) {
+        try { collectionFeature.readCard(person, stage); return ""; }
+        catch (java.io.IOException e) { return " · NEW 확인 저장 실패 · 다시 열어 주세요"; }
+    }
 
     public List<Integer> getStages(Person person) {
         return collectionFeature.getStages(person);

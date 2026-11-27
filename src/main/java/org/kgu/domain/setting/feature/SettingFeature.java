@@ -23,6 +23,7 @@ public final class SettingFeature {
 
     public void apply(boolean soundEnabled) throws IOException {
         settingFactory.saveSoundEnabled(soundEnabled);
+        if (!soundEnabled) org.kgu.core.window.GameResources.stopSounds();
     }
 
     public void returnToMenu() {

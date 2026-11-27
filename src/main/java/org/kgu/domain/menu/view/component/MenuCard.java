@@ -22,7 +22,15 @@ public final class MenuCard extends JPanel {
         addMouseListener(mouse); button.addMouseListener(mouse);
     }
     @Override public void doLayout() { button.setBounds(20, getHeight() - 60, Math.max(30, getWidth() - 40), 44); }
-    public void appear(int delay) { stop(); alpha = 0; timer = new Timer(16, e -> { alpha = Math.min(1, alpha + 0.075f); repaint(); if (alpha >= 1) ((Timer)e.getSource()).stop(); }); timer.setInitialDelay(delay); timer.start(); }
+    public void appear(int delay) {
+        stop(); alpha = 0;
+        long start = System.nanoTime() + delay * 1_000_000L;
+        timer = new Timer(16, e -> {
+            alpha = (float)Math.clamp((System.nanoTime() - start) / 250_000_000.0, 0, 1);
+            repaint(); if (alpha >= 1) ((Timer)e.getSource()).stop();
+        });
+        timer.setInitialDelay(delay); timer.start();
+    }
     public void stop() { if (timer != null) timer.stop(); }
     @Override protected void paintComponent(Graphics source) {
         Graphics2D g = (Graphics2D)source.create(); UiStyle.prepare(g); g.setComposite(AlphaComposite.SrcOver.derive(alpha));

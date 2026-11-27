@@ -7,7 +7,8 @@ public enum ShowcaseScene {
     COLLECTION("카드 도감"), SETTINGS("설정"), PRACTICE("연습 문제"),
     BATTLE("전투 시작"), HIT("첫 정답 · 공격 연출"), MISS("첫 오답 · 피드백"),
     VICTORY("자동 승리 · 전투 마무리"), DEFEAT("자동 패배 · 교수님 최종 공격"),
-    RESCUE("교수님 구출 · 대화"), RESULT("승리 결과 · 보상 바로 보기");
+    RESCUE("교수님 구출 · 대화"), RESULT("승리 결과 · 카드 획득"),
+    BOSS("마을 보스 · 2페이즈"), ENDING("최종 구출 · GAME CLEAR");
 
     private final String label;
     private final String tab;

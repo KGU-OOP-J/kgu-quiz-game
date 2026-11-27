@@ -16,6 +16,11 @@ public final class QuestionView extends JPanel implements View {
     private final CardArt art;
     private BattlePanel battlePanel;
     private CardView practiceCard;
+    private PracticeLayout practiceLayout;
+    private String hintText = "";
+    private int displayedQuestion = -1;
+    private String displayedSession = "";
+    public void showHint(String text) { hintText = text; if (practiceLayout != null) practiceLayout.showHint(text); }
     private final Timer practiceHit = new Timer(16, e -> animatePracticeHit());
     private void animatePracticeHit() {
         if (practiceCard == null) { practiceHit.stop(); return; }
@@ -42,13 +47,18 @@ public final class QuestionView extends JPanel implements View {
         removeAll();
         setLayout(new BorderLayout());
         setBorder(null);
-        practiceCard = new CardView(session.getCurrentPerson(), session.currentEntry().difficulty().getStage(), art);
-        practiceCard.reservePracticeEffectSpace();
-        add(new PracticeLayout(session, practiceCard, answer -> {
+        if (practiceCard == null || displayedQuestion != session.getQuestionIndex() || !displayedSession.equals(session.id())) {
+            practiceCard = new CardView(session.getCurrentPerson(), session.currentEntry().difficulty().getStage(), art);
+            practiceCard.reservePracticeEffectSpace(); hintText = "";
+            displayedQuestion = session.getQuestionIndex(); displayedSession = session.id();
+        }
+        practiceLayout = new PracticeLayout(session, practiceCard, answer -> {
             event.select(answer);
             showPractice();
         }, () -> event.showHint(this), () -> event.submit(this), () -> event.next(this),
-            () -> event.giveUp(this)), BorderLayout.CENTER);
+            () -> event.giveUp(this));
+        practiceLayout.showHint(hintText);
+        add(practiceLayout, BorderLayout.CENTER);
         revalidate();
         repaint();
         if (session.getPhase() == GameSession.Phase.FEEDBACK) {
@@ -67,6 +77,6 @@ public final class QuestionView extends JPanel implements View {
     @Override public JComponent getComponent() { return this; }
     @Override public Dimension getViewSize() { return new Dimension(1280, 960); }
     @Override protected void paintComponent(Graphics source) {
-        GameTheme.paintBackdrop(source, this, "study", 0.6f);
+        GameTheme.paintBackdrop(source, this, event.getSession().getMode() == GameSession.Mode.REVIEW ? "review" : "study", 0f);
     }
 }

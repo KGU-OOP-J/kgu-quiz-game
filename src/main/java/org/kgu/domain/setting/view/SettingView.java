@@ -14,6 +14,7 @@ public final class SettingView extends JPanel implements View {
     public SettingView() {
         super(new BorderLayout());
         setBackground(GameTheme.PAGE);
+        back.putClientProperty("secondaryAction", true);
         add(new SettingLayout(sound, status, back, apply), BorderLayout.CENTER);
     }
 

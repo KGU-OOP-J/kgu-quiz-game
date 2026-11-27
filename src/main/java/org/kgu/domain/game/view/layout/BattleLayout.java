@@ -40,7 +40,21 @@ public final class BattleLayout {
     }
 
     public static void paintStage(Graphics2D g, int width, int height) {
-        GameTheme.backdrop(g, width, height, "battle", 0.40f);
+        paintStage(g, width, height, "battle");
+    }
+
+    public static void paintStage(Graphics2D g, int width, int height, String scene) {
+        paintBackground(g, width, height, scene);
+        paintPanels(g, width, height);
+    }
+
+    public static void paintBackground(Graphics2D g, int width, int height, String scene) {
+        GameTheme.backdrop(g, width, height, "battle", 0f);
+        if (!scene.equals("battle")) org.kgu.core.window.GameResources.background(scene)
+            .ifPresent(image -> GameTheme.cover(g, image, 0, 0, width, height));
+    }
+
+    public static void paintPanels(Graphics2D g, int width, int height) {
         double scale = scale(width, height);
         g.translate((width - WIDTH * scale) / 2, (height - HEIGHT * scale) / 2);
         g.scale(scale, scale);

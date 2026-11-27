@@ -18,7 +18,7 @@ public final class ResultLayout {
         int buttonHeight = Math.round(62 * scale);
         int retryHeight = showRetry ? Math.round(43 * scale) : 0;
         int innerWidth = Math.min(width - 2 * margin, Math.round(930 * scale));
-        int buttonWidth = Math.min(innerWidth, Math.round(810 * scale));
+        int buttonWidth = Math.min(innerWidth, Math.round(1050 * scale));
 
         int headerWidth = Math.min(width - 2 * margin, Math.round(1140 * scale));
         int hpTop = margin + headerHeight + gap;

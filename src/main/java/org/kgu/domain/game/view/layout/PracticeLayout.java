@@ -13,6 +13,11 @@ import java.awt.*;
 import java.util.function.IntConsumer;
 
 public final class PracticeLayout extends JPanel {
+    private final JTextArea hintText = new JTextArea();
+    private final JScrollPane hintPane = GameTheme.scroll(hintText);
+    public void showHint(String text) {
+        hintText.setText(text); hintPane.setVisible(!text.isBlank()); revalidate(); repaint();
+    }
     public PracticeLayout(GameSession session, CardView card, IntConsumer select,
                           Runnable hint, Runnable submit, Runnable next, Runnable giveUp) {
         super(new BorderLayout(24, 20));
@@ -26,7 +31,7 @@ public final class PracticeLayout extends JPanel {
     }
 
     private JPanel progressSection(GameSession session) {
-        JPanel panel = GameTheme.clear(new GridLayout(2, 1, 0, 8));
+        JPanel panel = GameTheme.clear(new GridLayout(3, 1, 0, 6));
         panel.add(label(session.getCategory() + " · " + session.currentEntry().difficulty() + " · " + session.getMode(), 26));
         JProgressBar bar = new JProgressBar(0, session.getQuestionCount());
         bar.setValue(session.getQuestionIndex() + 1);
@@ -34,6 +39,7 @@ public final class PracticeLayout extends JPanel {
         bar.setString("문제 " + (session.getQuestionIndex() + 1) + "/" + session.getQuestionCount());
         bar.setFont(UiStyle.FONT.deriveFont(18f));
         panel.add(bar);
+        panel.add(label("연속 정답 " + session.combo() + " COMBO · 최고 " + session.bestCombo(), 18));
         return panel;
     }
 
@@ -65,6 +71,11 @@ public final class PracticeLayout extends JPanel {
         scroll.setPreferredSize(new Dimension(600, 155));
         questionArea.add(scroll, BorderLayout.NORTH);
         questionArea.add(answerSection(session, select, asking), BorderLayout.CENTER);
+        hintText.setEditable(false); hintText.setLineWrap(true); hintText.setWrapStyleWord(true);
+        hintText.setFont(UiStyle.FONT.deriveFont(16f)); hintText.setForeground(ComponentPainter.TEXT);
+        hintText.setBackground(Color.WHITE); hintText.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
+        hintPane.setPreferredSize(new Dimension(450, 100)); hintPane.setVisible(false);
+        questionArea.add(hintPane, BorderLayout.SOUTH);
         main.add(questionArea, BorderLayout.CENTER);
         return main;
     }
@@ -92,13 +103,17 @@ public final class PracticeLayout extends JPanel {
     private JPanel actionSection(GameSession session, boolean asking, Runnable hint, Runnable submit, Runnable giveUp) {
         JPanel bottom = GameTheme.clear(new GridLayout(2, 1, 0, 12));
         int answer = session.getCurrentQuiz().getAnswer();
-        String message = asking ? "연습에서는 힌트를 자유롭게 볼 수 있습니다. 정답을 맞히면 단계 카드를 얻습니다."
+        String message = asking ? session.getMode() == GameSession.Mode.PRACTICE
+            ? "연습 전용 · 보상·성장 없음 · 카드는 배틀 승리로만 획득합니다."
+            : "복습에서는 힌트를 자유롭게 보고 오답을 정리할 수 있습니다. 카드 획득은 배틀 승리로만 가능합니다."
             : (session.getSelectedAnswer() == answer ? "정답! " : "오답 — ") + "정답: " + session.getCurrentQuiz().getChoices().get(answer - 1);
+        if (!asking && java.util.Set.of(3, 5, 10).contains(session.combo())) message = session.combo() + " COMBO! · " + message;
         bottom.add(label(message, 18));
         JPanel buttons = GameTheme.clear(new GridLayout(1, 3, 20, 0));
         JButton hintButton = button("힌트 보기", hint);
         hintButton.setEnabled(asking);
         JButton action = button(asking ? "정답 제출" : "다음 문제", submit);
+        action.setEnabled(!asking || session.getSelectedAnswer() > 0);
         action.setName("practiceSubmit");
         buttons.add(hintButton);
         buttons.add(action);

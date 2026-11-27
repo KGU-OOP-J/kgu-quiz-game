@@ -1,124 +1,228 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>FINAL_PRESENTATION — WHO’S NEXT?</title>
-  <style>
-    body { font-size: 1rem; }
-    h1 { font-size: 2rem; }
-    h2 { font-size: 1.5rem; }
-    img { max-width: 100%; height: auto; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FINAL_PRESENTATION — WHO’S NEXT?</title>
+<style>
+:root { color-scheme: light; font-family: "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans CJK KR", sans-serif; color: #15253f; background: #fff; }
+* { box-sizing: border-box; }
+body { margin: 0; font-size: 16px; line-height: 1.8; overflow-wrap: anywhere; }
+header, main, footer { width: min(100% - 48px, 1120px); margin-inline: auto; }
+header { padding-block: 48px 28px; }
+h1 { margin: 0 0 18px; font-size: 36px; line-height: 1.35; letter-spacing: -.025em; text-wrap: balance; }
+h2 { margin: 0 0 24px; font-size: 26px; line-height: 1.45; letter-spacing: -.015em; text-wrap: balance; }
+p, li { max-width: 78ch; }
+p { margin: 0 0 18px; }
+a { color: #075ac0; text-underline-offset: 4px; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 3px solid #075ac0; outline-offset: 4px; }
+::selection { background: #cfe5ff; color: #15253f; }
+nav { margin-top: 28px; }
+nav ol { columns: 2; column-gap: 36px; padding-left: 24px; margin-bottom: 0; }
+nav li { break-inside: avoid; margin-block: 5px; }
+section { padding-block: 40px; border-top: 1px solid #d5dfed; scroll-margin-top: 24px; }
+ul { padding-left: 24px; margin: 18px 0 24px; }
+li { margin-block: 8px; }
+code { font-family: Consolas, "Malgun Gothic", monospace; font-size: .93em; }
+p code, li code, td code { background: #f0f5fb; padding: 2px 4px; border-radius: 3px; }
+pre { max-width: 100%; margin: 24px 0; padding: 20px; background: #f0f5fb; white-space: pre; overflow-x: auto; line-height: 1.65; }
+pre code { font-size: 14px; }
+.table-scroll { overflow-x: auto; margin: 24px 0; }
+table { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 15px; line-height: 1.75; }
+th, td { padding: 12px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid #d5dfed; }
+th { color: #153d70; background: #f0f5fb; font-weight: 700; }
+td:first-child { min-width: 120px; }
+figure { margin: 28px 0; }
+img { display: block; width: auto; max-width: min(100%, 960px); height: auto; }
+figcaption, .sources { margin-top: 12px; font-size: 14px; color: #435875; }
+.photo-note { color: #435875; }
+footer { padding-block: 24px 48px; border-top: 1px solid #d5dfed; font-size: 14px; }
+@media (max-width: 600px) {
+  header, main, footer { width: calc(100% - 32px); }
+  header { padding-top: 28px; }
+  h1 { font-size: 32px; }
+  h2 { font-size: 24px; }
+  nav ol { columns: 1; }
+  section { padding-block: 32px; }
+  pre { padding: 14px; }
+}
+@media print {
+  @page { margin: 14mm; }
+  body { font-size: 10.5pt; line-height: 1.55; }
+  header, main, footer { width: 100%; }
+  header { padding-top: 0; }
+  nav, footer, .sources { display: none; }
+  section { break-before: page; border: 0; padding-block: 0; }
+  h1 { font-size: 25pt; }
+  h2 { font-size: 18pt; }
+  h2, th, figcaption { break-after: avoid; }
+  table { min-width: 0; font-size: 9.5pt; }
+  th, td { padding: 7px; }
+  tr, figure { break-inside: avoid; }
+  pre { white-space: pre-wrap; overflow: visible; padding: 10px; }
+  pre code { font-size: 9pt; }
+  .table-scroll { overflow: visible; }
+  a { color: inherit; text-decoration: none; }
+}
+</style>
 </head>
 <body>
-  <header>
-    <h1>WHO’S NEXT? — 객체지향프로그래밍 최종 발표</h1>
-    <p><a href="README.md">페이지 구성과 사진 목록</a> · <a href="FINAL_PRESENTATION.md">발표 원고</a></p>
-  </header>
-  <main>
-    <section id="page-01">
-      <h2>01. 팀 개발과 View 단위 MVP</h2>
-      <p>Git Flow를 팀에 맞게 변형해 develop을 기본 브랜치 겸 통합 지점으로 뒀다. 팀원 각자가 만든 MVP를 가져와 문제·배틀·결과·도감 등 View 단위로 역할을 나눴다. 회의에서 화면 연결과 전투 동작을 정리하고, 기능 브랜치의 PR을 develop에 합친 뒤 통합 흐름을 확인했다.</p>
-    </section>
-
-    <section id="page-02">
-      <h2>02. 설계 결정 ① View에서 View·Event·Feature로</h2>
-      <p>feat/new-architecture에서 구조 개선 예시를 먼저 구현해 팀이 같은 기준으로 작업하도록 했다. 당시 중간 검사가 남아 있어 GUI와 기능 모두 바뀔 가능성이 컸다. MVC 전체를 도입할 규모는 아니었으므로 View는 표시, Event는 입력과 화면 생명주기, Feature는 기능 흐름을 맡도록 정했다. 필요한 객체는 생성자로 주입하고 Application에서 연결했다.</p>
-    </section>
-
-    <section id="page-03">
-      <h2>03. 전체 코드 구조와 도메인 기반 설계</h2>
-      <pre>src/main/
+<header>
+<h1>WHO’S NEXT? — 객체지향프로그래밍 최종 발표</h1>
+<p>화면별 MVP를 하나의 게임으로 통합하고, 변경에 대응하는 객체 구조로 발전시킨 과정.</p>
+<p><a href="README.md">페이지 구성·사진 목록</a> · <a href="FINAL_PRESENTATION.md">발표 원고</a></p>
+<nav aria-label="발표 페이지 목차"><ol><li><a href="#page-01">프로젝트 소개와 기획 중점</a></li><li><a href="#page-02">MVP에서 최종 구조까지</a></li><li><a href="#page-03">전체 코드 구조 — core와 domain</a></li><li><a href="#page-04">View·Event·Feature와 의존성 주입</a></li><li><a href="#page-05">객체지향으로 나눈 상태와 행동</a></li><li><a href="#page-06">SOLID 원칙을 적용한 지점</a></li><li><a href="#page-07">ADR로 설명하는 설계 결정의 변화</a></li><li><a href="#page-08">Gradle로 빌드와 리소스 처리 통일</a></li><li><a href="#page-09">데이터와 전체 화면 흐름</a></li><li><a href="#page-10">주요 화면 — 연습과 오답 복습</a></li><li><a href="#page-11">주요 화면 — 일반 배틀과 보스</a></li><li><a href="#page-12">주요 화면 — 카드·지원 능력·결과</a></li><li><a href="#page-13">스토리·최종 목표와 F1 시연</a></li><li><a href="#page-14">디자인 시스템과 UI/UX 개편</a></li><li><a href="#page-15">팀 운영 — 변형 Git Flow와 역할 분담</a></li><li><a href="#page-16">자체 평가와 배운 점</a></li></ol></nav>
+</header>
+<main><section id="page-01" aria-labelledby="title-01"><h2 id="title-01">01. 프로젝트 소개와 기획 중점</h2>
+<p>졸업을 앞둔 학생이 인물 퀴즈와 도전을 통해 실종된 교수님을 구출하는 Java Swing 싱글 플레이 게임이다.</p>
+<ul><li>문제 풀이를 인물 도전·카드 수집·지원 카드 장착·보스 도전으로 연결했다.</li><li>연습은 문제를 익히는 공간으로, 배틀은 카드를 얻고 다음 목표에 도전하는 공간으로 구분했다.</li><li>화면과 기능이 바뀌어도 판정·저장 규칙을 유지할 수 있도록 책임을 나눴다.</li></ul>
+<p>차별화 포인트는 인물별 3단계 카드, 지원 능력, 단계별 보스 전투, 구출 대화와 엔딩이다. 발표는 기능 소개와 함께 이 기능들을 어떤 객체에 맡겼는지 설명한다.</p>
+<p class="photo-note">사진: 필수 없음. 대표 배틀 화면은 11페이지에 배치한다.</p>
+</section>
+<section id="page-02" aria-labelledby="title-02"><h2 id="title-02">02. MVP에서 최종 구조까지</h2>
+<div class="table-scroll" role="region" aria-label="내용 비교 표" tabindex="0"><table><thead><tr><th scope="col">단계</th><th scope="col">당시 상황</th><th scope="col">팀의 대응</th></tr></thead><tbody><tr><td>MVP 통합</td><td>팀원별 구현을 하나의 프로젝트로 연결해야 했다</td><td>문제·배틀·결과·도감 등 View 단위로 설계·분업했다</td></tr><tr><td>구조 개선</td><td>GUI와 기능이 바뀔 가능성이 있었고 공통 작업 기준이 필요했다</td><td><code>feat/new-architecture</code>에 예시를 먼저 구현하고 View·Event·Feature와 생성자 주입을 공유했다</td></tr><tr><td>중간 평가 반영</td><td>기능이 부족하다는 평가를 받았다</td><td>디자인 시스템을 설계하고 전체 UI, 전투 이펙트, 스토리·최종 목표·다이얼로그를 보강했다</td></tr><tr><td>최종 정리</td><td>기능과 공용 기반의 위치, 리소스·저장 책임을 명확히 해야 했다</td><td>core/domain 경계, classpath 리소스, F1 시연과 결정 기록을 정리했다</td></tr></tbody></table></div>
+<p>화면 수를 늘리는 데서 끝내지 않고, 변경할 때 찾아가야 할 클래스와 재사용할 공통 요소를 함께 정리했다.</p>
+<p class="photo-note">사진: 필수 없음. 단계별 변화는 위 표로 설명한다.</p>
+</section>
+<section id="page-03" aria-labelledby="title-03"><h2 id="title-03">03. 전체 코드 구조 — core와 domain</h2>
+<p>도메인 기반 설계로 사용자 기능을 묶었다. 게임을 작동시키는 공통 기반은 <code>core</code>, 실제 게임플레이와 사용자 기능은 <code>domain</code>에서 관리한다. 독립적인 View·Event·Feature 책임을 구분할 수 있는 기능을 도메인 패키지로 나눴다.</p>
+<pre><code>src/main/
 ├─ java/org/kgu/
 │  ├─ Main.java
-│  ├─ core/       앱 실행, 창, 데이터 모델, 로딩, 저장, 공용 UI
-│  └─ domain/     퀴즈·전투·보상, 모험·도감, 스토리·대화, 기타 사용자 기능
-└─ resources/     이미지, 문제, 대본</pre>
-      <p>도메인 기반 설계로 게임을 실행하는 공통 기반과 실제 게임 기능을 나눴다. <code>core</code>는 앱 시작, 창과 화면 전환, 모델, 리소스 로딩, 저장과 진행도, 공용 UI를 관리한다. <code>domain</code>은 퀴즈·전투·보상, 모험·도감, 스토리·대화 등 실제 게임플레이와 로그인·메뉴·설정·시연 같은 사용자 기능을 맡는다.</p>
-      <p>실행은 <code>Main → Application → MainWindow</code> 순으로 시작한다. <code>Application</code>이 객체를 조립해 화면을 등록한다. 플레이어가 조작하면 <code>View → Event → Feature</code>로 입력이 전달된다. 화면 배치는 <code>view/layout</code>, 반복 부품은 <code>view/component</code>에 둔다.</p>
-      <p><a href="../ARCHITECTURE.md">코드 탐색 가이드</a> · <a href="../adr/0001-core-and-domain-packages.md">코어와 기능의 경계</a></p>
-    </section>
+│  ├─ core/
+│  │  ├─ application/  앱 조립, 플레이어 세션, 난이도
+│  │  ├─ factory/      문제·저장·설정 로딩과 생성
+│  │  ├─ manager/      인물·이미지 관리
+│  │  ├─ model/        인물·문제·저장 공통 모델
+│  │  ├─ progression/  XP·코인·업적·해금·진행도 저장
+│  │  ├─ ui/           디자인 토큰, 공용 페인터·아이콘
+│  │  └─ window/       화면 계약·전환·공용 Swing 기반
+│  └─ domain/
+│     ├─ game/         연습·복습·배틀·결과·보상
+│     ├─ adventure/    마을·상점·덱·업적·오답 노트
+│     ├─ collection/   카드 도감·상세·획득 표시
+│     ├─ story/        프롤로그·구출 대화·엔딩
+│     ├─ login/        로컬 ID와 플레이어 연결
+│     ├─ menu/         메인·게임 준비
+│     ├─ setting/      설정
+│     ├─ showcase/     F1 장면 시연
+│     └─ battle/       기존 팀 통합 데모의 전투 경로
+└─ resources/          문제·카드·배경·대본</code></pre>
+<p>일반 게임의 전투 규칙은 <code>domain/game/feature/BattleEngine</code>에서 찾는다. <code>domain/battle</code>은 기존 통합 데모 경로이므로 발표 코드 탐색 시 두 엔진을 구분한다.</p>
+<p class="sources">근거: <a href="../ARCHITECTURE.md">코드 탐색 가이드</a>, <a href="../../src/main/java/org/kgu/core/application/Application.java">Application</a>.</p>
+</section>
+<section id="page-04" aria-labelledby="title-04"><h2 id="title-04">04. View·Event·Feature와 의존성 주입</h2>
+<pre><code>Main → Application → MainWindow에 화면 등록
 
-    <section id="page-04">
-      <h2>04. 빌드 표준화와 Gradle 선택</h2>
-      <p>팀원마다 빌드·실행 방식이 달라지는 것을 줄이고, macOS·Windows·Linux의 실행 경로 차이에 대응하기 위해 Gradle을 도입했다. Gradle Wrapper가 프로젝트의 Gradle 버전을 고정한다. macOS·Linux는 <code>./gradlew</code>, Windows는 <code>.\gradlew.bat</code>로 같은 <code>run</code>·<code>check</code> 작업을 실행한다. <code>src/main/resources</code>의 이미지·문제·대본을 배포물에 포함하고 classpath에서 읽기 때문에 프로젝트 루트나 이미지의 절대 경로를 가정할 필요가 없다.</p>
-      <p>Maven으로도 빌드와 패키징은 가능하다. 이 프로젝트에는 통합 테스트용 카드 ZIP 풀기, 작업 폴더 준비, 검증 프로그램 실행처럼 프로젝트 고유 작업이 있다. Gradle에서는 이 작업을 <code>Copy</code>와 <code>JavaExec</code> 태스크로 정의하고 <code>dependsOn</code>으로 <code>test</code>·<code>check</code>에 연결할 수 있다. 팀은 이런 작업의 실행 순서를 한 빌드 파일에서 직접 읽고 수정할 수 있다는 점을 기준으로 Gradle을 선택했다.</p>
-      <p><a href="../../build.gradle">프로젝트 빌드 설정</a> · <a href="../adr/0003-classpath-game-resources.md">classpath 리소스 결정</a></p>
-    </section>
-
-    <section id="page-05">
-      <h2>05. SOLID를 코드로 설명하기</h2>
-      <p>SRP (단일 책임 원칙) — BattlePanel은 배치·피드백·타이머를 맡고 BattleEngine은 정오답과 승패를 판정한다.</p>
-      <p>OCP (개방-폐쇄 원칙) — View와 LifecycleEvent를 구현해 화면을 등록할 수 있다. 새 화면을 연결할 때 MainWindow의 전환 알고리즘은 그대로 쓴다.</p>
-      <p>LSP (리스코프 치환 원칙) — 로그인·연습·결과는 모두 View 계약으로 등록된다. MainWindow는 구체 화면의 타입을 검사하지 않고 ViewId·컴포넌트·크기만 사용한다.</p>
-      <p>ISP (인터페이스 분리 원칙) — 표시 계약인 View와 진입·이탈 계약인 LifecycleEvent를 분리했다. 종료할 작업이 없는 화면은 기본 onExit를 쓴다.</p>
-      <p>DIP (의존성 역전 원칙) — GameFeature는 JFrame을 직접 제어하지 않고 생성자로 받은 Consumer&lt;ViewId&gt;를 호출한다. Application이 실제 화면 전환을 연결한다. 생성자 주입(DI)은 이 연결을 외부에서 전달하는 구현 방법이다.</p>
-    </section>
-
-    <section id="page-06">
-      <h2>06. 중간 평가 이후 UI와 게임 흐름 개편</h2>
-      <p>중간 평가에서 기능이 부족하다는 피드백을 받았다. 화면 전반을 다시 구성해 조작을 직관적으로 만들고, 색상·버튼·패널·카드·진행 막대는 디자인 시스템의 기준을 공유하도록 했다. 배틀에는 타격과 최종 공격 연출을 추가했고, 스토리·최종 목표·구출 대화로 전투의 결과를 이야기와 연결했다.</p>
-      <figure>
-        <img src="images/adventure-map.webp" width="640" alt="마을 선택과 최종 구출 진행률">
-        <figcaption>마을 선택과 최종 구출 진행률</figcaption>
-      </figure>
-    </section>
-
-    <section id="page-07">
-      <h2>07. 전체 데이터와 화면 흐름</h2>
-      <p>4개 분야의 80명, 난이도별 다섯 문제씩 총 1,200문제, 인물별 3단계 카드 이미지를 사용한다. 프롤로그 → 로컬 ID → 첫 접속 튜토리얼 → 메인 메뉴 → 연습·배틀 → 결과로 이어진다. 메인과 결과에서 도감과 다음 도전으로 이동하고, 오답은 오답 노트에서 복습한다.</p>
-      <figure>
-        <img src="images/collection-map.webp" width="640" alt="마을별 카드 수집 현황">
-        <figcaption>마을별 카드 수집 현황</figcaption>
-      </figure>
-    </section>
-
-    <section id="page-08">
-      <h2>08. 주요 화면 ① 연습 퀴즈</h2>
-      <p>상단에는 진행률, 왼쪽에는 인물 카드, 오른쪽에는 문제와 네 개의 보기, 하단에는 힌트·제출 버튼이 있다. 같은 분야와 난이도에서 서로 다른 인물 10명을 뽑고 보기를 섞는다. PracticeLayout이 배치하고 QuestionGUIEvent가 답안을 GameFeature에 전달한다.</p>
-      <figure>
-        <img src="images/practice.webp" width="640" alt="연습 퀴즈의 진행률·카드·문제·보기">
-        <figcaption>연습 퀴즈의 진행률·카드·문제·보기</figcaption>
-      </figure>
-    </section>
-
-    <section id="page-09">
-      <h2>09. 주요 화면 ② 배틀과 보상</h2>
-      <p>상대 HP·아이템·문제 영역을 한 화면에 표시한다. 5문제 중 3개를 맞히면 승리하며 정답마다 상대 HP가 20 감소한다. BattleEngine이 판정하면 BattlePanel이 타격과 정오답 피드백을 재생하고 다음 문제로 진행한다. 결과에서는 획득 카드·XP·코인을 확인한다. 정산에는 세션 ID를 사용해 보상 중복 지급을 막는다.</p>
-      <figure>
-        <img src="images/battle-question.webp" width="640" alt="전투 문제 제출 전 상대 HP·아이템·문제 영역">
-        <figcaption>전투 문제 제출 전 상대 HP·아이템·문제 영역</figcaption>
-      </figure>
-      <figure>
-        <img src="images/battle-feedback.webp" width="640" alt="오답 직후 정답 안내와 자동 진행">
-        <figcaption>오답 직후 정답 안내와 자동 진행</figcaption>
-      </figure>
-      <figure>
-        <img src="images/battle-result.webp" width="640" alt="전투 승리 후 카드·XP·코인 보상">
-        <figcaption>전투 승리 후 카드·XP·코인 보상</figcaption>
-      </figure>
-    </section>
-
-    <section id="page-10">
-      <h2>10. 최종 목표와 시연</h2>
-      <p>다른 세 분야에서 서로 다른 문제 30개를 맞히면 교수님 구출 전투가 열린다. 승리 후 구출 대화가 이어진다. 발표에서는 F1로 첫 정답 공격 → 승리 결과와 보상 → 교수님 구출 순서로 보여 준다. 시연은 별도 임시 프로필에서 실제 기능을 실행한다.</p>
-      <figure>
-        <img src="images/rescue-dialogue.webp" width="640" alt="최종 전투 승리 후 교수님 구출 대화">
-        <figcaption>최종 전투 승리 후 교수님 구출 대화</figcaption>
-      </figure>
-      <figure>
-        <img src="images/showcase-menu.webp" width="320" alt="F1에서 선택할 수 있는 시연 장면">
-        <figcaption>F1에서 선택할 수 있는 시연 장면</figcaption>
-      </figure>
-    </section>
-
-    <section id="page-11">
-      <h2>11. 자체 평가와 팀원 소감</h2>
-      <p>잘한 점 — 화면, 입력, 판정의 변경 지점을 구분해 화면 개편과 연출 추가를 진행했고, 전투·보상·수집을 하나의 흐름으로 연결했다.</p>
-      <p>부족한 점 — View 단위 MVP를 합친 뒤 공용 화면 전환과 UI 기준을 다시 맞추는 비용이 들었다.</p>
-      <p>팀원 소감 — 각자 맡은 기능에서 구조 변경으로 달라진 점과 다시 한다면 바꿀 점을 실제 발언으로 한 문장씩 추가한다.</p>
-    </section>
-  </main>
+View의 사용자 입력
+  → Event: 입력 전달·화면 갱신 연결
+  → Feature: 기능 흐름·보상 정책
+  → Session / Engine: 현재 상태·정답·승패
+  → Factory / ProgressStore: 리소스·저장
+  → View: 바뀐 상태 표시</code></pre>
+<ul><li>View는 표시, Event는 입력 연결, Feature는 기능 흐름을 맡는다.</li><li>루트 View는 화면을 조합한다. 배치·섹션·컨테이너는 <code>view/layout</code>, 반복되는 부품은 해당 화면의 <code>view/component</code>에 둔다.</li><li><code>Application</code>이 필요한 객체를 만들고 생성자로 전달한다. DI (의존성 주입)를 사용해 화면과 기능의 연결 지점을 외부에 뒀다.</li><li><code>GameFeature</code>는 직접 창을 바꾸지 않고 주입받은 <code>Consumer&lt;ViewId&gt;</code>에 목적지를 전달한다.</li></ul>
+<p>중간 검사 전에는 GUI와 기능이 모두 바뀔 수 있었다. 당시 규모에서 MVC (모델·뷰·컨트롤러) 체계를 추가하기보다, 필요한 책임 경계와 주입 구조를 먼저 정했다.</p>
+<p class="sources">근거: <a href="../../src/main/java/org/kgu/domain/game/feature/GameFeature.java">GameFeature</a>, <a href="../../src/main/java/org/kgu/domain/game/event/QuestionGUIEvent.java">QuestionGUIEvent</a>, <a href="../../src/main/java/org/kgu/domain/game/view/layout/PracticeLayout.java">PracticeLayout</a>.</p>
+</section>
+<section id="page-05" aria-labelledby="title-05"><h2 id="title-05">05. 객체지향으로 나눈 상태와 행동</h2>
+<div class="table-scroll" role="region" aria-label="내용 비교 표" tabindex="0"><table><thead><tr><th scope="col">고려한 점</th><th scope="col">구현 사례</th><th scope="col">얻은 효과</th></tr></thead><tbody><tr><td>캡슐화</td><td><code>BattleEngine</code>이 선택·제출·진행 메서드에서 현재 단계를 확인한다</td><td>잘못된 시점의 입력을 규칙 객체에서 거절한다</td></tr><tr><td>추상화</td><td><code>View</code>가 화면 ID·컴포넌트·기준 크기를 제공한다</td><td>화면 전환 코드는 개별 화면의 배치를 알 필요가 없다</td></tr><tr><td>다형성</td><td>로그인·문제·결과를 같은 <code>View</code> 계약으로 등록한다</td><td>서로 다른 화면을 동일한 전환 흐름으로 처리한다</td></tr><tr><td>객체 조합</td><td><code>QuestionView</code>가 연습 배치 또는 <code>BattlePanel</code>을 조합한다</td><td>화면별 구성을 담당 부품으로 나눠 변경한다</td></tr><tr><td>상태와 영속 데이터 구분</td><td><code>GameSession</code>은 한 판, <code>ProgressStore</code>는 계정 진행도를 관리한다</td><td>연습 성적과 실제 성장 기록을 분리한다</td></tr></tbody></table></div>
+<p>연습의 콤보는 이번 판의 피드백이다. 누적 최고 콤보나 업적 진행도로 저장하지 않는다. 같은 숫자라도 객체가 맡은 의미에 따라 생명주기를 구분했다.</p>
+<p class="sources">근거: <a href="../../src/main/java/org/kgu/domain/game/feature/GameSession.java">GameSession</a>, <a href="../../src/main/java/org/kgu/domain/game/feature/BattleEngine.java">BattleEngine</a>, <a href="../../src/main/java/org/kgu/core/window/View.java">View</a>.</p>
+</section>
+<section id="page-06" aria-labelledby="title-06"><h2 id="title-06">06. SOLID 원칙을 적용한 지점</h2>
+<div class="table-scroll" role="region" aria-label="내용 비교 표" tabindex="0"><table><thead><tr><th scope="col">원칙</th><th scope="col">코드 사례</th><th scope="col">설명</th></tr></thead><tbody><tr><td>SRP (단일 책임 원칙)</td><td><code>BattleEngine</code>과 <code>BattlePanel</code></td><td>전투 판정과 시각적 피드백의 변경 이유를 나눴다</td></tr><tr><td>OCP (개방-폐쇄 원칙)</td><td><code>MainWindow.register</code></td><td>화면을 추가할 때 등록과 조립을 확장하고 기존 화면 전환 알고리즘을 재사용한다</td></tr><tr><td>LSP (리스코프 치환 원칙)</td><td><code>View</code> 구현 화면</td><td>구체 화면이 달라도 ID·컴포넌트·크기를 제공하는 계약을 지켜 같은 전환 경로에 넣는다</td></tr><tr><td>ISP (인터페이스 분리 원칙)</td><td><code>View</code>와 <code>LifecycleEvent</code></td><td>화면 정보와 진입·이탈 처리를 별도 계약으로 나눴다</td></tr><tr><td>DIP (의존성 역전 원칙)</td><td><code>GameFeature</code>의 <code>Consumer&lt;ViewId&gt;</code></td><td>기능은 구체적인 창 대신 화면 이동 동작의 추상화에 의존한다</td></tr></tbody></table></div>
+<p>생성자 주입은 DI (의존성 주입)의 구현 방식이다. DIP의 사례는 그중에서도 기능이 구체 창을 직접 참조하지 않고 이동 계약을 받는 부분이다.</p>
+<p class="sources">근거: <a href="../../src/main/java/org/kgu/core/window/MainWindow.java">MainWindow</a>, <a href="../../src/main/java/org/kgu/core/window/LifecycleEvent.java">LifecycleEvent</a>, <a href="../../src/main/java/org/kgu/domain/game/feature/GameFeature.java">GameFeature</a>.</p>
+</section>
+<section id="page-07" aria-labelledby="title-07"><h2 id="title-07">07. ADR로 설명하는 설계 결정의 변화</h2>
+<p>ADR (아키텍처 결정 기록)은 구조를 왜 선택했는지 남기는 문서다. 화면별 구현에서 공통 계약으로, 화면 연출에서 독립된 저장 규칙으로 책임을 구체화했다.</p>
+<div class="table-scroll" role="region" aria-label="내용 비교 표" tabindex="0"><table><thead><tr><th scope="col">기록</th><th scope="col">해결한 문제</th><th scope="col">객체지향 관점</th><th scope="col">현재 상태</th></tr></thead><tbody><tr><td>ADR-0001: core/domain 경계</td><td>공용 기반과 화면 기능이 흩어져 있었다</td><td>기능 응집도와 책임 경계, 객체 조립 위치를 정했다</td><td>Accepted</td></tr><tr><td>ADR-0002: F1 시연 격리</td><td>시연의 답안·보상이 실제 계정에 저장될 수 있었다</td><td>동일 기능에 별도 세션·저장 객체를 조합한다</td><td>Proposed</td></tr><tr><td>ADR-0003: classpath 리소스</td><td>루트와 번들 자산이 중복되고 실행 경로에 의존했다</td><td>로딩 책임을 공용 기반에 모으고 화면은 논리 키로 조회한다</td><td>Accepted</td></tr><tr><td>ADR-0004: 카드 소유·NEW 저장</td><td>카드 소유와 알림이 서로 다른 저장 결과가 될 수 있었다</td><td>저장 확정을 연출과 분리하고 상태 변경을 저장 계층에 둔다</td><td>Proposed</td></tr></tbody></table></div>
+<p>초기 View·Event·Feature와 DI 도입은 팀의 개발 과정으로 설명한다. 표의 ADR 번호는 현재 기록의 구분이며 당시 결정 날짜의 순서를 뜻하지 않는다. Proposed는 구현이 있어도 승인 완료로 소개하지 않는다.</p>
+<p class="sources">근거: <a href="../adr/0001-core-and-domain-packages.md">ADR-0001</a>, <a href="../adr/0002-isolated-showcase.md">ADR-0002</a>, <a href="../adr/0003-classpath-game-resources.md">ADR-0003</a>, <a href="../adr/0004-card-ownership-and-new-state.md">ADR-0004</a>.</p>
+</section>
+<section id="page-08" aria-labelledby="title-08"><h2 id="title-08">08. Gradle로 빌드와 리소스 처리 통일</h2>
+<p>팀원마다 실행·빌드 절차가 달라지는 일을 줄이기 위해 Gradle을 사용했다. Wrapper로 Gradle 버전을 맞추고, Windows는 <code>.\gradlew.bat</code>, macOS·Linux는 <code>./gradlew</code>로 같은 작업을 실행한다. 이미지·문제·대본은 classpath에서 읽어 실행 폴더 이동과 경로 구분자 차이에 따른 문제를 줄였다.</p>
+<div class="table-scroll" role="region" aria-label="내용 비교 표" tabindex="0"><table><thead><tr><th scope="col">비교 기준</th><th scope="col">Gradle을 선택한 이유</th></tr></thead><tbody><tr><td>게임 실행·배포</td><td><code>application</code> 플러그인으로 실행 진입점과 배포 작업을 한곳에서 관리한다</td></tr><tr><td>리소스 처리</td><td><code>processResources</code>에 디자인 시스템 이미지 복사를 연결한다</td></tr><tr><td>팀 통합 자료</td><td>카드 ZIP 해제·실행 폴더 준비를 <code>Copy</code> 태스크로 정의한다</td></tr><tr><td>작업 순서</td><td><code>JavaExec</code>·<code>dependsOn</code>으로 준비·실행·검증의 의존 관계를 명시한다</td></tr></tbody></table></div>
+<p>Maven도 크로스플랫폼 빌드와 리소스 패키징을 지원한다. Maven은 생명주기 단계에 플러그인 목표를 연결한다. 이 프로젝트에서는 별도 준비·실행 작업을 직접 태스크로 조합하는 Gradle 구성이 맞았다. Maven의 기능 부족이 아니라 현재 작업 구성에 따른 선택이다.</p>
+<p>Gradle만으로 이식성이 보장되지는 않는다. 호환 JDK와 한글 폰트, 대소문자가 일치하는 리소스 경로도 확인해야 한다.</p>
+<p class="sources">근거: <a href="../../build.gradle">build.gradle</a>, <a href="https://docs.gradle.org/current/userguide/gradle_wrapper.html">Gradle Wrapper</a>, <a href="https://docs.gradle.org/current/userguide/application_plugin.html">Application 플러그인</a>, <a href="https://docs.gradle.org/current/userguide/task_basics.html">태스크 의존 관계</a>, <a href="https://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html">Maven 생명주기</a>.</p>
+</section>
+<section id="page-09" aria-labelledby="title-09"><h2 id="title-09">09. 데이터와 전체 화면 흐름</h2>
+<p>과학자·한국사·아이돌·교수님 4개 분야의 인물 80명, 인물별 하·중·상 각 5문제인 총 1,200문제, 인물별 3단계 카드 240장을 사용한다.</p>
+<div class="table-scroll" role="region" aria-label="내용 비교 표" tabindex="0"><table><thead><tr><th scope="col">데이터</th><th scope="col">위치·담당</th><th scope="col">사용처</th></tr></thead><tbody><tr><td>인물·문제</td><td><code>resources/questions</code>, <code>CategoryFileFactory</code></td><td>출제·힌트·전투 상대</td></tr><tr><td>카드·배경·대본</td><td><code>resources/images</code>, <code>resources/org/kgu</code></td><td>도감·문제·스토리 화면</td></tr><tr><td>한 판의 상태</td><td><code>GameSession</code>, <code>BattleEngine</code></td><td>현재 문제·선택·콤보·승패</td></tr><tr><td>계정 저장</td><td><code>SaveFactory</code>, <code>ProgressStore</code>, <code>saves/</code></td><td>카드 소유·NEW·성장·오답·해금</td></tr><tr><td>설정</td><td><code>SettingFactory</code>, <code>settings.properties</code></td><td>음향 등 사용자 설정</td></tr></tbody></table></div>
+<pre><code>프롤로그 → 로컬 ID 입력 → 최초 튜토리얼 → 메인
+  ├─ 연습 준비 → 연습 → 성적·보상 없음 → 다시 연습
+  ├─ 마을 지도 → 인물 도전 / 보스 → 구출 대화 → 결과
+  ├─ 오답 노트 → 복습 → 결과·기존 보상
+  ├─ 카드 도감 / 지원 카드 장착 / 상점 / 도전과제 / 설정
+  └─ 교수님 해금 → 최종 3페이즈 → 구출 대화 → 결과 → 엔딩</code></pre>
+<p><code>QuestionBank</code>는 문제의 고유 ID를 만들고 최근 출제 문제의 우선순위를 낮춘다. 보기 순서를 섞을 때 정답 번호도 함께 바꾼다.</p>
+<figure><a href="images/adventure-map-current.png"><img src="images/adventure-map-current.png" width="1280" height="960" alt="마을 탐험: 보스와 교수님 구출 경로, 도전 준비" loading="lazy"></a><figcaption>마을 탐험: 보스와 교수님 구출 경로, 도전 준비</figcaption></figure>
+<figure><a href="images/collection-map-current.png"><img src="images/collection-map-current.png" width="1280" height="960" alt="카드 도감 지도: 기존 지도 이미지와 현재 버튼" loading="lazy"></a><figcaption>카드 도감 지도: 기존 지도 이미지와 현재 버튼</figcaption></figure>
+<p class="sources">근거: <a href="../../src/main/java/org/kgu/domain/game/feature/QuestionBank.java">QuestionBank</a>, <a href="../../src/main/java/org/kgu/core/progression/ProgressStore.java">ProgressStore</a>.</p>
+</section>
+<section id="page-10" aria-labelledby="title-10"><h2 id="title-10">10. 주요 화면 — 연습과 오답 복습</h2>
+<div class="table-scroll" role="region" aria-label="내용 비교 표" tabindex="0"><table><thead><tr><th scope="col">화면 영역</th><th scope="col">기능</th></tr></thead><tbody><tr><td>상단</td><td>분야·난이도·모드, 진행률, 이번 판의 콤보</td></tr><tr><td>카드·문제 영역</td><td>인물 이미지, 질문, 네 개의 보기</td></tr><tr><td>하단</td><td>인라인 힌트, 선택 후 제출, 피드백 후 다음 문제</td></tr><tr><td>연습 결과</td><td>정답 수, 보상 없음 안내, 다시 연습·오답 복습</td></tr></tbody></table></div>
+<p>연습은 같은 분야·난이도에서 서로 다른 인물 10명을 출제한다. 오답 복습은 저장된 오답에서 최대 10문제를 고른다. 화면 부품은 공유하되 모드별 기록·정산 정책은 기능 로직에서 구분한다.</p>
+<ul><li><strong>연습:</strong> 카드·XP·코인·숙련도·업적·수집률·해금 진행도 등 보상과 성장 수치가 증가하지 않는다. 오답 노트와 최근 출제 기록만 갱신한다.</li><li><strong>오답 복습:</strong> 기존 XP·코인·누적 성장 처리를 유지한다. 카드는 지급하지 않는다.</li><li><strong>강제 위치:</strong> <code>GameFeature.recordAnswer</code>가 연습 기록 경로를 선택하고, <code>saveRewards</code>는 연습이면 저장 전에 종료한다. <code>GameSession.getRewards</code>는 배틀에서만 카드 후보를 반환한다.</li></ul>
+<figure><a href="images/practice-current.png"><img src="images/practice-current.png" width="1280" height="960" alt="연습: 진행률·인물 카드·보기 선택·보상 없음 안내" loading="lazy"></a><figcaption>연습: 진행률·인물 카드·보기 선택·보상 없음 안내</figcaption></figure>
+<figure><a href="images/practice-result-current.png"><img src="images/practice-result-current.png" width="1280" height="960" alt="연습 결과: 정답 9개와 보상 없음, 다시 연습" loading="lazy"></a><figcaption>연습 결과: 정답 9개와 보상 없음, 다시 연습</figcaption></figure>
+<figure><a href="images/review-result-current.png"><img src="images/review-result-current.png" width="1280" height="960" alt="오답 복습 결과: 카드 지급 없이 XP 6·코인 4 정산" loading="lazy"></a><figcaption>오답 복습 결과: 카드 지급 없이 XP 6·코인 4 정산</figcaption></figure>
+<p class="sources">근거: <a href="../../src/main/java/org/kgu/domain/game/view/layout/PracticeLayout.java">PracticeLayout</a>, <a href="../../src/main/java/org/kgu/domain/game/feature/GameFeature.java">GameFeature</a>, <a href="../../src/main/java/org/kgu/domain/game/view/component/PracticeResultPanel.java">PracticeResultPanel</a>.</p>
+</section>
+<section id="page-11" aria-labelledby="title-11"><h2 id="title-11">11. 주요 화면 — 일반 배틀과 보스</h2>
+<figure><a href="images/battle-current.png"><img src="images/battle-current.png" width="1280" height="960" alt="현재 일반 배틀: 목표·HP·인물·아이템·질문·보기" loading="lazy"></a><figcaption>현재 일반 배틀: 목표·HP·인물·아이템·질문·보기</figcaption></figure>
+<p>사진은 현재 게임 컴포넌트를 오프스크린으로 새로 촬영한 일반 배틀이다. 페이즈 목표·상대 HP·인물·아이템·답안 제출 영역을 설명한다.</p>
+<div class="table-scroll" role="region" aria-label="내용 비교 표" tabindex="0"><table><thead><tr><th scope="col">도전</th><th scope="col">문제 구성</th><th scope="col">페이즈별 통과 정답 수</th></tr></thead><tbody><tr><td>일반 인물</td><td>5문제</td><td>3개</td></tr><tr><td>마을 보스</td><td>두 난이도, 총 10문제</td><td>3개 → 4개</td></tr><tr><td>이은정 교수님</td><td>하·중·상, 총 15문제</td><td>3개 → 3개 → 4개</td></tr></tbody></table></div>
+<p>마을 보스는 해당 분야의 서로 다른 인물 3명에게 승리하면 열린다. 과학자는 앨런 튜링, 한국사는 김구, 아이돌은 영케이다. 교수님은 다른 세 분야의 서로 다른 문제 30개 정답으로 열린다. 연습 정답은 이 조건에 반영하지 않는다.</p>
+<p><code>BattleEngine</code>이 판정과 페이즈 상태를 관리하고, <code>BattlePanel</code>과 효과 컴포넌트가 공격·정오답·전환 연출을 재생한다. HP는 해당 페이즈 통과 정답 수 × 20이며 정답마다 20 감소한다. 최종 페이즈를 통과해야 승리한다.</p>
+<figure><a href="images/boss-phase-current.png"><img src="images/boss-phase-current.png" width="1280" height="960" alt="마을 보스 2페이즈: 전용 배경과 정답 4개·HP 80 목표" loading="lazy"></a><figcaption>마을 보스 2페이즈: 전용 배경과 정답 4개·HP 80 목표</figcaption></figure>
+<figure><a href="images/final-phase-current.png"><img src="images/final-phase-current.png" width="1280" height="960" alt="최종 교수님 3페이즈: 새 구출 배경과 마지막 통과 조건" loading="lazy"></a><figcaption>최종 교수님 3페이즈: 새 구출 배경과 마지막 통과 조건</figcaption></figure>
+<p class="sources">근거: <a href="../../src/main/java/org/kgu/domain/game/feature/BattlePhases.java">BattlePhases</a>, <a href="../../src/main/java/org/kgu/domain/game/feature/BattleEngine.java">BattleEngine</a>.</p>
+</section>
+<section id="page-12" aria-labelledby="title-12"><h2 id="title-12">12. 주요 화면 — 카드·지원 능력·결과</h2>
+<p>카드는 배틀 승리 시 해당 인물·단계로 획득한다. 도감에서 단계를 확인하고, 보유 카드 한 장을 지원 카드로 장착한다. 지원은 정답 피해를 올리는 대신 선택과 보상에 영향을 준다.</p>
+<div class="table-scroll" role="region" aria-label="내용 비교 표" tabindex="0"><table><thead><tr><th scope="col">성향</th><th scope="col">역할</th></tr></thead><tbody><tr><td>분석</td><td>오답 보기 제거·인물 힌트</td></tr><tr><td>돌파</td><td>콤보 조건을 만족하면 코인 보너스</td></tr><tr><td>수호</td><td>힌트·실패 위기의 새 보충 문제</td></tr><tr><td>집중</td><td>전투 XP 보너스</td></tr></tbody></table></div>
+<p>결과는 판정이 끝난 세션의 카드·XP·코인과 다음 행동을 표시한다. 최초 승리·난이도에 따라 보상을 가산하고, 같은 세션을 다시 저장해도 정산을 중복 지급하지 않는다.</p>
+<p>카드 소유와 단계별 NEW는 저장에서 먼저 확정한다. 획득 연출을 건너뛰어도 소유 기록이 유지된다. NEW는 도감에서 해당 단계 상세를 열 때만 해제한다. 패배 결과는 같은 도전 재시도, 연습 결과는 같은 조건의 다시 연습으로 연결한다.</p>
+<figure><a href="images/collection-new-current.png"><img src="images/collection-new-current.png" width="1280" height="960" alt="카드 도감 목록: 새 전시실 배경과 카드별 NEW 표시" loading="lazy"></a><figcaption>카드 도감 목록: 새 전시실 배경과 카드별 NEW 표시</figcaption></figure>
+<figure><a href="images/card-acquisition-current.png"><img src="images/card-acquisition-current.png" width="1280" height="960" alt="카드 획득: 지원 능력·숙련도 확인과 즉시 장착" loading="lazy"></a><figcaption>카드 획득: 지원 능력·숙련도 확인과 즉시 장착</figcaption></figure>
+<figure><a href="images/battle-result-current.png"><img src="images/battle-result-current.png" width="1280" height="960" alt="배틀 결과: 카드 획득과 XP·코인 정산 완료" loading="lazy"></a><figcaption>배틀 결과: 카드 획득과 XP·코인 정산 완료</figcaption></figure>
+<p class="sources">근거: <a href="../../src/main/java/org/kgu/core/progression/CardPower.java">CardPower</a>, <a href="../../src/main/java/org/kgu/domain/collection/event/CardRewardEvent.java">CardRewardEvent</a>, <a href="../../src/main/java/org/kgu/domain/game/event/ResultGUIEvent.java">ResultGUIEvent</a>.</p>
+</section>
+<section id="page-13" aria-labelledby="title-13"><h2 id="title-13">13. 스토리·최종 목표와 F1 시연</h2>
+<p>프롤로그에서 교수님 실종을 제시하고, 마을 도전과 최종 3페이즈를 거쳐 구출 대화·결과·GAME CLEAR로 이어진다. 엔딩은 레벨·수집률·보스 기록·최초 구출 시각과 크레딧을 보여 주며 계속 플레이할 수 있다.</p>
+<p>발표에서는 게임 창에서 F1을 열어 장면을 선택한다. 일반 플레이와 같은 기능 객체를 별도 임시 프로필에 연결해 실제 저장을 건드리지 않고 상황을 재현한다.</p>
+<div class="table-scroll" role="region" aria-label="내용 비교 표" tabindex="0"><table><thead><tr><th scope="col">시연 순서</th><th scope="col">F1 장면 이름</th><th scope="col">보여 줄 내용</th></tr></thead><tbody><tr><td>1</td><td>연습 문제</td><td>힌트·보기 선택·보상 없는 연습</td></tr><tr><td>2</td><td>첫 정답 · 공격 연출</td><td>입력→판정→효과의 연결</td></tr><tr><td>3</td><td>마을 보스 · 2페이즈</td><td>목표·HP가 바뀌는 단계별 전투</td></tr><tr><td>4</td><td>승리 결과 · 카드 획득</td><td>저장 확정·카드 공개·다음 행동</td></tr><tr><td>5</td><td>교수님 구출 · 대화</td><td>최종 전투와 스토리 연결</td></tr><tr><td>6</td><td>최종 구출 · GAME CLEAR</td><td>엔딩 통계·계속 플레이</td></tr></tbody></table></div>
+<figure><a href="images/rescue-dialogue-current.png"><img src="images/rescue-dialogue-current.png" width="1280" height="960" alt="교수님 구출 대화: 현재 배경·인물·대사창" loading="lazy"></a><figcaption>교수님 구출 대화: 현재 배경·인물·대사창</figcaption></figure>
+<figure><a href="images/ending-current.png"><img src="images/ending-current.png" width="1280" height="960" alt="엔딩: 새 캠퍼스 배경과 GAME CLEAR·플레이 기록" loading="lazy"></a><figcaption>엔딩: 새 캠퍼스 배경과 GAME CLEAR·플레이 기록</figcaption></figure>
+<figure><a href="images/showcase-menu-current.png"><img src="images/showcase-menu-current.png" width="472" height="622" alt="F1 시연 메뉴 내용: 보스·엔딩 항목, 운영체제 창 테두리 제외" loading="lazy"></a><figcaption>F1 시연 메뉴 내용: 보스·엔딩 항목, 운영체제 창 테두리 제외</figcaption></figure>
+<p>효과의 연속 재생은 실행 시연으로 설명한다. F1 사진은 실제 메뉴 컴포넌트의 내용 영역이다.</p>
+<p class="sources">근거: <a href="../../src/main/java/org/kgu/domain/showcase/feature/ShowcaseScene.java">ShowcaseScene</a>, <a href="../../src/main/java/org/kgu/domain/showcase/feature/ShowcaseFeature.java">ShowcaseFeature</a>, <a href="../../src/main/java/org/kgu/domain/story/feature/EndingFeature.java">EndingFeature</a>.</p>
+</section>
+<section id="page-14" aria-labelledby="title-14"><h2 id="title-14">14. 디자인 시스템과 UI/UX 개편</h2>
+<figure><a href="images/tutorial-current.png"><img src="images/tutorial-current.png" width="1280" height="960" alt="현재 튜토리얼: 연습 성장 차단과 배틀·복습 보상 안내" loading="lazy"></a><figcaption>현재 튜토리얼: 연습 성장 차단과 배틀·복습 보상 안내</figcaption></figure>
+<p>중간 평가 이후 화면을 개편하며 밝은 바탕과 블루 중심의 공통 기준을 세웠다. 버튼·패널·입력·진행 막대의 표시 기준을 디자인 시스템에 모으고 Java2D 페인터와 Swing 컴포넌트로 공유한다.</p>
+<ul><li>주요 행동과 보조 행동을 구분하고, 답안 선택·제출·정오답 상태를 분명하게 표시한다.</li><li>기존 배경·인물 이미지는 유지하고, 버튼·아이콘·프레임은 코드로 표현한다.</li><li>연습·배틀·결과의 반복 부품을 컴포넌트로 나눠 수정 범위를 줄인다.</li><li>효과의 재생과 타이머 정리는 View가 맡고, 정답·승패·저장 확정은 기능 로직에서 처리한다.</li></ul>
+<p>사진은 현재 튜토리얼의 성장 안내 페이지를 새로 촬영한 오프스크린 결과다. 새 배경과 공용 버튼 표현을 함께 확인할 수 있다.</p>
+<p class="sources">근거: <a href="../design-system/index.html#implementation">디자인 시스템</a>, <a href="../../src/main/java/org/kgu/core/ui/ComponentPainter.java">공용 UI</a>, <a href="../../src/main/java/org/kgu/domain/adventure/view/TutorialView.java">TutorialView</a>.</p>
+</section>
+<section id="page-15" aria-labelledby="title-15"><h2 id="title-15">15. 팀 운영 — 변형 Git Flow와 역할 분담</h2>
+<p>Git Flow를 팀에 맞게 변형해 <code>develop</code>을 기본 브랜치와 통합 기준으로 운영했다. 팀원별 MVP를 가져와 View 단위로 분업하고, <code>feat/new-architecture</code>의 개선 예시를 공유해 공통 구조를 맞췄다.</p>
+<pre><code>develop에서 기능 브랜치 분기
+  → 담당 화면·기능 구현
+  → Pull Request로 변경 공유
+  → 통합 브랜치에서 화면 연결과 데이터 흐름 확인</code></pre>
+<div class="table-scroll" role="region" aria-label="내용 비교 표" tabindex="0"><table><thead><tr><th scope="col">협업 단위</th><th scope="col">정리한 내용</th></tr></thead><tbody><tr><td>회의</td><td>화면 연결, 전투 동작, 스토리와 피드백 반영 범위</td></tr><tr><td>역할 분담</td><td>문제·배틀·결과·도감 등 화면 단위 책임</td></tr><tr><td>구조 공유</td><td>View·Event·Feature 예시와 생성자 주입 방식</td></tr><tr><td>공용 파일</td><td>화면 전환·공통 UI 수정 시 변경 범위 공유</td></tr><tr><td>통합</td><td>PR로 변경 내용을 확인하고 전체 플레이 흐름 연결</td></tr></tbody></table></div>
+<p>현재 최종 작업의 PR 대상은 <code>feat/final</code>이다. 초기 개발의 <code>develop</code> 운영과 최종 결합 대상을 구분한다. 회의 횟수·실명별 담당은 확인된 팀 자료만 발표에 추가한다.</p>
+<p class="sources">근거: 팀이 설명한 개발 과정, <a href="../reference/TEAM_MODULE_GUIDE.md">기존 분업 가이드</a>, <a href="../PROFESSOR_BATTLE.md">당시 회의 반영 기록</a>. 두 문서의 옛 패키지 이름은 현재 구조가 아닌 당시 분업 기록으로 사용한다.</p>
+</section>
+<section id="page-16" aria-labelledby="title-16"><h2 id="title-16">16. 자체 평가와 배운 점</h2>
+<div class="table-scroll" role="region" aria-label="내용 비교 표" tabindex="0"><table><thead><tr><th scope="col">구분</th><th scope="col">평가</th></tr></thead><tbody><tr><td>잘한 점</td><td>팀원별 MVP를 통합하고, 입력·기능·표시 책임을 나눠 UI 개편과 게임 기능 확장을 이어 갔다</td></tr><tr><td>잘한 점</td><td>카드 수집·지원 능력·보스·구출 대화·엔딩을 하나의 목표 흐름으로 연결했다</td></tr><tr><td>잘한 점</td><td>연습의 성장 차단, 배틀 전용 카드 지급, 세션 중복 정산 방지를 UI 밖의 규칙으로 구현했다</td></tr><tr><td>개선할 점</td><td>공용 UI와 화면 전환 기준을 통합 초기에 합의했다면 후반 재작업을 줄일 수 있었다</td></tr><tr><td>개선할 점</td><td>규칙 변경과 함께 문서·기존 검사 기대값·발표 사진도 갱신하는 절차가 필요했다</td></tr><tr><td>배운 점</td><td>객체지향 설계는 클래스 수를 늘리는 일보다 상태와 행동의 책임, 협업 시 변경 범위를 정하는 일에 가까웠다</td></tr></tbody></table></div>
+<p>팀원별 소감은 본인의 실제 경험으로 마무리한다. 맡은 기능, 가장 큰 설계 변화, 다음 프로젝트에서 바꿀 점을 한 문장씩 준비한다. 확인되지 않은 발언을 대신 작성하지 않는다.</p>
+<p class="photo-note">사진: 필수 없음. 마무리는 설계에서 배운 점과 실제 팀원 소감으로 구성한다.</p>
+</section></main>
+<footer><p>16페이지 발표 예시. 현재 게임 화면을 새로 촬영한 사진 15장을 반영했다. 사진을 누르면 원본 PNG를 볼 수 있다. 촬영 범위와 팀원별 확인 사항은 <a href="README.md">제작 가이드</a>에 정리했다.</p></footer>
 </body>
 </html>

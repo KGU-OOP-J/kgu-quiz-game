@@ -5,12 +5,9 @@ import org.kgu.core.model.Person;
 import org.kgu.core.model.Save;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.SeekableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardOpenOption;
 import java.util.Objects;
 import java.util.Scanner;
 
@@ -49,6 +46,23 @@ public final class SaveFactory extends TextFileFactory<Save> {
         if (Files.exists(getPath())) {
             load();
         }
+        restoreOwnedCards(save);
+    }
+
+    private void restoreOwnedCards(Save target) throws IOException {
+        var profile = progress.snapshot();
+        for (String key : profile.keys("card.owned.")) {
+            if (!profile.flag(key)) continue;
+            String[] fields = key.substring("card.owned.".length()).split("\\|", -1);
+            if (fields.length != 3) throw new IOException("카드 진행도 형식 오류: " + key);
+            int stage;
+            try { stage = Integer.parseInt(fields[2]); }
+            catch (NumberFormatException e) { throw new IOException("카드 단계 형식 오류: " + key, e); }
+            if (stage < 1 || stage > 3) throw new IOException("카드 단계 범위 오류: " + key);
+            try {
+                for (Difficulty difficulty : Difficulty.values()) if (difficulty.getStage() == stage) target.record(fields[0], fields[1], difficulty);
+            } catch (IllegalArgumentException e) { throw new IOException("카드 진행도 형식 오류: " + key, e); }
+        }
     }
 
     @Override
@@ -60,15 +74,13 @@ public final class SaveFactory extends TextFileFactory<Save> {
                 throw in.ioException();
             }
 
+            restoreOwnedCards(loaded);
             save = loaded;
         } catch (IllegalArgumentException e) {
             throw new IOException("세이브 파일 형식 오류: " + getPath(), e);
         }
     }
 
-    /**
-     * 디스크에 쓰기가 성공한 뒤에만 메모리에 획득을 반영한다. 중복 보상은 쓰지 않는다.
-     */
     public boolean record(Person person, Difficulty difficulty) throws IOException {
         Objects.requireNonNull(person);
         Objects.requireNonNull(difficulty);
@@ -82,33 +94,24 @@ public final class SaveFactory extends TextFileFactory<Save> {
             return false;
         }
 
-        createParentPath();
-        String line = person.getCategory() + "\t" + person.getName() + "\t" + difficulty.getLabel();
-        String separator = needsLineSeparator() ? System.lineSeparator() : "";
-
-        Files.writeString(getPath(), separator + line + System.lineSeparator(), StandardCharsets.UTF_8,
-            StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        progress.acquireCard(person.getCategory(), person.getName(), difficulty.getStage());
         save.record(person.getCategory(), person.getName(), difficulty);
+        try { save(); }
+        catch (IOException e) {
+            java.util.logging.Logger.getLogger(SaveFactory.class.getName()).warning("Legacy card export failed; ownership and NEW are saved in " + progress.path() + ": " + e.getMessage());
+        }
 
         return true;
     }
 
-    private boolean needsLineSeparator() throws IOException {
-        if (!Files.exists(getPath()) || Files.size(getPath()) == 0) {
-            return false;
-        }
-        try (SeekableByteChannel channel = Files.newByteChannel(getPath(), StandardOpenOption.READ)) {
-            ByteBuffer last = ByteBuffer.allocate(1);
-            channel.position(channel.size() - 1);
-            channel.read(last);
-            byte value = last.array()[0];
-            return value != '\n' && value != '\r';
-        }
-    }
-
     public void save() throws IOException {
         createParentPath();
-        Files.write(getPath(), save.getLines(), StandardCharsets.UTF_8);
+        Path temporary = getPath().resolveSibling(getPath().getFileName() + ".tmp");
+        try {
+            Files.write(temporary, save.getLines(), StandardCharsets.UTF_8);
+            try { Files.move(temporary, getPath(), java.nio.file.StandardCopyOption.ATOMIC_MOVE, java.nio.file.StandardCopyOption.REPLACE_EXISTING); }
+            catch (java.nio.file.AtomicMoveNotSupportedException e) { Files.move(temporary, getPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING); }
+        } finally { Files.deleteIfExists(temporary); }
     }
 
     private void createParentPath() throws IOException {

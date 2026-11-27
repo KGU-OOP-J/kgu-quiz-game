@@ -17,11 +17,18 @@ public final class ResultGUIEvent {
     private final GameFeature gameFeature;
     public ResultGUIEvent(GameFeature gameFeature){this.gameFeature=gameFeature;}
     public void refresh(ResultView view){
+        if (gameFeature.getSession().getMode() == GameSession.Mode.PRACTICE) {
+            view.display(presentation(gameFeature.getSession(), List.of(), "연습 모드 · 보상 및 성장 반영 없음", false));
+            view.configureNext(gameFeature.nextActionLabel(), gameFeature::nextAction);
+            return;
+        }
         try{
             gameFeature.saveRewards();
             if (gameFeature.beginRescueDialogue()) return;
             view.display(presentation(gameFeature.getSession(), gameFeature.getSavedRewards(),
-                    "다음 목표: " + gameFeature.nextGoal(), false));
+                    (gameFeature.getSavedRewards().isEmpty() ? "" : "카드 숙련도 +1 · ") + "다음 목표: " + gameFeature.nextGoal(), false));
+            view.configureNext(gameFeature.nextActionLabel(), gameFeature::nextAction);
+            javax.swing.SwingUtilities.invokeLater(() -> { if (view.isShowing()) new org.kgu.domain.collection.event.CardRewardEvent(gameFeature).present(view); });
         }catch(IOException e){
             view.display(presentation(gameFeature.getSession(), gameFeature.getSavedRewards(),
                     "보상 저장 실패: " + e.getMessage(), true));
@@ -42,10 +49,15 @@ public final class ResultGUIEvent {
                 .toList();
         return new ResultPresentation(session.id(), session.getMode().toString(), battleSummary,
                 session.getCorrectCount(), session.getAnsweredCount(), session.getQuestionCount(), cards,
-                session.getDifficulty().getStage(), session.rewardSettlement(), statusMessage, saveFailed);
+                session.getDifficulty().getStage(), session.rewardSettlement(), statusMessage, saveFailed,
+                session.getMode() == GameSession.Mode.PRACTICE);
     }
 
     public Optional<BufferedImage> image(String key){return gameFeature.image(key);}
+    public void startReview() {
+        try { gameFeature.startReview(); }
+        catch (IllegalArgumentException e) { gameFeature.openAdventure(); }
+    }
     public void returnToMenu(){gameFeature.returnToMenu();}
     public void openCollection(){gameFeature.openCollection();}
     public void openAdventure(){gameFeature.openAdventure();}

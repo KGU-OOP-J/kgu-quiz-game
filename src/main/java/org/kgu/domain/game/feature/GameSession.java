@@ -21,8 +21,12 @@ public final class GameSession {
     private final Difficulty difficulty;
     private final List<QuestionBank.Entry> entries;
     private final BattleEngine battle;
-    private final List<Person> earnedPersons = new ArrayList<>();
     private final Set<CardKey> newlyAcquiredCards = new HashSet<>();
+    private final Set<CardKey> presentedCards = new HashSet<>();
+    private int combo, bestCombo;
+    public int combo() { return combo; }
+    public int bestCombo() { return bestCombo; }
+    public boolean markCardPresented(Person person) { return presentedCards.add(new CardKey(person.getCategory(), person.getName(), difficulty)); }
     private int questionIndex, selectedAnswer, correctCount, hints;
     private Phase phase = Phase.QUESTION;
     private String receipt = "";
@@ -62,6 +66,7 @@ public final class GameSession {
     public Optional<RewardSettlement> rewardSettlement() { return Optional.ofNullable(rewardSettlement); }
 
     void recordRewardSettlement(PlayerProgress before, PlayerProgress after) {
+        if (mode == Mode.PRACTICE) return;
         if (rewardSettlement != null) return;
         rewardSettlement = new RewardSettlement(LevelProgress.from(before), LevelProgress.from(after),
                 after.experience() - before.experience(), after.coins() - before.coins());
@@ -88,7 +93,8 @@ public final class GameSession {
         require(Phase.QUESTION);
         if (selectedAnswer == 0) throw new IllegalStateException("정답을 선택해 주세요.");
         boolean correct = selectedAnswer == getCurrentQuiz().getAnswer();
-        if (correct) { correctCount++; if (mode == Mode.PRACTICE) earnedPersons.add(getCurrentPerson()); }
+        if (correct) { correctCount++; bestCombo = Math.max(bestCombo, ++combo); }
+        else combo = 0;
         phase = Phase.FEEDBACK;
         return correct;
     }
@@ -96,9 +102,10 @@ public final class GameSession {
         require(Phase.FEEDBACK); questionIndex++; selectedAnswer = 0;
         phase = questionIndex == entries.size() ? Phase.FINISHED : Phase.QUESTION;
     }
-    public List<Person> getRewards() { return mode == Mode.BATTLE ? battle.rewards() : List.copyOf(earnedPersons); }
+    public List<Person> getRewards() { return mode == Mode.BATTLE ? battle.rewards() : List.of(); }
 
     void recordNewCard(Person person) {
+        if (mode != Mode.BATTLE) throw new IllegalStateException("카드는 배틀 승리 보상으로만 획득할 수 있습니다.");
         newlyAcquiredCards.add(new CardKey(person.getCategory(), person.getName(), difficulty));
     }
 

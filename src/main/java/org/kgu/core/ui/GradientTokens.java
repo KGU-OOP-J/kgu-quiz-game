@@ -30,6 +30,14 @@ public enum GradientTokens {
     }
 
     public LinearGradientPaint paint(int y, int height) {
-        return new LinearGradientPaint(0, y, 0, y + Math.max(1, height), stops, colors);
+        return paint(y, height, 1f);
+    }
+
+    public LinearGradientPaint paint(int y, int height, float brightness) {
+        Color[] adjusted = brightness == 1f ? colors : Arrays.stream(colors).map(color -> new Color(
+            Math.clamp(Math.round(color.getRed() * brightness), 0, 255),
+            Math.clamp(Math.round(color.getGreen() * brightness), 0, 255),
+            Math.clamp(Math.round(color.getBlue() * brightness), 0, 255))).toArray(Color[]::new);
+        return new LinearGradientPaint(0, y, 0, y + Math.max(1, height), stops, adjusted);
     }
 }

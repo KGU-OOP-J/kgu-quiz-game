@@ -1,0 +1,103 @@
+WHO'S NEXT? - English production prompts for dedicated backgrounds
+
+Current status
+All seven PNG files listed below have now been added by the user and loaded through the production classpath. Their screens were rendered offscreen at 1280 x 960 and 960 x 720. These prompts are retained as production records; they are no longer recommendations to generate missing files. Do not regenerate or overwrite the added artwork.
+
+Selection criteria
+The images in src/main/resources and docs/design-system were checked against GameResources.backgroundPath and BattlePhases.
+At selection time, this file covered seven optional dedicated backgrounds whose files were absent. Prompts for recreating existing images or replacing backgrounds already used by existing screens were excluded.
+A missing file does not make a new illustration mandatory. The collection can keep its existing map and background, and bosses can keep the existing campus background as a fallback. The added ending artwork now replaces its solid-color fallback. The prompts below describe the dedicated environment artwork already supplied.
+
+Optional production list
+- scene-collection.png: an exhibition-room environment behind the collection. Keep existing map, village, and card images.
+- scene-boss-phase-1.png, scene-boss-phase-2.png: two states of the same village-boss location. Keeping the existing campus background is also valid.
+- scene-final-phase-1.png, scene-final-phase-2.png, scene-final-phase-3.png: three states of the professor-rescue location. Keeping the existing campus background is also valid.
+- scene-ending.png: a dedicated environment behind GAME CLEAR. Do not include text, statistics, or buttons in the image.
+
+Excluded from production
+- docs/design-system/scene-shop.png, scene-guild.png, scene-tutorial.png, scene-settings.png already exist and are included by Gradle. Their recreation prompts have been removed.
+- scene-login.png, scene-menu.png, scene-practice-setup.png, scene-study.png, scene-review.png, scene-adventure.png, scene-battle.png, scene-result.png were replacement drafts for existing backgrounds. They are not referenced by the current code and have been removed from the prompt list.
+- Login keeps src/main/resources/org/kgu/login/main_login.png.
+- The menu, setup, village exploration, and ordinary battles keep src/main/resources/org/kgu/battle/campus_background.png.
+- Practice and wrong-answer review keep src/main/resources/images/question-background.png.
+- The prologue, rescue dialogue, and results keep src/main/resources/org/kgu/result/result_background.png.
+- Do not recreate the collection map, existing village images, or the 240 existing character-card stage images.
+- Buttons, icons, card frames, NEW badges, HP, XP, coins, text, attack effects, and particles are drawn with Java2D/Swing. They are not separate PNG assets to produce.
+
+Usage
+Place any selected new PNG at src/main/resources/org/kgu/art/<filename>. Its classpath is /org/kgu/art/<filename>. Unlike the four existing docs/design-system images, these new files are not in the automatic copy list, so place them directly in this resource directory.
+Run Gradle resource processing and restart the application. Adding files while the application is running does not trigger automatic reloading.
+Attach the existing campus_background.png and docs/design-system/scene-shop.png and scene-guild.png as visual references. Use them as references; do not recreate them.
+The two village-boss backgrounds and the three final-rescue backgrounds each form a sequence showing the same location. After creating the first image in a sequence, attach it as a reference for the following states.
+Output: 4:3 landscape, recommended 1920 x 1440, opaque PNG. Do not bake UI into the image. These are newly proposed prompts, not recovered historical generation prompts.
+This document update does not generate or replace images or change code references.
+
+
+[01] scene-collection.png
+Status: File added and rendered offscreen - do not regenerate
+PRD classpath: /org/kgu/art/scene-collection.png
+Current screen classpath: /org/kgu/art/scene-collection.png
+Generation prompt (English):
+Environment illustration for a casual quiz RPG set on a bright university campus. Match the attached existing campus, shop, and guild images in palette, architecture, materials, and brushwork. Soft hand-painted game background with cream-colored masonry, blue roofs, a sky-blue, blue, and white palette, natural light-green vegetation, diffused daylight, and subtle depth. Do not use large black or dark-navy areas or gold ornamentation as the dominant visual treatment. Do not wash the entire scene out with white or haze. Landscape 4:3 composition, 1920 x 1440, opaque PNG. The composition must remain readable if the outer 12% is cropped. Keep the central 70% visually quiet for UI overlays. Render the environment only. No people, human silhouettes, characters, text, numbers, logos, watermarks, buttons, cards, icons, HP bars, or UI panels. Do not paint flashing beams, camera-shake effects, explosions, or particles; the game code handles those effects.
+A university archive exhibition room that preserves knowledge and memories of notable people. Place slim glass display cases and blue-framed storage shelves along the left and right edges. Do not put faces, cards, or lettering inside the displays. Add rear windows overlooking a campus garden. Keep the central and right-hand area, roughly 70% of the frame, orderly and quiet for the card list and detail panel. Do not pre-render the card-collection interface into the background.
+
+
+[02] scene-boss-phase-1.png
+Status: File added and rendered offscreen - do not regenerate
+PRD classpath: /org/kgu/art/scene-boss-phase-1.png
+Current screen classpath: /org/kgu/art/scene-boss-phase-1.png
+Generation prompt (English):
+Environment illustration for a casual quiz RPG set on a bright university campus. Match the attached existing campus, shop, and guild images in palette, architecture, materials, and brushwork. Soft hand-painted game background with cream-colored masonry, blue roofs, a sky-blue, blue, and white palette, natural light-green vegetation, diffused daylight, and subtle depth. Do not use large black or dark-navy areas or gold ornamentation as the dominant visual treatment. Do not wash the entire scene out with white or haze. Landscape 4:3 composition, 1920 x 1440, opaque PNG. The composition must remain readable if the outer 12% is cropped. Keep the central 70% visually quiet for UI overlays. Render the environment only. No people, human silhouettes, characters, text, numbers, logos, watermarks, buttons, cards, icons, HP bars, or UI panels. Do not paint flashing beams, camera-shake effects, explosions, or particles; the game code handles those effects.
+A special university challenge plaza where the first village-boss trial takes place. Preserve the architecture, camera height, and path direction of the existing battle plaza. Add a few blue banners and low stone columns along the left and right edges so the location feels like a formal gateway beyond an ordinary battle. This background is shared by the scientist, historical-figure, and idol categories; do not emphasize symbols belonging to only one category. Keep the central character position and lower question-panel area clear.
+
+
+[03] scene-boss-phase-2.png
+Status: File added and rendered offscreen - do not regenerate
+PRD classpath: /org/kgu/art/scene-boss-phase-2.png
+Current screen classpath: /org/kgu/art/scene-boss-phase-2.png
+Generation prompt (English):
+Environment illustration for a casual quiz RPG set on a bright university campus. Match the attached existing campus, shop, and guild images in palette, architecture, materials, and brushwork. Soft hand-painted game background with cream-colored masonry, blue roofs, a sky-blue, blue, and white palette, natural light-green vegetation, diffused daylight, and subtle depth. Do not use large black or dark-navy areas or gold ornamentation as the dominant visual treatment. Do not wash the entire scene out with white or haze. Landscape 4:3 composition, 1920 x 1440, opaque PNG. The composition must remain readable if the outer 12% is cropped. Keep the central 70% visually quiet for UI overlays. Render the environment only. No people, human silhouettes, characters, text, numbers, logos, watermarks, buttons, cards, icons, HP bars, or UI panels. Do not paint flashing beams, camera-shake effects, explosions, or particles; the game code handles those effects.
+The second state of exactly the same plaza, buildings, camera, and horizon shown in the attached scene-boss-phase-1.png. A blue gate at the rear is now open, and pale-blue detailing along the path is slightly more distinct, suggesting entry into the final trial. Make sunlight and contrast a little clearer than in the first state while preserving bright daylight. Do not move to another location or darken the scene. Do not paint motion or particles.
+
+
+[04] scene-final-phase-1.png
+Status: File added and rendered offscreen - do not regenerate
+PRD classpath: /org/kgu/art/scene-final-phase-1.png
+Current screen classpath: /org/kgu/art/scene-final-phase-1.png
+Generation prompt (English):
+Environment illustration for a casual quiz RPG set on a bright university campus. Match the attached existing campus, shop, and guild images in palette, architecture, materials, and brushwork. Soft hand-painted game background with cream-colored masonry, blue roofs, a sky-blue, blue, and white palette, natural light-green vegetation, diffused daylight, and subtle depth. Do not use large black or dark-navy areas or gold ornamentation as the dominant visual treatment. Do not wash the entire scene out with white or haze. Landscape 4:3 composition, 1920 x 1440, opaque PNG. The composition must remain readable if the outer 12% is cropped. Keep the central 70% visually quiet for UI overlays. Render the environment only. No people, human silhouettes, characters, text, numbers, logos, watermarks, buttons, cards, icons, HP bars, or UI panels. Do not paint flashing beams, camera-shake effects, explosions, or particles; the game code handles those effects.
+The courtyard in front of the university's main building, where the final rescue restores the professor's memories. Preserve the cream-colored buildings, blue roofs, garden, and broad stone path of the existing campus. In the distance, place a faint, transparent blue-white glass structure around the main entrance to suggest a seal on the professor's memories. The structure has no letters or runes and must not obstruct the central character-card area. Convey quiet tension within a clear, brightly lit daytime setting.
+
+
+[05] scene-final-phase-2.png
+Status: File added and rendered offscreen - do not regenerate
+PRD classpath: /org/kgu/art/scene-final-phase-2.png
+Current screen classpath: /org/kgu/art/scene-final-phase-2.png
+Generation prompt (English):
+Environment illustration for a casual quiz RPG set on a bright university campus. Match the attached existing campus, shop, and guild images in palette, architecture, materials, and brushwork. Soft hand-painted game background with cream-colored masonry, blue roofs, a sky-blue, blue, and white palette, natural light-green vegetation, diffused daylight, and subtle depth. Do not use large black or dark-navy areas or gold ornamentation as the dominant visual treatment. Do not wash the entire scene out with white or haze. Landscape 4:3 composition, 1920 x 1440, opaque PNG. The composition must remain readable if the outer 12% is cropped. Keep the central 70% visually quiet for UI overlays. Render the environment only. No people, human silhouettes, characters, text, numbers, logos, watermarks, buttons, cards, icons, HP bars, or UI panels. Do not paint flashing beams, camera-shake effects, explosions, or particles; the game code handles those effects.
+Use the identical camera and composition of the main-building courtyard in the attached scene-final-phase-1.png. The transparent blue-white glass structure around the entrance now has static cracks. Gaps between a few fragments at its edges reveal more of the original architecture and sunlight. Show the weakening memory seal through environmental changes alone. Keep the ground intact; this is not a ruined site or a dark battlefield. No explosions or drifting particles.
+
+
+[06] scene-final-phase-3.png
+Status: File added and rendered offscreen - do not regenerate
+PRD classpath: /org/kgu/art/scene-final-phase-3.png
+Current screen classpath: /org/kgu/art/scene-final-phase-3.png
+Generation prompt (English):
+Environment illustration for a casual quiz RPG set on a bright university campus. Match the attached existing campus, shop, and guild images in palette, architecture, materials, and brushwork. Soft hand-painted game background with cream-colored masonry, blue roofs, a sky-blue, blue, and white palette, natural light-green vegetation, diffused daylight, and subtle depth. Do not use large black or dark-navy areas or gold ornamentation as the dominant visual treatment. Do not wash the entire scene out with white or haze. Landscape 4:3 composition, 1920 x 1440, opaque PNG. The composition must remain readable if the outer 12% is cropped. Keep the central 70% visually quiet for UI overlays. Render the environment only. No people, human silhouettes, characters, text, numbers, logos, watermarks, buttons, cards, icons, HP bars, or UI panels. Do not paint flashing beams, camera-shake effects, explosions, or particles; the game code handles those effects.
+The final state of the same courtyard, with the same architecture, camera, and horizon as the two attached final-rescue backgrounds. Most of the glass seal around the entrance has cleared away, revealing the open main-building doors and a gentle blue-white light inside. Use clear blues and bright whites to give the final trial visual clarity without oversaturating the colors. Do not include a professor portrait, a giant boss, a diploma, or lettering. Keep the central card area, upper HP area, and lower question area clear.
+
+
+[07] scene-ending.png
+Status: File added and rendered offscreen - do not regenerate
+PRD classpath: /org/kgu/art/scene-ending.png
+Current screen classpath: /org/kgu/art/scene-ending.png
+Generation prompt (English):
+Environment illustration for a casual quiz RPG set on a bright university campus. Match the attached existing campus, shop, and guild images in palette, architecture, materials, and brushwork. Soft hand-painted game background with cream-colored masonry, blue roofs, a sky-blue, blue, and white palette, natural light-green vegetation, diffused daylight, and subtle depth. Do not use large black or dark-navy areas or gold ornamentation as the dominant visual treatment. Do not wash the entire scene out with white or haze. Landscape 4:3 composition, 1920 x 1440, opaque PNG. The composition must remain readable if the outer 12% is cropped. Keep the central 70% visually quiet for UI overlays. Render the environment only. No people, human silhouettes, characters, text, numbers, logos, watermarks, buttons, cards, icons, HP bars, or UI panels. Do not paint flashing beams, camera-shake effects, explosions, or particles; the game code handles those effects.
+The university campus has returned to peace after the professor's rescue. Use the existing main-building architecture, blue roofs, well-kept garden, and a broad open path. Morning sunlight, white flowers, and a clean sky convey relief and the possibility of another journey. Keep the central 70% simple for the GAME CLEAR heading, play statistics, and credits panel that the game will overlay; place attractive environmental details along the left and right edges. Do not include graduation crowds or diplomas implying that graduation has already occurred. No writing or celebratory fireworks.
+
+
+Review and integration
+1. Produce only the optional backgrounds you choose to add. Existing assets and removed replacement drafts are not production tasks.
+2. Check the palette, architecture, and perspective against the reference images. Reject dark-theme styling, large gold ornamentation, baked-in UI, or lettering.
+3. Keep the exact filenames and resource paths. Do not rename a new image to main_login.png or another existing filename to overwrite an existing asset.
+4. After resource processing and application restart, check integration using existing checks, in-memory rendering, and execution logs. The presence of this prompt list does not establish that the full PRD is implemented.

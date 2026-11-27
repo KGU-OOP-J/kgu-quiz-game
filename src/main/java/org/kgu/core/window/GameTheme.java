@@ -2,7 +2,6 @@ package org.kgu.core.window;
 
 import org.kgu.core.ui.ComponentPainter;
 import org.kgu.core.ui.GradientTokens;
-import javax.imageio.ImageIO;
 import javax.swing.*;
 import javax.swing.plaf.*;
 import javax.swing.plaf.basic.*;
@@ -22,7 +21,6 @@ public final class GameTheme {
     public static final Color MUTED = new Color(157, 174, 186);
     public static final Color PAGE = new Color(0xEDF1F6);
     public static final Color BLUE_TEXT = new Color(0x275898);
-    private static final Map<String, Optional<BufferedImage>> ASSETS = new ConcurrentHashMap<>();
     private static boolean installed;
 
     private GameTheme() { }
@@ -85,11 +83,7 @@ public final class GameTheme {
     }
 
     public static Optional<BufferedImage> resourceImage(String path) {
-        return ASSETS.computeIfAbsent(path, key -> {
-            try (var stream = GameTheme.class.getResourceAsStream(key)) {
-                return stream == null ? Optional.empty() : Optional.ofNullable(ImageIO.read(stream));
-            } catch (java.io.IOException e) { return Optional.empty(); }
-        });
+        return GameResources.image(path);
     }
 
     public static void cover(Graphics2D g, Image image, int x, int y, int width, int height) {
@@ -103,19 +97,7 @@ public final class GameTheme {
 
     public static void backdrop(Graphics2D g, int width, int height, String scene, float shade) {
         g.setColor(PAGE); g.fillRect(0, 0, width, height);
-        Optional<BufferedImage> art = asset("scene-" + scene);
-        if (art.isPresent()) cover(g, art.get(), 0, 0, width, height);
-        else {
-            String resource = switch (scene) {
-                case "login" -> "/org/kgu/login/main_login.png";
-                case "prologue", "dialogue" -> "/org/kgu/result/result_background.png";
-                case "study" -> "/images/question-background.png";
-                default -> "/org/kgu/battle/campus_background.png";
-            };
-            resourceImage(resource).ifPresent(image -> cover(g, image, 0, 0, width, height));
-        }
-        g.setColor(new Color(PAGE.getRed(), PAGE.getGreen(), PAGE.getBlue(), Math.round(255 * shade)));
-        g.fillRect(0, 0, width, height);
+        GameResources.background(scene).ifPresent(image -> cover(g, image, 0, 0, width, height));
     }
 
     public static void paintBackdrop(Graphics source, JComponent component, String scene, float shade) {
@@ -190,17 +172,25 @@ public final class GameTheme {
     }
 
     public static void paintButton(Graphics2D g, AbstractButton button, Color tint) {
+        paintButton(g, button, tint, button.getModel().isRollover() ? 1f : 0f,
+            button.getModel().isPressed() && button.getModel().isArmed() ? 1f : 0f);
+    }
+
+    public static void paintButton(Graphics2D g, AbstractButton button, Color tint, float hover, float pressed) {
         UiStyle.prepare(g); int w = button.getWidth(), h = button.getHeight();
         boolean selected = button.getModel().isSelected() || Boolean.TRUE.equals(button.getClientProperty("selected"));
-        boolean hover = button.getModel().isRollover(), pressed = button.getModel().isPressed();
         boolean correct = Boolean.TRUE.equals(button.getClientProperty("correct"));
-        boolean incorrect = Boolean.TRUE.equals(button.getClientProperty("incorrect"));
-        GradientTokens style = selected ? GradientTokens.SELECTED
-            : !button.isEnabled() ? GradientTokens.DISABLED
+        boolean incorrect = Boolean.TRUE.equals(button.getClientProperty("incorrect")) || Boolean.TRUE.equals(button.getClientProperty("wrong"));
+        boolean answer = Boolean.TRUE.equals(button.getClientProperty("answer"));
+        GradientTokens style = !button.isEnabled() && !answer ? GradientTokens.DISABLED
+            : selected ? GradientTokens.SELECTED
+            : answer ? GradientTokens.NEUTRAL
             : Boolean.TRUE.equals(button.getClientProperty("secondaryAction")) ? GradientTokens.NEUTRAL
             : GradientTokens.PRIMARY;
         Color textColor = ComponentPainter.button(g, w, h, style, selected, correct, incorrect,
-            hover && button.isEnabled(), pressed && button.isEnabled(), button.hasFocus());
+            button.isEnabled() ? hover : 0f, button.isEnabled() ? pressed : 0f, button.hasFocus());
+        if (!textColor.equals(button.getForeground())) button.setForeground(textColor);
+        g.translate(0, button.isEnabled() ? Math.round(pressed * 2) : 0);
         g.setFont(button.getFont());
         g.setColor(textColor);
         javax.swing.text.View html = (javax.swing.text.View)button.getClientProperty(BasicHTML.propertyKey);
@@ -211,13 +201,23 @@ public final class GameTheme {
             while (g.getFontMetrics(font).stringWidth(text) > w - 24 && font.getSize2D() > 11) font = font.deriveFont(font.getSize2D() - 1);
             g.setFont(font); FontMetrics metrics = g.getFontMetrics();
             int x = button.getHorizontalAlignment() == SwingConstants.LEFT ? 15 : (w - metrics.stringWidth(text)) / 2;
-            g.drawString(text, x, (h - metrics.getHeight()) / 2 + metrics.getAscent() - 1);
+            g.drawString(text, x, (h - metrics.getHeight()) / 2 + metrics.getAscent() - 2);
         }
     }
 
     public static final class ButtonUI extends BasicButtonUI {
         public static ComponentUI createUI(JComponent component) { return new ButtonUI(); }
         @Override protected void installDefaults(AbstractButton button) { super.installDefaults(button); button.setOpaque(false); button.setContentAreaFilled(false); button.setBorderPainted(false); button.setRolloverEnabled(true); button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR)); button.setMargin(new Insets(9, 16, 9, 16)); }
+        @Override protected void installListeners(AbstractButton button) {
+            super.installListeners(button);
+            if (!(button instanceof UiButton) && !Boolean.TRUE.equals(button.getClientProperty("gameSoundWired"))) {
+                button.putClientProperty("gameSoundWired", true);
+                button.addActionListener(event -> GameResources.play(GameResources.Sound.UI_CLICK));
+                button.addMouseListener(new java.awt.event.MouseAdapter() {
+                    @Override public void mouseEntered(java.awt.event.MouseEvent event) { if (button.isEnabled()) GameResources.play(GameResources.Sound.UI_HOVER); }
+                });
+            }
+        }
         @Override public void paint(Graphics graphics, JComponent component) { Graphics2D g = (Graphics2D)graphics.create(); AbstractButton button = (AbstractButton)component; paintButton(g, button, button.getBackground()); g.dispose(); }
     }
 
