@@ -34,6 +34,7 @@ public final class AdventureView extends JPanel implements View {
     private String activeTab = "world", category = "과학자";
     private Difficulty difficulty = Difficulty.LOW;
     private Person target;
+    private JComponent challengeHelp;
 
     public AdventureView(AdventureFeature feature) {
         super(new BorderLayout());
@@ -61,6 +62,12 @@ public final class AdventureView extends JPanel implements View {
         home.putClientProperty("secondaryAction", true);
         home.setPreferredSize(new Dimension(108, 44));
         actions.add(home);
+        JButton help = button("규칙 · 보유 아이템", "challengeDetails", () -> {
+            if (challengeHelp != null) content.remove(challengeHelp);
+            challengeHelp = new org.kgu.domain.adventure.view.component.ChallengeHelpPanel(feature.profile(), () -> pages.show(content, activeTab));
+            content.add(challengeHelp, "help"); pages.show(content, "help");
+        });
+        actions.add(help);
         header.add(actions, BorderLayout.EAST);
         return header;
     }

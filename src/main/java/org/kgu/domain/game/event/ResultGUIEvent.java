@@ -17,11 +17,6 @@ public final class ResultGUIEvent {
     private final GameFeature gameFeature;
     public ResultGUIEvent(GameFeature gameFeature){this.gameFeature=gameFeature;}
     public void refresh(ResultView view){
-        if (gameFeature.getSession().getMode() == GameSession.Mode.PRACTICE) {
-            view.display(presentation(gameFeature.getSession(), List.of(), "연습 모드 · 보상 및 성장 반영 없음", false));
-            view.configureNext(gameFeature.nextActionLabel(), gameFeature::nextAction);
-            return;
-        }
         try{
             gameFeature.saveRewards();
             if (gameFeature.beginRescueDialogue()) return;
@@ -50,13 +45,15 @@ public final class ResultGUIEvent {
         return new ResultPresentation(session.id(), session.getMode().toString(), battleSummary,
                 session.getCorrectCount(), session.getAnsweredCount(), session.getQuestionCount(), cards,
                 session.getDifficulty().getStage(), session.rewardSettlement(), statusMessage, saveFailed,
-                session.getMode() == GameSession.Mode.PRACTICE);
+                session.getMode() == GameSession.Mode.PRACTICE, session.answers());
     }
 
     public Optional<BufferedImage> image(String key){return gameFeature.image(key);}
-    public void startReview() {
-        try { gameFeature.startReview(); }
-        catch (IllegalArgumentException e) { gameFeature.openAdventure(); }
+    public void reviewCurrent(ResultView view) {
+        try { gameFeature.startCurrentReview(); }
+        catch (IOException | IllegalArgumentException | IllegalStateException e) {
+            javax.swing.JOptionPane.showMessageDialog(view, e.getMessage(), "복습 시작 실패", javax.swing.JOptionPane.ERROR_MESSAGE);
+        }
     }
     public void returnToMenu(){gameFeature.returnToMenu();}
     public void openCollection(){gameFeature.openCollection();}

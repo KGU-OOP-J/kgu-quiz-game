@@ -1,6 +1,7 @@
 package org.kgu.domain.collection.view.component;
 
 import org.kgu.core.model.Person;
+import org.kgu.core.window.GameTheme;
 import org.kgu.core.window.UiButton;
 import org.kgu.core.window.UiStyle;
 
@@ -30,7 +31,9 @@ public final class CardArt {
         UiButton button = new UiButton(text, color);
         button.putClientProperty("secondaryAction", color.equals(Color.WHITE));
         button.setFont(UiStyle.FONT.deriveFont(Font.BOLD, fontSize));
-        button.setForeground(color.equals(Color.WHITE) ? UiStyle.NAVY : Color.WHITE);
+        button.setForeground(GameTheme.PAPER);
+        // 메뉴와 같은 색: 강조 버튼은 파랑, 나머지는 차분한 남색
+        button.putClientProperty("selectionTint", color.equals(BLUE) ? new Color(43, 104, 165) : new Color(35, 52, 73));
         button.addActionListener(e -> action.run());
         return button;
     }
@@ -92,17 +95,17 @@ public final class CardArt {
     private static void drawLockedCard(Graphics2D g, String name, int x, int y, int w, int h) {
         float s = w / 100f;
         int arc = Math.round(14 * s), pad = Math.round(4 * s);
-        gradientRound(g, x, y, w, h, arc, new Color(222, 229, 240), new Color(196, 206, 222));
-        g.setColor(new Color(240, 244, 250));
-        g.setStroke(new BasicStroke(2f * s));
+        gradientRound(g, x, y, w, h, arc, new Color(32, 48, 66), new Color(18, 30, 45));
+        g.setColor(new Color(113, 136, 148, 120));
+        g.setStroke(new BasicStroke(1.5f * s));
         g.drawRoundRect(x + 1, y + 1, w - 2, h - 2, arc, arc);
         Shape oldClip = g.getClip();
         g.clip(new RoundRectangle2D.Float(x + pad, y + pad, w - pad * 2, h - pad * 2, arc - pad, arc - pad));
-        drawSilhouette(g, x + pad, y + pad, w - pad * 2, h - pad * 2, new Color(168, 180, 200));
+        drawSilhouette(g, x + pad, y + pad, w - pad * 2, h - pad * 2, new Color(52, 70, 90));
         g.setClip(oldClip);
         drawLock(g, x + w / 2, y + h / 2, s);
         // 잠긴 카드도 이름은 보여 준다. 위치는 획득 카드의 이름 띠와 같다.
-        g.setColor(new Color(90, 104, 128));
+        g.setColor(GameTheme.MUTED);
         drawName(g, name, x + w / 2, y + h - Math.round(20 * s) + Math.round(4.5f * s), w - Math.round(18 * s), s);
     }
 
@@ -115,11 +118,11 @@ public final class CardArt {
 
     private static void drawLock(Graphics2D g, int cx, int cy, float s) {
         int bw = Math.round(24 * s), bh = Math.round(19 * s);
-        g.setColor(new Color(248, 250, 253));
+        g.setColor(GameTheme.GOLD);
         g.setStroke(new BasicStroke(4f * s, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
         g.drawArc(cx - bw / 3, cy - bh, bw * 2 / 3, bh * 3 / 2, 0, 180);
         g.fillRoundRect(cx - bw / 2, cy - bh / 4, bw, bh, Math.round(6 * s), Math.round(6 * s));
-        g.setColor(new Color(150, 162, 182));
+        g.setColor(GameTheme.DARK);
         g.fillOval(cx - Math.round(2.5f * s), cy + bh / 6, Math.round(5 * s), Math.round(5 * s));
         g.fillRect(cx - Math.round(s), cy + bh / 6 + Math.round(3 * s), Math.round(2 * s), Math.round(5 * s));
     }
@@ -198,7 +201,7 @@ public final class CardArt {
 
     private Optional<WaveMap> waveMap(int w, int h) {
         if (waveMap == null) {
-            image("ui/map").ifPresent(map -> waveMap = new WaveMap(map, w, h));
+            image("ui/map").ifPresent(map -> waveMap = new WaveMap(map, image("ui/map_ruin").orElse(null), w, h));
         }
         return Optional.ofNullable(waveMap);
     }
@@ -212,14 +215,17 @@ public final class CardArt {
      * @param lockedVillage 자물쇠를 그릴 마을 번호(없으면 -1)
      * @param unlock 0이면 잠김, 0~1이면 자물쇠가 풀리는 중, 1이면 다 열림
      * @param hint 잠겨 있을 때 섬 위쪽에 보여 줄 여는 조건
+     * @param reveal 섬마다 폐허에서 복구된 정도(0~1)
+     * @param world 지도 전체가 복구된 정도(0~1)
      */
-    public void paintMap(Graphics2D g, int w, int h, double seconds, double[] villageScales, int lockedVillage, double unlock, String hint) {
+    public void paintMap(Graphics2D g, int w, int h, double seconds, double[] villageScales, int lockedVillage, double unlock, String hint,
+                  double[] reveal, double world) {
         Optional<WaveMap> map = waveMap(w, h);
         if (map.isEmpty()) {
             paintBackground(g, w, h);
             return;
         }
-        BufferedImage frame = map.get().frame(seconds);
+        BufferedImage frame = map.get().frame(seconds, reveal, world);
         boolean sealed = lockedVillage >= 0 && unlock < 1;
         // 봉인이 있으면 빛 번짐을 더하려고 작업 화면에 그린 뒤 한 번에 옮긴다
         Graphics2D target = sealed ? lockArt.begin(frame) : g;
@@ -233,18 +239,8 @@ public final class CardArt {
     private final LockArt lockArt = new LockArt();
 
     public void paintBackground(Graphics2D g, int w, int h) {
-        Optional<BufferedImage> background = image("ui/background");
-        if (background.isPresent()) {
-            drawCover(g, background.get(), 0, 0, w, h);
-            return;
-        }
-        g.setPaint(new GradientPaint(0, 0, new Color(205, 226, 250), 0, h, new Color(240, 246, 253)));
-        g.fillRect(0, 0, w, h);
-        g.setColor(new Color(255, 255, 255, 110));
-        g.fillOval(-60, h - 106, 300, 140);
-        g.fillOval(150, h - 76, 260, 120);
-        g.fillOval(w - 260, h - 96, 320, 150);
-        g.fillOval(w - 180, -50, 260, 110);
+        // 도전 준비 화면과 같은 어두운 캠퍼스 배경
+        GameTheme.backdrop(g, w, h, "collection", 0.35f);
     }
 
     /**

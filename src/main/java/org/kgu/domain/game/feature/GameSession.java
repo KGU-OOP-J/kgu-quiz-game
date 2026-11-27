@@ -21,6 +21,8 @@ public final class GameSession {
     private final Difficulty difficulty;
     private final List<QuestionBank.Entry> entries;
     private final BattleEngine battle;
+    private final List<Person> earnedPersons = new ArrayList<>();
+    private final List<AnswerRecord> answers = new ArrayList<>();
     private final Set<CardKey> newlyAcquiredCards = new HashSet<>();
     private final Set<CardKey> presentedCards = new HashSet<>();
     private int combo, bestCombo;
@@ -66,7 +68,6 @@ public final class GameSession {
     public Optional<RewardSettlement> rewardSettlement() { return Optional.ofNullable(rewardSettlement); }
 
     void recordRewardSettlement(PlayerProgress before, PlayerProgress after) {
-        if (mode == Mode.PRACTICE) return;
         if (rewardSettlement != null) return;
         rewardSettlement = new RewardSettlement(LevelProgress.from(before), LevelProgress.from(after),
                 after.experience() - before.experience(), after.coins() - before.coins());
@@ -93,8 +94,9 @@ public final class GameSession {
         require(Phase.QUESTION);
         if (selectedAnswer == 0) throw new IllegalStateException("정답을 선택해 주세요.");
         boolean correct = selectedAnswer == getCurrentQuiz().getAnswer();
-        if (correct) { correctCount++; bestCombo = Math.max(bestCombo, ++combo); }
+        if (correct) { correctCount++; bestCombo = Math.max(bestCombo, ++combo); if (mode == Mode.PRACTICE) earnedPersons.add(getCurrentPerson()); }
         else combo = 0;
+        answers.add(new AnswerRecord(currentEntry(), selectedAnswer, correct));
         phase = Phase.FEEDBACK;
         return correct;
     }
@@ -102,10 +104,22 @@ public final class GameSession {
         require(Phase.FEEDBACK); questionIndex++; selectedAnswer = 0;
         phase = questionIndex == entries.size() ? Phase.FINISHED : Phase.QUESTION;
     }
-    public List<Person> getRewards() { return mode == Mode.BATTLE ? battle.rewards() : List.of(); }
+    /** Only original submissions are recorded; shield retries do not replace learning history. */
+    public record AnswerRecord(QuestionBank.Entry entry, int selectedAnswer, boolean correct) {
+        public String selectedText() { return entry.quiz().getChoices().get(selectedAnswer - 1); }
+        public String correctText() { return entry.quiz().getChoices().get(entry.quiz().getAnswer() - 1); }
+    }
+    public List<AnswerRecord> answers() { return List.copyOf(answers); }
+    public List<QuestionBank.Entry> wrongEntries() {
+        return answers.stream().filter(answer -> !answer.correct()).map(AnswerRecord::entry).toList();
+    }
+    void recordBattleAnswer() {
+        if (!battle.isRetry()) answers.add(new AnswerRecord(currentEntry(), battle.selected() + 1, battle.feedback().correct()));
+    }
+
+    public List<Person> getRewards() { return mode == Mode.BATTLE ? battle.rewards() : List.copyOf(earnedPersons); }
 
     void recordNewCard(Person person) {
-        if (mode != Mode.BATTLE) throw new IllegalStateException("카드는 배틀 승리 보상으로만 획득할 수 있습니다.");
         newlyAcquiredCards.add(new CardKey(person.getCategory(), person.getName(), difficulty));
     }
 

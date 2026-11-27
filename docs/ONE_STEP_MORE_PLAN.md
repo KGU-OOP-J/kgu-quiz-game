@@ -1,3 +1,5 @@
+> 이 문서는 PR 작성 당시 기록입니다. 최신 통합 결과와 연습 규칙은 [PR15_INTEGRATION](PR15_INTEGRATION.md)을 우선합니다. 통합 과정에서는 회귀 방지를 위해 테스트를 추가·수정했습니다.
+
 # Final Game Polish 구현 계획
 
 기준: [요구사항](one_step_more.md). 작업 브랜치: `feat/one-step-more`.

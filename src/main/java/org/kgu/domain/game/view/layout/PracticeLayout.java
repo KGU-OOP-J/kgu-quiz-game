@@ -104,13 +104,14 @@ public final class PracticeLayout extends JPanel {
         JPanel bottom = GameTheme.clear(new GridLayout(2, 1, 0, 12));
         int answer = session.getCurrentQuiz().getAnswer();
         String message = asking ? session.getMode() == GameSession.Mode.PRACTICE
-            ? "연습 전용 · 보상·성장 없음 · 카드는 배틀 승리로만 획득합니다."
+            ? "힌트는 자유롭게 · 정답 카드 획득 · 10문제 만점이면 5코인"
             : "복습에서는 힌트를 자유롭게 보고 오답을 정리할 수 있습니다. 카드 획득은 배틀 승리로만 가능합니다."
             : (session.getSelectedAnswer() == answer ? "정답! " : "오답 — ") + "정답: " + session.getCurrentQuiz().getChoices().get(answer - 1);
         if (!asking && java.util.Set.of(3, 5, 10).contains(session.combo())) message = session.combo() + " COMBO! · " + message;
         bottom.add(label(message, 18));
         JPanel buttons = GameTheme.clear(new GridLayout(1, 3, 20, 0));
-        JButton hintButton = button("힌트 보기", hint);
+        JButton hintButton = button("힌트 보기 / 닫기", hint);
+        hintButton.setName("practiceHint");
         hintButton.setEnabled(asking);
         JButton action = button(asking ? "정답 제출" : "다음 문제", submit);
         action.setEnabled(!asking || session.getSelectedAnswer() > 0);

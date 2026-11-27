@@ -17,9 +17,12 @@ public final class QuestionView extends JPanel implements View {
     private BattlePanel battlePanel;
     private CardView practiceCard;
     private PracticeLayout practiceLayout;
+    private boolean feedbackShown;
     private String hintText = "";
     private int displayedQuestion = -1;
     private String displayedSession = "";
+    public boolean isPracticeHintVisible() { return !hintText.isBlank(); }
+    public void hidePracticeHint() { showHint(""); }
     public void showHint(String text) { hintText = text; if (practiceLayout != null) practiceLayout.showHint(text); }
     private final Timer practiceHit = new Timer(16, e -> animatePracticeHit());
     private void animatePracticeHit() {
@@ -49,7 +52,7 @@ public final class QuestionView extends JPanel implements View {
         setBorder(null);
         if (practiceCard == null || displayedQuestion != session.getQuestionIndex() || !displayedSession.equals(session.id())) {
             practiceCard = new CardView(session.getCurrentPerson(), session.currentEntry().difficulty().getStage(), art);
-            practiceCard.reservePracticeEffectSpace(); hintText = "";
+            practiceCard.reservePracticeEffectSpace(); practiceCard.setName("practicePortrait"); hintText = ""; feedbackShown = false;
             displayedQuestion = session.getQuestionIndex(); displayedSession = session.id();
         }
         practiceLayout = new PracticeLayout(session, practiceCard, answer -> {
@@ -62,9 +65,11 @@ public final class QuestionView extends JPanel implements View {
         revalidate();
         repaint();
         if (session.getPhase() == GameSession.Phase.FEEDBACK) {
-            if (correctAnswer) practiceCard.startCorrectHit(System.nanoTime());
-            else practiceCard.startHit(System.nanoTime());
-            practiceHit.start();
+            if (!feedbackShown) {
+                practiceCard.startPracticeFeedback(session.getSelectedAnswer() == session.getCurrentQuiz().getAnswer(), System.nanoTime());
+                feedbackShown = true;
+            }
+            if (practiceCard.isHitAnimating()) practiceHit.start();
         }
     }
     public void playShowcaseAnswers(boolean correct, boolean continuous) {

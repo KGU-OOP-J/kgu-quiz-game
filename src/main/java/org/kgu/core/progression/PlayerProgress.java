@@ -5,6 +5,11 @@ import java.util.*;
 /** A detached profile snapshot. Only ProgressStore publishes persisted mutations. */
 public final class PlayerProgress {
     final Properties values;
+    private boolean demoAccess;
+    /** Unlocks only this detached snapshot; no fake answers or clears are persisted. */
+    public PlayerProgress withDemoAccess() {
+        PlayerProgress preview = new PlayerProgress(values); preview.demoAccess = true; return preview;
+    }
     public PlayerProgress() { values = new Properties(); }
     PlayerProgress(Properties source) { values = new Properties(); values.putAll(source); }
     public int number(String key) { return Integer.parseInt(values.getProperty(key, "0")); }
@@ -49,11 +54,11 @@ public final class PlayerProgress {
     public int totalStars() { return keys("stage.").stream().mapToInt(this::number).sum(); }
     public static final int PROFESSOR_REQUIRED = 30;
     public int rescueProgress() { return (int)keys("solved.external.").stream().filter(this::flag).count(); }
-    public boolean professorUnlocked() { return rescueProgress() >= PROFESSOR_REQUIRED; }
+    public boolean professorUnlocked() { return demoAccess || rescueProgress() >= PROFESSOR_REQUIRED; }
     public boolean professorRescued() {
         return keys("stage.boss.교수님|이은정|").stream().anyMatch(k -> number(k) > 0);
     }
-    public boolean bossUnlocked(String category) { return category.equals("교수님") ? professorUnlocked() : cleared(category) >= 3; }
+    public boolean bossUnlocked(String category) { return demoAccess || (category.equals("교수님") ? professorUnlocked() : cleared(category) >= 3); }
     public int bossWins() { return (int) keys("stage.boss.").stream().filter(k -> number(k) > 0).count(); }
     public String equipped() { return text("equipped"); }
     public int inventory(ShopItem item) { return number("item." + item.name()); }

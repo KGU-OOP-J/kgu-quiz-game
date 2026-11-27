@@ -70,6 +70,8 @@ public final class ResultView extends JPanel implements View {
     private final JPanel rewardPanels = new JPanel(new GridLayout(1, 2, 24, 0));
     private final org.kgu.domain.game.view.component.PracticeResultPanel practiceResult = new org.kgu.domain.game.view.component.PracticeResultPanel();
     private JButton collectionAction;
+    private List<GameSession.AnswerRecord> answerRecords = List.of();
+    private final JButton reviewCurrent = new UiButton("이번 오답 복습", new Color(0x275898));
     private final JPanel actions = new JPanel(new GridLayout(1, 3, 10, 0));
     private final ResultSection cardSection = new ResultSection("획득한 보상 카드");
     private final ResultSection xpSection = new ResultSection("경험치");
@@ -172,8 +174,12 @@ public final class ResultView extends JPanel implements View {
         actions.add(collectionAction);
         nextAction.addActionListener(e -> nextCommand.run());
         actions.add(nextAction);
-        actions.setLayout(new GridLayout(1, 4, 10, 0));
-        actions.add(action("오답 복습", new Color(0x275898), event::startReview));
+        actions.setLayout(new GridLayout(1, 5, 10, 0));
+        JButton study = action("학습 기록", new Color(0x275898), () -> JOptionPane.showMessageDialog(this,
+            new org.kgu.domain.game.view.component.LearningReviewPanel(answerRecords), "이번 학습 기록", JOptionPane.PLAIN_MESSAGE));
+        study.setName("studySummary"); actions.add(study);
+        reviewCurrent.setName("reviewCurrent"); reviewCurrent.putClientProperty("secondaryAction", true);
+        reviewCurrent.addActionListener(e -> event.reviewCurrent(this)); actions.add(reviewCurrent);
         add(actions);
         retry.setForeground(Color.WHITE);
         retry.addActionListener(e -> event.refresh(this));
@@ -239,10 +245,12 @@ public final class ResultView extends JPanel implements View {
     public void display(ResultPresentation result) {
         hp.removeAll();
         showingBattle = result.battle().isPresent();
-        practiceResult.setVisible(result.practice());
-        rewardPanels.setVisible(!result.practice());
-        collectionAction.setVisible(!result.practice());
-        actions.setLayout(new GridLayout(1, result.practice() ? 3 : 4, 10, 0));
+        practiceResult.setVisible(false);
+        answerRecords = result.answers();
+        reviewCurrent.setEnabled(answerRecords.stream().anyMatch(a -> !a.correct()));
+        rewardPanels.setVisible(true);
+        collectionAction.setVisible(true);
+        actions.setLayout(new GridLayout(1, 5, 10, 0));
         var battle = result.battle().orElse(null);
         if (battle != null) {
             boolean victory = battle.victory();
@@ -267,15 +275,11 @@ public final class ResultView extends JPanel implements View {
         if (result.cardRewards().isEmpty()) rewards.add(new EmptyRewardCard());
         emptyRewardMessage.setText(result.saveFailed() ? "저장된 보상이 없습니다." : "획득한 보상이 없습니다.");
         emptyRewardMessage.setVisible(result.cardRewards().isEmpty());
-        if (result.practice()) {
-            finishXpAnimation(); finishCoinFade();
-        } else {
-            showSettlement(result);
-            showCoins(result);
-        }
+        showSettlement(result);
+        showCoins(result);
         status.setText("<html><div style='text-align:center'>" + result.statusMessage() + "</div></html>");
         status.setForeground(result.saveFailed() ? new Color(180, 30, 30) : new Color(20, 35, 60));
-        retry.setVisible(!result.practice() && result.saveFailed());
+        retry.setVisible(result.saveFailed());
         victoryHeader.showEffect(result.sessionId(), battle == null ? HeaderEffect.NONE
                 : battle.victory() ? HeaderEffect.VICTORY : HeaderEffect.DEFEAT);
         revalidate();

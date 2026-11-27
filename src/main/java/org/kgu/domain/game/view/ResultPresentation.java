@@ -10,10 +10,10 @@ import java.util.Optional;
 public record ResultPresentation(String sessionId, String modeLabel, Optional<BattleSummary> battle,
                                  int correctCount, int answeredCount, int questionCount,
                                  List<CardReward> cardRewards, int cardStage, Optional<RewardSettlement> settlement,
-                                 String statusMessage, boolean saveFailed, boolean practice) {
+                                 String statusMessage, boolean saveFailed, boolean practice, List<org.kgu.domain.game.feature.GameSession.AnswerRecord> answers) {
     public ResultPresentation {
         cardRewards = List.copyOf(cardRewards);
-        if (practice) { cardRewards = List.of(); settlement = Optional.empty(); saveFailed = false; }
+        answers = List.copyOf(answers);
     }
 
     public enum CardStatus { NEW, ALREADY_OWNED }

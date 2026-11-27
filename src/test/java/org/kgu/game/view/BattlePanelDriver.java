@@ -19,6 +19,7 @@ public final class BattlePanelDriver {
             var field = BattlePanel.class.getDeclaredField("animation");
             field.setAccessible(true);
             timer = (Timer) field.get(panel);
+            if (battle.boss()) finishAnimation();
         } catch (ReflectiveOperationException ex) {
             throw new AssertionError(ex);
         }

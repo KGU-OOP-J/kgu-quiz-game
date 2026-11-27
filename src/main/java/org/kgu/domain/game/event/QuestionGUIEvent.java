@@ -30,6 +30,8 @@ public final class QuestionGUIEvent {
     }
 
     public void showHint(QuestionView view) {
+        if (view.isPracticeHintVisible()) { view.hidePracticeHint(); return; }
+        if (getSession().getPhase() != GameSession.Phase.QUESTION) return;
         getSession().recordHint();
         view.showHint(String.join("\n", getSession().getCurrentPerson().getInformation()));
         org.kgu.core.window.GameResources.play(org.kgu.core.window.GameResources.Sound.HINT);
@@ -47,7 +49,8 @@ public final class QuestionGUIEvent {
             org.kgu.core.window.GameResources.play(correct ? org.kgu.core.window.GameResources.Sound.CORRECT : org.kgu.core.window.GameResources.Sound.WRONG);
             if (correct && java.util.Set.of(3, 5, 10).contains(getSession().combo())) org.kgu.core.window.GameResources.play(org.kgu.core.window.GameResources.Sound.COMBO);
             view.showPractice(correct);
-        } catch (java.io.UncheckedIOException e) {
+            gameFeature.saveRewards();
+        } catch (java.io.UncheckedIOException | IOException e) {
             JOptionPane.showMessageDialog(view, e.getMessage(), "답안 기록 실패", JOptionPane.ERROR_MESSAGE);
         }
     }
@@ -67,7 +70,6 @@ public final class QuestionGUIEvent {
             JOptionPane.PLAIN_MESSAGE, null, options, options[0]);
         if (answer == 1) {
             org.kgu.core.window.GameResources.play(org.kgu.core.window.GameResources.Sound.UI_CANCEL);
-            if (getSession().getMode() == GameSession.Mode.PRACTICE) { gameFeature.returnToMenu(); return; }
             try {
                 gameFeature.saveRewards();
                 gameFeature.returnToMenu();

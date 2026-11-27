@@ -32,6 +32,175 @@ class AdventureFlowTest {
     private SaveFactory save;
     private final AtomicReference<ViewId> destination = new AtomicReference<>();
     private final Path project = Path.of(System.getProperty("game.projectDir"));
+    @Test void practicePaysFiveCoinsOnlyForACompletedPerfectRun() throws Exception {
+        int initialCoins = game.profile().coins();
+        for (boolean perfect : new boolean[]{false, true}) {
+            game.startPractice("과학자", Difficulty.LOW);
+            int baseline = game.profile().coins();
+            int count = 0;
+            while (game.getSession().getPhase() != GameSession.Phase.FINISHED) {
+                int answer = game.getSession().getCurrentQuiz().getAnswer();
+                game.selectAnswer(!perfect && count == 0 ? answer % 4 + 1 : answer);
+                game.submitAnswer(); game.saveRewards();
+                assertEquals(baseline, game.profile().coins(), "no coin reward before finishing");
+                game.nextQuestion(); count++;
+            }
+            game.saveRewards();
+            assertEquals(baseline + (perfect ? 5 : 0), game.profile().coins());
+            assertEquals(perfect ? 5 : 0, game.getSession().rewardSettlement().orElseThrow().coinsEarned());
+            game.saveRewards(); assertEquals(baseline + (perfect ? 5 : 0), game.profile().coins(), "no duplicate payout");
+        }
+        assertEquals(initialCoins + 5, game.profile().coins());
+        game.startPractice("과학자", Difficulty.LOW);
+        game.selectAnswer(game.getSession().getCurrentQuiz().getAnswer()); game.submitAnswer(); game.saveRewards();
+        assertEquals(initialCoins + 5, game.profile().coins(), "abandoning a partial perfect run pays nothing");
+    }
+
+    @Test void demoAccountsUnlockChallengesAndPreviewCardsWithoutGrantingProgress() throws Exception {
+        for (String id : List.of("admin", " CHEAT ")) {
+            SaveFactory demoSave = new SaveFactory(temp.resolve(id.trim() + ".txt")); demoSave.open();
+            PlayerSession player = new PlayerSession(id, demoSave);
+            assertTrue(player.isDemoMode());
+            GameFeature demo = new GameFeature(player, PersonManager.getInstance(), ImageManager.getInstance(),
+                new SettingFactory(temp.resolve("demo-settings"), new Setting()), destination::set);
+            CollectionFeature gallery = new CollectionFeature(PersonManager.getInstance(), ImageManager.getInstance(), player, destination::set);
+            assertTrue(demo.categoryUnlocked("교수님")); assertTrue(gallery.categoryAvailable("교수님"));
+            assertEquals(80, gallery.getCollectedCount()); assertEquals(60, gallery.getStageCount("교수님"));
+            assertEquals(List.of(1, 2, 3), gallery.getStages(demo.getChallengeCandidates("교수님").getFirst()));
+            demo.startChallenge("교수님", Difficulty.LOW, demo.getChallengeCandidates("교수님").getFirst(), true);
+            assertEquals(15, demo.getSession().getQuestionCount());
+            demo.startChallenge("과학자", Difficulty.LOW, demo.getChallengeCandidates("과학자").stream().filter(x -> x.getName().equals(BattlePhases.bossName("과학자"))).findFirst().orElseThrow(), true);
+            assertTrue(demo.profile().bossUnlocked("과학자"));
+            assertEquals(0, demoSave.create().getCollectedCount());
+            assertEquals(0, demoSave.progress().snapshot().rescueProgress());
+            assertFalse(demoSave.progress().snapshot().professorUnlocked());
+            assertFalse(demoSave.progress().snapshot().bossUnlocked("과학자"));
+        }
+        assertFalse(new PlayerSession("admin2", save).isDemoMode());
+        assertFalse(game.categoryUnlocked("교수님"));
+        assertFalse(game.profile().bossUnlocked("과학자"));
+        assertEquals(0, game.ownedCards().size());
+    }
+
+    @Test void resultReviewUsesOnlyThisRunAndKeepsOriginalSettlement() throws Exception {
+        game.startPractice("한국사", Difficulty.LOW);
+        String historicalWrong = game.getSession().currentEntry().id();
+        game.selectAnswer(game.getSession().getCurrentQuiz().getAnswer() % 4 + 1); game.submitAnswer();
+        finishMixedBattle();
+        GameSession finished = game.getSession();
+        assertEquals(5, finished.answers().size());
+        assertEquals(2, finished.wrongEntries().size());
+        Set<String> expected = new HashSet<>(finished.wrongEntries().stream().map(QuestionBank.Entry::id).toList());
+        game.saveRewards();
+        int xp = game.profile().experience(), coins = game.profile().coins();
+        SwingUtilities.invokeAndWait(() -> {
+            ResultView result = new ResultView(new ResultGUIEvent(game));
+            try {
+                result.display(finished, game.getSavedRewards(), "이번 오답을 복습해 보세요.", false);
+                assertTrue(find(result, "reviewCurrent").isEnabled());
+                render(result, "evaluation-result-preview.png");
+                renderAt(new LearningReviewPanel(finished.answers()), "evaluation-learning-preview.png", 760, 520);
+                find(result, "reviewCurrent").doClick();
+            } catch (Exception e) { throw new AssertionError(e); }
+            finally { result.stopAnimations(); }
+        });
+        assertEquals(GameSession.Mode.REVIEW, game.getSession().getMode());
+        assertEquals(2, game.getSession().getQuestionCount());
+        assertEquals(xp, game.profile().experience()); assertEquals(coins, game.profile().coins());
+        Set<String> actual = new HashSet<>();
+        while (game.getSession().getPhase() != GameSession.Phase.FINISHED) {
+            actual.add(game.getSession().currentEntry().id());
+            game.selectAnswer(game.getSession().getCurrentQuiz().getAnswer()); game.submitAnswer(); game.nextQuestion();
+        }
+        assertEquals(expected, actual);
+        game.saveRewards();
+        assertEquals(xp + 12, game.profile().experience());
+        assertEquals(coins + 8, game.profile().coins());
+        assertTrue(game.profile().wrongQuestions().contains(historicalWrong));
+        assertTrue(Collections.disjoint(expected, game.profile().wrongQuestions()));
+    }
+
+    @Test void resultReviewDoesNotDiscardSessionWhenRewardSaveFails() throws Exception {
+        finishMixedBattle();
+        GameSession finished = game.getSession();
+        Path temporary = save.progress().path().resolveSibling(save.progress().path().getFileName() + ".tmp");
+        Files.createDirectories(temporary);
+        assertThrows(java.io.IOException.class, game::startCurrentReview);
+        assertSame(finished, game.getSession());
+        assertEquals(GameSession.Phase.FINISHED, finished.getPhase());
+        game.startCurrentReview();
+        assertEquals(GameSession.Mode.REVIEW, game.getSession().getMode());
+        assertEquals(126, finished.rewardSettlement().orElseThrow().xpEarned());
+        assertEquals(78, finished.rewardSettlement().orElseThrow().coinsEarned());
+        assertEquals(1, save.create().getCollectedCount());
+    }
+
+    private void finishMixedBattle() {
+        game.startBattle("과학자", Difficulty.LOW, game.getCandidates("과학자").getFirst());
+        BattleEngine battle = game.getSession().getBattle();
+        for (int i = 0; i < 5; i++) {
+            game.selectBattleAnswer(i < 3 ? battle.current().getAnswer() - 1 : battle.current().getAnswer() % 4);
+            game.submitBattleAnswer(); game.advanceBattle();
+        }
+        assertEquals(GameSession.Phase.FINISHED, game.getSession().getPhase());
+    }
+
+    @Test void restoredMapCountsPeopleNotStagesAndMotionIsOnce() throws Exception {
+        CollectionGUIEvent event = new CollectionGUIEvent(new CollectionFeature(PersonManager.getInstance(), ImageManager.getInstance(), new PlayerSession("review", save), destination::set));
+        List<Person> people = game.getCandidates("과학자");
+        for (int i = 0; i < 9; i++) for (Difficulty d : Difficulty.values()) save.record(people.get(i), d);
+        assertFalse(event.isVillageRestored("과학자"));
+        save.record(people.get(9), Difficulty.LOW);
+        assertTrue(event.isVillageRestored("과학자")); assertTrue(event.takeRestoreMotion("과학자"));
+        assertFalse(event.takeRestoreMotion("과학자")); assertFalse(event.isVillageRestored("한국사"));
+    }
+
+    @Test void cardNewStateSurvivesReloadAndClearsOnlyTheOpenedStage() throws Exception {
+        Person person = game.getCandidates("과학자").getFirst();
+        save.record(person, Difficulty.LOW); save.record(person, Difficulty.HIGH);
+        SaveFactory reloaded = new SaveFactory(save.getPath()); reloaded.open();
+        CollectionFeature feature = new CollectionFeature(PersonManager.getInstance(), ImageManager.getInstance(), new PlayerSession("new", reloaded), destination::set);
+        assertTrue(feature.isNew(person, 1)); assertTrue(feature.isNew(person, 3));
+        feature.readCard(person, 1);
+        assertFalse(feature.isNew(person, 1)); assertTrue(feature.isNew(person, 3));
+        assertFalse(reloaded.record(person, Difficulty.HIGH));
+        assertEquals(1, feature.newCount("과학자"));
+    }
+
+    @Test void professorHasThreeDistinctPhasesAndReviewKeepsAllOriginalAnswers() throws Exception {
+        for (int i=0;i<30;i++) game.progress().answer("phase-unlock-"+i,"과학자",true);
+        game.startChallenge("교수님", Difficulty.LOW, game.getCandidates("교수님").stream().filter(p -> p.getName().equals("이은정")).findFirst().orElseThrow(), true);
+        BattleEngine battle = game.getSession().getBattle();
+        Set<String> questionIds = new HashSet<>();
+        for (int i=0;i<15;i++) {
+            assertEquals(i / 5 + 1, battle.stageNumber());
+            assertEquals(i < 10 ? 60 : 80, battle.maxComputerHp());
+            assertTrue(questionIds.add(game.getSession().currentEntry().id()));
+            game.selectBattleAnswer(battle.current().getAnswer()-1); game.submitBattleAnswer(); game.advanceBattle();
+            if(i<14) assertEquals(BattleEngine.Phase.QUESTION,battle.phase());
+        }
+        assertEquals(BattleEngine.Result.WIN,battle.result());
+        assertEquals(15,game.getSession().answers().size());
+        game.saveRewards(); assertEquals(List.of(3),save.create().getStages("교수님","이은정"));
+    }
+
+    @Test void practiceFeedbackFinishesAndNextPortraitIsVisible() throws Exception {
+        SwingUtilities.invokeAndWait(() -> {
+            var art = new org.kgu.domain.collection.view.component.CardArt(game::image);
+            var card = new org.kgu.domain.collection.view.component.CardView(game.getCandidates("과학자").getFirst(),1,art);
+            card.setSize(320,460);
+            card.startPracticeFeedback(false,0); card.updateHit(1_300_000_000L);
+            BufferedImage hidden=new BufferedImage(320,460,BufferedImage.TYPE_INT_ARGB);
+            Graphics2D g=hidden.createGraphics();card.paint(g);g.dispose();
+            assertTrue(Arrays.stream(hidden.getRGB(0,0,320,460,null,0,320)).allMatch(pixel -> pixel==0));
+            card.show(game.getCandidates("과학자").get(1),1);
+            card.startPracticeFeedback(true,0);card.updateHit(1_300_000_000L);
+            g=hidden.createGraphics();card.paint(g);g.dispose();
+            assertTrue(Arrays.stream(hidden.getRGB(0,0,320,460,null,0,320)).anyMatch(pixel -> pixel!=0));
+            assertFalse(card.isHitAnimating());
+        });
+    }
+
     @BeforeEach void loadRealGameData() throws Exception {
         PersonManager people = PersonManager.getInstance(); people.clear();
         ImageManager images = ImageManager.getInstance(); images.clear();
@@ -62,7 +231,7 @@ class AdventureFlowTest {
         assertTrue(game.profile().bossUnlocked("과학자")); assertTrue(game.profile().level() > 1);
         assertEquals(3, game.profile().cleared("과학자")); assertEquals(3, game.ownedCards().size());
         game.equip(targets.getFirst()); assertEquals(CardPower.key(targets.getFirst()), game.equippedPower().personKey());
-        game.startChallenge("과학자", Difficulty.LOW, targets.getLast(), true); assertEquals(5, game.getSession().getQuestionCount()); completeBattle();
+        game.startChallenge("과학자", Difficulty.LOW, targets.stream().filter(x -> x.getName().equals(BattlePhases.bossName("과학자"))).findFirst().orElseThrow(), true); assertEquals(10, game.getSession().getQuestionCount()); completeBattle();
         assertEquals(1, game.profile().bossWins()); assertTrue(Achievement.BOSS.unlocked(game.profile()));
         int xp = game.profile().experience(), coins = game.profile().coins(); game.saveRewards();
         assertEquals(xp, game.profile().experience()); assertEquals(coins, game.profile().coins());
@@ -77,8 +246,8 @@ class AdventureFlowTest {
         ResultPresentation first = ResultGUIEvent.presentation(game.getSession(), game.getSavedRewards(), "", false);
         assertEquals(ResultPresentation.CardStatus.NEW, first.cardRewards().getFirst().status());
         var settlement = first.settlement().orElseThrow();
-        assertEquals(120, settlement.xpEarned());
-        assertEquals(70, settlement.coinsEarned());
+        assertEquals(150, settlement.xpEarned());
+        assertEquals(90, settlement.coinsEarned());
         int xp = game.profile().experience(), coins = game.profile().coins();
         game.saveRewards();
         ResultPresentation refreshed = ResultGUIEvent.presentation(game.getSession(), game.getSavedRewards(), "", false);
@@ -194,8 +363,8 @@ class AdventureFlowTest {
         assertTrue(game.profile().wrongQuestions().contains(wrongId));
         game.saveRewards();
         game.saveRewards();
-        assertEquals(84, game.profile().experience());
-        assertEquals(before + 52, game.profile().coins());
+        assertEquals(114, game.profile().experience());
+        assertEquals(before + 72, game.profile().coins());
         assertEquals(1, game.getSavedRewards().size());
         assertEquals(1, battle.stars());
         ResultPresentation result = ResultGUIEvent.presentation(game.getSession(), game.getSavedRewards(), "", false);
@@ -203,8 +372,8 @@ class AdventureFlowTest {
         assertEquals(5, result.answeredCount());
         assertEquals(1, result.battle().orElseThrow().retryCorrectCount());
         assertTrue(result.battle().orElseThrow().victory());
-        assertEquals(84, result.settlement().orElseThrow().xpEarned());
-        assertEquals(52, result.settlement().orElseThrow().coinsEarned());
+        assertEquals(114, result.settlement().orElseThrow().xpEarned());
+        assertEquals(72, result.settlement().orElseThrow().coinsEarned());
         SaveFactory reloaded = new SaveFactory(save.getPath());
         reloaded.open();
         assertEquals(0, reloaded.progress().snapshot().inventory(ShopItem.SHIELD));
@@ -258,16 +427,16 @@ class AdventureFlowTest {
                 java.lang.reflect.Field windowField = Application.class.getDeclaredField("mainWindow"); windowField.setAccessible(true);
                 MainWindow window = (MainWindow)windowField.get(app);
                 // This test exercises login routing after the separate prologue flow.
-                window.show(ViewId.LOGIN);
+                window.show(ViewId.LOGIN); awaitTransition();
                 java.lang.reflect.Field frameField = MainWindow.class.getDeclaredField("frame"); frameField.setAccessible(true);
                 JFrame frame = (JFrame)frameField.get(window); frame.setLocation(-5000, -5000);
                 PlayerSession first = new PlayerSession("first", save);
-                login.invoke(app, first); assertNotNull(find(frame, "tutorialNext"));
+                login.invoke(app, first); awaitTransition(); assertNotNull(find(frame, "tutorialNext"));
                 for (int i = 0; i < 6; i++) find(frame, "tutorialNext").doClick();
-                assertTrue(save.progress().snapshot().flag("tutorial")); find(frame, "returnToLogin").doClick();
-                login.invoke(app, new PlayerSession("second", new SaveFactory(temp.resolve("second.txt"))));
-                assertNotNull(find(frame, "tutorialNext")); find(frame, "tutorialLater").doClick(); find(frame, "returnToLogin").doClick();
-                login.invoke(app, first);
+                awaitTransition(); assertTrue(save.progress().snapshot().flag("tutorial")); find(frame, "returnToLogin").doClick(); awaitTransition();
+                login.invoke(app, new PlayerSession("second", new SaveFactory(temp.resolve("second.txt")))); awaitTransition();
+                assertNotNull(find(frame, "tutorialNext")); find(frame, "tutorialLater").doClick(); awaitTransition(); find(frame, "returnToLogin").doClick(); awaitTransition();
+                login.invoke(app, first); awaitTransition();
                 assertNull(findOrNull(frame, "tutorialNext")); assertNotNull(find(frame, "returnToLogin"));
             } catch (Exception ex) { throw new RuntimeException(ex); }
             finally { if (app != null) app.shutdown(); }
@@ -521,14 +690,14 @@ class AdventureFlowTest {
                 BattlePanelDriver driver = new BattlePanelDriver(battle, event, finishes::incrementAndGet, () -> { });
                 BattlePanel panel = driver.panel();
                 try {
-                    for (int question = 0; question < 5; question++) {
+                    for (int question = 0; question < battle.questionCount(); question++) {
                         find(panel, "choice" + (battle.current().getAnswer() - 1)).doClick();
                         find(panel, "submit").doClick();
                         if (question == 0) {
                             for (int i = 0; i < 4; i++) driver.tick();
                             render(panel, "attack-" + category + "-preview.png");
                         }
-                        if (question < 4) driver.finishAnimation();
+                        if (question < battle.questionCount() - 1) driver.finishAnimation();
                     }
                     for (int i = 0; i < 53; i++) driver.tick();
                     render(panel, "charge-" + category + "-preview.png");
@@ -542,6 +711,17 @@ class AdventureFlowTest {
         });
     }
 
+    private static void awaitTransition() {
+        var loop = Toolkit.getDefaultToolkit().getSystemEventQueue().createSecondaryLoop();
+        javax.swing.Timer timer = new javax.swing.Timer(380, e -> loop.exit());
+        timer.setRepeats(false); timer.start(); loop.enter();
+    }
+    private void renderAt(JComponent component, String name, int width, int height) throws Exception {
+        component.setSize(width, height); layout(component);
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = image.createGraphics(); component.paint(g); g.dispose();
+        ImageIO.write(image, "png", project.resolve("build/" + name).toFile());
+    }
     private void render(JComponent component, String name) throws Exception {
         component.setSize(1280, 960); layout(component); BufferedImage image = new BufferedImage(1280, 960, BufferedImage.TYPE_INT_RGB);
         Graphics2D graphics = image.createGraphics(); component.paint(graphics); graphics.dispose();

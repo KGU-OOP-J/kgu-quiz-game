@@ -5,6 +5,7 @@ import org.kgu.domain.collection.view.layout.CollectionLayout;
 
 import org.kgu.domain.collection.event.CollectionGUIEvent;
 import org.kgu.core.model.Person;
+import org.kgu.core.window.GameTheme;
 import org.kgu.core.window.UiButton;
 import org.kgu.core.window.UiStyle;
 import org.kgu.core.window.View;
@@ -26,7 +27,7 @@ public final class CollectionView extends JPanel implements View {
     private static final String[] VILLAGES = {"과학자", "교수님", "한국사", "아이돌"};
     private static final int LOCKED = java.util.Arrays.asList(VILLAGES).indexOf(CollectionGUIEvent.LOCKED_VILLAGE);
     private static final double UNLOCK_SECONDS = LockArt.DURATION;
-    private static final Point[] LABELS = {new Point(120, 200), new Point(480, 200), new Point(110, 470), new Point(480, 451)};
+    private static final Point[] LABELS = {new Point(120, 200), new Point(480, 200), new Point(110, 452), new Point(480, 452)};  // 아래 버튼(y 510)과 안 겹치게
     // 배치는 처음 만든 780x560 좌표로 하고, 로그인·메뉴·대전과 같은 1280x960 창에 맞게 한 번에 늘린다.
 
     private final CollectionGUIEvent event;
@@ -39,12 +40,27 @@ public final class CollectionView extends JPanel implements View {
             for (int v = 0; v < scales.length; v++) {
                 scales[v] += ((v == hovered ? 1.12 : 1.0) - scales[v]) * 0.3;  // 부드럽게 커지고 줄어든다
             }
-            double unlock = locked ? 0 : unlockStart < 0 ? 1 : Math.min(1, (System.nanoTime() - unlockStart) / 1e9 / UNLOCK_SECONDS);
-            art.paintMap(g, getWidth(), getHeight(), (System.nanoTime() - startNanos) / 1e9, scales, LOCKED, unlock, lockHint);
+            long now = System.nanoTime();
+            double unlock = locked ? 0 : unlockStart < 0 ? 1 : Math.min(1, (now - unlockStart) / 1e9 / UNLOCK_SECONDS);
+            double[] reveal = new double[VILLAGES.length];
+            for (int v = 0; v < reveal.length; v++) {
+                reveal[v] = !restored[v] ? 0 : restoreStart[v] < 0 ? 1 : progress(now, restoreStart[v], 0, RESTORE_SECONDS);
+            }
+            // 봉인이 깨진 뒤(약 1초) 금빛이 지도 전체로 퍼진다
+            double world = locked ? 0 : unlockStart < 0 ? 1 : progress(now, unlockStart, UNLOCK_SECONDS * 0.31, WORLD_SECONDS);
+            art.paintMap(g, getWidth(), getHeight(), (now - startNanos) / 1e9, scales, LOCKED, unlock, lockHint, reveal, world);
             g.dispose();
         }
     };
+    private static final double RESTORE_SECONDS = 2.0, WORLD_SECONDS = 3.0;
+    private final boolean[] restored = new boolean[VILLAGES.length];
+    private final long[] restoreStart = {-1, -1, -1, -1};
     private final long startNanos = System.nanoTime();
+
+    /** start에서 delay초 뒤부터 seconds초 동안 0→1. */
+    private static double progress(long now, long start, double delay, double seconds) {
+        return Math.min(1, Math.max(0, ((now - start) / 1e9 - delay) / seconds));
+    }
     private final double[] scales = {1, 1, 1, 1};
     private int hovered = -1;
     private boolean locked;
@@ -62,6 +78,9 @@ public final class CollectionView extends JPanel implements View {
     private final CardSliderPanel slider;
     private final CardDetailPanel detail;
     private String selected = "";
+    private String pendingVillage;
+    private final JPanel villageActions = org.kgu.core.window.GameTheme.panel(new BorderLayout(0, 14));
+    private final JLabel villageTitle = new JLabel("", SwingConstants.CENTER);
     private int collectedPersons;
     private int totalPersons;
     private int collectedStages;
@@ -99,7 +118,9 @@ public final class CollectionView extends JPanel implements View {
         map.setBounds(0, 0, 780, 560);
         for (int i = 0; i < VILLAGES.length; i++) {
             String category = VILLAGES[i];
-            UiButton button = CardArt.button(villageName(category) + " 마을", Color.WHITE, 16f, () -> event.selectCategory(this, category));
+            UiButton button = CardArt.button(villageName(category) + " 마을", Color.WHITE, 16f, () -> chooseVillage(category));
+            button.setName("mapVillage" + category);
+            button.putClientProperty("selectionTint", new Color(39, 61, 84));
             button.setBounds(LABELS[i].x, LABELS[i].y, 190, 44);
             int village = i;
             button.addMouseListener(new MouseAdapter() {
@@ -139,12 +160,34 @@ public final class CollectionView extends JPanel implements View {
             public void mouseClicked(MouseEvent e) {
                 int village = art.villageAt(e.getX(), e.getY(), map.getWidth(), map.getHeight());
                 if (village >= 0) {
-                    event.selectCategory(CollectionView.this, VILLAGES[village]);
+                    chooseVillage(VILLAGES[village]);
                 }
             }
         };
         map.addMouseListener(villageMouse);
         map.addMouseMotionListener(villageMouse);
+        villageActions.setBounds(205, 175, 370, 220);
+        villageActions.setBorder(BorderFactory.createEmptyBorder(22, 24, 22, 24));
+        villageTitle.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 22f));
+        villageTitle.setForeground(org.kgu.core.window.GameTheme.PAPER); villageActions.add(villageTitle, BorderLayout.NORTH);
+        JPanel routes = new JPanel(new GridLayout(2, 1, 0, 12)); routes.setOpaque(false);
+        JButton enter = CardArt.button("도전하기  →", CardArt.BLUE, 18f, () -> {
+            if (pendingVillage != null && event.categoryAvailable(pendingVillage)) {
+                villageActions.setVisible(false); adventure.accept(pendingVillage);
+            }
+        });
+        enter.setName("villageChallenge"); enter.putClientProperty("selectionTint", new Color(43, 104, 165)); routes.add(enter);
+        JButton cards = CardArt.button("수집 카드 보기", Color.WHITE, 17f, () -> {
+            if (pendingVillage != null) { villageActions.setVisible(false); event.selectCategory(this, pendingVillage); }
+        });
+        cards.setName("villageCollection"); cards.putClientProperty("selectionTint", new Color(39, 61, 84)); routes.add(cards);
+        villageActions.add(routes);
+        JButton close = CardArt.button("지도로 돌아가기", Color.WHITE, 14f, () -> villageActions.setVisible(false));
+        close.setName("villageCancel"); close.putClientProperty("selectionTint", new Color(39, 61, 84));
+        villageActions.add(close, BorderLayout.SOUTH); villageActions.setVisible(false);
+        map.add(villageActions); map.setComponentZOrder(villageActions, 0);
+        mapMenu.putClientProperty("selectionTint", new Color(39, 61, 84));
+        challengeMap.putClientProperty("selectionTint", new Color(39, 61, 84));
         add(map);
     }
 
@@ -171,16 +214,14 @@ public final class CollectionView extends JPanel implements View {
         add(detail);
     }
 
+    private void chooseVillage(String category) {
+        if (!event.categoryAvailable(category)) { showGateNotice(event.rescueProgress()); return; }
+        pendingVillage = category;
+        villageTitle.setText(villageName(category) + " 마을");
+        villageActions.setVisible(true); map.repaint();
+    }
 
-    /**
-     * 고른 마을의 카드 목록과 진행도, 지도 이름표의 수집 수를 새로 채운다. 보이는 페이지는 바꾸지 않는다.
-     *
-     * @param selected 고른 분야(마을) 이름
-     * @param persons 목록에 보여 줄 인물
-     * @param collectedPersons 그 분야에서 모은 인물 수
-     * @param totalPersons 그 분야의 전체 인물 수
-     * @param collectedStages 그 분야에서 모은 단계 카드 수
-     */
+
     public void display(String selected, List<Person> persons, int collectedPersons, int totalPersons, int collectedStages) {
 
         this.selected = selected;
@@ -197,10 +238,16 @@ public final class CollectionView extends JPanel implements View {
 
     /** 마을 지도를 보여 주고 바다 물결을 움직인다. */
     public void showMap() {
+        villageActions.setVisible(false); pendingVillage = null;
         hovered = -1;
         locked = !event.isVillageOpen(CollectionGUIEvent.LOCKED_VILLAGE);
         // 열린 뒤 처음 지도를 볼 때 계정마다 한 번만 풀리는 모션을 튼다(본 기록은 세이브 옆 파일에 남는다)
         if (event.takeUnlockMotion(CollectionGUIEvent.LOCKED_VILLAGE)) unlockStart = System.nanoTime();
+        // 교수님 섬은 따로 복구되지 않고, 교수님 마을이 열릴 때 지도 전체와 함께 돌아온다
+        for (int v = 0; v < VILLAGES.length; v++) {
+            restored[v] = v != LOCKED && event.isVillageRestored(VILLAGES[v]);
+            if (restored[v] && event.takeRestoreMotion(VILLAGES[v])) restoreStart[v] = System.nanoTime();
+        }
         lockHint = "다른 분야 문제 " + event.rescueProgress() + "/"
             + org.kgu.core.progression.PlayerProgress.PROFESSOR_REQUIRED + " 정답이면 열려요";
         java.util.Arrays.fill(scales, 1);
@@ -268,17 +315,20 @@ public final class CollectionView extends JPanel implements View {
 
         if (list.isVisible()) {
             g.scale(getWidth() / (double)UiStyle.WIDTH, getHeight() / (double)UiStyle.HEIGHT);
-            CardArt.gradientRound(g, 16, 22, 214, 54, 30, new Color(44, 80, 140), new Color(22, 46, 92));
-            g.setColor(Color.WHITE);
-            g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 26f));
-            UiStyle.center(g, villageName(selected) + " 마을", 123, 49);
-            CardArt.panel(g, 290, 18, 470, 62, 18, new Color(255, 255, 255, 235));
-            g.setColor(UiStyle.NAVY);
+            // 도전 준비 화면처럼: 왼쪽 위 제목, 어두운 패널, 금색 포인트
+            g.setColor(GameTheme.MUTED);
+            g.setFont(UiStyle.FONT.deriveFont(12f));
+            g.drawString("카드 도감", 18, 34);
+            g.setColor(GameTheme.PAPER);
+            g.setFont(UiStyle.FONT.deriveFont(Font.BOLD, 24f));
+            g.drawString(villageName(selected) + " 마을", 16, 66);
+            GameTheme.paintSurface(g, 290, 18, 470, 62, 12, false);
+            g.setColor(GameTheme.PAPER);
             g.setFont(UiStyle.FONT.deriveFont(15f));
             UiStyle.center(g, "수집한 인물 " + collectedPersons + " / " + totalPersons + " · 단계 카드 " + collectedStages + " / " + totalPersons * 3, 525, 43);
-            UiStyle.round(g, 320, 54, 410, 14, 14, new Color(222, 229, 240));
-            UiStyle.round(g, 320, 54, totalPersons == 0 ? 0 : 410 * collectedPersons / totalPersons, 14, 14, CardArt.BLUE);
-            CardArt.panel(g, 210, 90, 552, 432, 20, new Color(255, 255, 255, 200));
+            UiStyle.round(g, 320, 54, 410, 10, 10, GameTheme.INK);
+            UiStyle.round(g, 320, 54, totalPersons == 0 ? 0 : 410 * collectedPersons / totalPersons, 10, 10, GameTheme.TEAL);
+            GameTheme.paintSurface(g, 210, 90, 552, 432, 12, false);
         }
 
         g.dispose();

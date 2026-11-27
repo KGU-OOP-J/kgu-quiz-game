@@ -18,6 +18,11 @@ public record PlayerSession(String playerId, SaveFactory saveFactory) {
         this.saveFactory = Objects.requireNonNull(saveFactory);
     }
 
+    /** Local presentation accounts, not administrator authentication. */
+    public boolean isDemoMode() {
+        return playerId.equalsIgnoreCase("admin") || playerId.equalsIgnoreCase("cheat");
+    }
+
     @Override
     public boolean equals(Object other) {
         return other instanceof PlayerSession && playerId.equals(((PlayerSession) other).playerId);

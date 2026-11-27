@@ -1,3 +1,5 @@
+> 이 문서는 PR 작성 당시 기록입니다. 최신 통합 결과와 연습 규칙은 [PR15_INTEGRATION](PR15_INTEGRATION.md)을 우선합니다. 통합 과정에서는 회귀 방지를 위해 테스트를 추가·수정했습니다.
+
 # Final Game Polish 요구사항 점검
 
 기준: [PRD](one_step_more.md), [구현 계획](ONE_STEP_MORE_PLAN.md). 소스 존재, 실행 확인, 실제 화면 확인을 구분한다. 테스트 코드·주석 작성은 현재 지시로 금지되어 있다.

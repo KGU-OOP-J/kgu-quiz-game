@@ -213,7 +213,7 @@ public final class IntegrationChecks {
                     BattleEngine.Result expected=scenario==0?BattleEngine.Result.WIN:BattleEngine.Result.LOSE;
                     check(battle.result()==expected,"five-question win / loss");
                     check(battle.rewards().size()==(scenario==0?1:0),"target card only on win");
-                    check(battle.computerHp()>=0 && battle.answeredCount()==(scenario==1?3:5),"authoritative nonnegative HP and early defeat");
+                    check(battle.computerHp()>=0 && battle.answeredCount()==(scenario==0?battle.questionCount():scenario==1?3:5),"authoritative nonnegative HP and early defeat");
                     if(scenario==0){game.saveRewards();check(game.getSavedRewards().size()==1,"battle rewards use real save records");}
                     game.finishBattle();
                     if (destination.get()==ViewId.DIALOGUE) game.finishDialogue();
@@ -252,11 +252,12 @@ public final class IntegrationChecks {
         GameFeature game=gameFeature();
         MenuView menu=new MenuView();MenuGUIEvent menuEvent=new MenuGUIEvent(menu,new MenuFeature(game,destination::set));
         MenuLifecycleEvent menuLifecycle=new MenuLifecycleEvent(menu,menuEvent);
-        menuLifecycle.onEnter();check(menu.getGameButton().getActionListeners().length==1,"menu input bound");
+        int initialMenuListeners=menu.getGameButton().getActionListeners().length;
+        menuLifecycle.onEnter();check(menu.getGameButton().getActionListeners().length==initialMenuListeners+1,"menu input bound");
         menu.getGameButton().doClick();menu.getCategoryBox().setSelectedItem("교수님");
         menu.getStartButton().doClick();check(game.getSession().getCategory().equals("교수님"),"setup inputs reach Feature");
         paint(menu,780,560);menuLifecycle.onExit();menuLifecycle.onEnter();
-        check(menu.getGameButton().getActionListeners().length==1,"no duplicate input on reentry");menuLifecycle.onExit();
+        check(menu.getGameButton().getActionListeners().length==initialMenuListeners+1,"no duplicate input on reentry");menuLifecycle.onExit();
         game.startPractice("과학자", Difficulty.LOW);
         QuestionGUIEvent questionEvent=new QuestionGUIEvent(game);BattleGUIEvent battleEvent=new BattleGUIEvent(game);
         QuestionView question=new QuestionView(questionEvent,battleEvent);QuestionLifecycleEvent lifecycle=new QuestionLifecycleEvent(question);
@@ -291,10 +292,11 @@ public final class IntegrationChecks {
         setting.getApplyButton().doClick();paint(setting,780,560);settingLifecycle.onExit();
         AtomicReference<PlayerSession> loggedIn=new AtomicReference<>();LoginView login=new LoginView();
         LoginFeature loginFeature=new LoginFeature(loggedIn::set);LoginLifecycleEvent loginLifecycle=new LoginLifecycleEvent(login,new LoginGUIEvent(login,loginFeature));
+        int initialLoginListeners=login.getLoginButton().getActionListeners().length;
         loginLifecycle.onEnter();login.getIdField().setText("integration-check-no-disk-save");login.getLoginButton().doClick();
         check(loggedIn.get().playerId().equals("integration-check-no-disk-save"),"ID login creates player session");
         check(!Files.exists(loggedIn.get().saveFactory().getPath()),"login alone never writes a save");paint(login,780,560);loginLifecycle.onExit();
-        check(login.getLoginButton().getActionListeners().length==0,"login inputs unbound");
+        check(login.getLoginButton().getActionListeners().length==initialLoginListeners,"login inputs unbound");
         checkResultRetry();
     }
 
