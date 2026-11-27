@@ -1,3 +1,5 @@
+> 이전 `feat/final` 실행·발표 참고 자료입니다. PR #15 이후 경로와 보스 규칙은 [최신 통합 안내](PR15_INTEGRATION.md)를 참고하세요. `run.bat` 대신 `gradlew.bat run`을 사용합니다.
+
 # WHO’S NEXT? 최종 시연 및 발표 준비
 
 > 대상: `feat/final`. 통합 기준 커밋 `6db50df`에 화면·학습 흐름 개선을 추가한 버전.

@@ -1,4 +1,6 @@
-package org.kgu.battle;
+package org.kgu.domain.battle.feature;
+
+import org.kgu.battle.UiTestActions;
 
 import static org.junit.jupiter.api.Assertions.*;
 import java.util.*;
@@ -10,7 +12,7 @@ import java.nio.file.*;
 import javax.swing.*;
 import javax.imageio.ImageIO;
 import org.junit.jupiter.api.Test;
-import org.kgu.ui.battle.*;
+import org.kgu.domain.battle.view.component.*;
 
 class BattleTest {
     private BattleEngine mission() {

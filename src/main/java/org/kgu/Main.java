@@ -1,26 +1,32 @@
 package org.kgu;
 
-import org.kgu.application.Application;
-
+import org.kgu.core.application.Application;
+import org.kgu.domain.showcase.feature.ShowcaseScene;
 import javax.swing.*;
-import java.io.IOException;
 
 public class Main {
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            Application application = new Application();
+        Application[] loaded = new Application[1];
+        try {
+            SwingUtilities.invokeAndWait(() -> loaded[0] = new Application());
+            Application application = loaded[0];
+            application.init(); application.load();
+            SwingUtilities.invokeLater(() -> {
+                try {
+                    application.start();
+                    for (String argument : args) if (argument.startsWith("--showcase="))
+                        application.startShowcase(ShowcaseScene.valueOf(argument.substring("--showcase=".length())));
+                } catch (Exception e) { showFailure(application, e); }
+            });
+        } catch (Exception e) {
+            if (e instanceof InterruptedException) Thread.currentThread().interrupt();
+            Throwable cause = e.getCause() == null ? e : e.getCause();
+            SwingUtilities.invokeLater(() -> showFailure(loaded[0], cause));
+        }
+    }
 
-            try {
-                application.init();
-                application.load();
-                application.start();
-            }
-            catch (IOException e) {
-                application.shutdown();
-                JOptionPane.showMessageDialog(null,
-                    e.getMessage(),
-                    "시작 실패", JOptionPane.ERROR_MESSAGE);
-            }
-        });
+    private static void showFailure(Application application, Throwable error) {
+        if (application != null) application.shutdown();
+        JOptionPane.showMessageDialog(null, error.getMessage(), "시작 실패", JOptionPane.ERROR_MESSAGE);
     }
 }

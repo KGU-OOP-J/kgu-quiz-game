@@ -1,4 +1,6 @@
-package org.kgu.ui.battle;
+package org.kgu.domain.battle.view.component;
+
+import org.kgu.battle.UiTestActions;
 
 import static org.junit.jupiter.api.Assertions.*;
 import java.awt.*;
@@ -12,7 +14,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import org.junit.jupiter.api.Test;
-import org.kgu.battle.*;
+import org.kgu.domain.battle.feature.*;
 
 class FinalAttackEffectTest {
     private BattleEngine mission(String category) {

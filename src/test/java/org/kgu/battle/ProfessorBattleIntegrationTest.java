@@ -1,5 +1,7 @@
 package org.kgu.battle;
 
+import org.kgu.domain.battle.feature.BattleEngine;
+
 import static org.junit.jupiter.api.Assertions.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -10,7 +12,7 @@ import javax.imageio.ImageIO;
 import org.junit.jupiter.api.Test;
 import org.kgu.integration.ui.navigation.GameNavigator;
 import org.kgu.integration.collection.CardSave;
-import org.kgu.ui.battle.*;
+import org.kgu.domain.battle.view.component.*;
 
 class ProfessorBattleIntegrationTest {
     @Test void eachCategoryAndRandomSelectionSaveExactlyOneCard() throws Exception {

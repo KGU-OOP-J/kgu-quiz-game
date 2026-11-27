@@ -21,7 +21,10 @@ application {
 }
 
 tasks.named('processResources') {
-    from('prologue-dialog.txt') { into 'org/kgu/story' }
+    from('docs/design-system') {
+        include 'scene-guild.png', 'scene-settings.png', 'scene-shop.png', 'scene-tutorial.png'
+        into 'org/kgu/art'
+    }
 }
 
 // Team pages/data are test fixtures and never enter the production source set.

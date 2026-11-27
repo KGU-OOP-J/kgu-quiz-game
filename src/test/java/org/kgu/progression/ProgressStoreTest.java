@@ -1,8 +1,8 @@
-package org.kgu.progression;
+package org.kgu.core.progression;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
-import org.kgu.model.Person;
+import org.kgu.core.model.Person;
 import java.io.IOException;
 import java.nio.file.*;
 import java.util.List;

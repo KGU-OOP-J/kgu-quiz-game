@@ -1,5 +1,7 @@
 package org.kgu.battle;
 
+import org.kgu.domain.battle.feature.BattleEngine;
+
 import static org.junit.jupiter.api.Assertions.*;
 import java.nio.file.*;
 import java.util.*;

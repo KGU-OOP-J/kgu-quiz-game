@@ -1,10 +1,10 @@
-package org.kgu.game.feature;
+package org.kgu.domain.game.feature;
 
 import org.junit.jupiter.api.Test;
-import org.kgu.application.Difficulty;
-import org.kgu.model.Person;
-import org.kgu.model.Quiz;
-import org.kgu.progression.*;
+import org.kgu.core.application.Difficulty;
+import org.kgu.core.model.Person;
+import org.kgu.core.model.Quiz;
+import org.kgu.core.progression.*;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -50,7 +50,7 @@ class QuizBattleTest {
         }
     }
 
-    @Test void exactlyFiveQuestionsRequiredForEveryBattle() {
+    @Test void exactlyFiveQuestionsRequiredPerPhase() {
         for (int count : List.of(0, 3, 4, 6, 8)) {
             assertThrows(IllegalArgumentException.class,
                 () -> new BattleEngine(person("상대"), questions(count), CardPower.beginner(), true));
@@ -59,7 +59,7 @@ class QuizBattleTest {
 
     @Test void damageCannotBeBoostedBySupportCardsOrBossMode() {
         for (CardPower.Kind kind : CardPower.Kind.values()) {
-            BattleEngine battle = new BattleEngine(person("보스"), questions(5), new CardPower("지원", kind, 8, "support"), true);
+            BattleEngine battle = new BattleEngine(person("보스"), questions(10), new CardPower("지원", kind, 8, "support"), true);
             battle.select(0);
             assertEquals(20, battle.submit().damage());
             assertEquals(40, battle.computerHp());
